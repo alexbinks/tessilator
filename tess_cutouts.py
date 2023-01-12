@@ -162,58 +162,66 @@ else:
                 t_targets["num_tot_bg"][i] = t_contam["num_tot_bg"][g][0]
 
 
-# As discussed between Alex and Moritz on 10 Jan 2023, we should break this loop into a set of functions
-# That way we can run different tests and see which is the most efficient/readable technique.
-# For now, I (Alex) will try and explain what's going on in the loops.
+def single_epoch(filepath, t_target):
+    t_sp = filepath.split('-')
+    scc = [int(t_sp[1][1:]), int(t_sp[2]), int(t_sp[3][0])] # simply extract the sector, ccd and camera numbers from the fits file.
 
-for i in range(len(t_targets)): # loop over each target in the input table
-    cutout_coord = SkyCoord(t_targets["ra"][i], t_targets["dec"][i], unit="deg")
-    # Download the fits files using Tesscut.download_cutouts
-    manifest = Tesscut.download_cutouts(coordinates=cutout_coord, size=20, sector=None)
-    for j in range(len(manifest)): # loop over each TESS sector returned for the current target.
-        file_in = manifest["Local Path"][j]
-        t_sp = file_in.split('-')
-        scc = [int(t_sp[1][1:]), int(t_sp[2]), int(t_sp[3][0])] # simply extract the sector, ccd and camera numbers from the fits file.
+# create a numpy array which holds the photometric measurements for each timestep from the aper_run_cutouts routine.
+    with open(store_file, 'a') as file1:
+         file1.write(f'{t_targets["source_id"][i]}, {j+1}/{len(manifest)}\n')
+    x = np.array(aper_run_cutouts(file_in))
 
-        # create a numpy array which holds the photometric measurements for each timestep from the aper_run_cutouts routine.
-        with open(store_file, 'a') as file1:
-            file1.write(f'{t_targets["source_id"][i]}, {j+1}/{len(manifest)}\n')
-        x = np.array(aper_run_cutouts(file_in))
+# make an astropy table out of the array, and remove magnitudes brigher than T=0 or fainter than T=25
+    zz = Table(x, names=('num', 'xcenter', 'ycenter', 'flux', 'flux_err',
+                         'bkg', 'total_bkg', 'flux_corr', 'mag',
+                         'mag_err', 'time', 'qual'),
+                  dtype=(int, float, float, float, float, float, float, float,
+                         float, float, float, int))
+    zg = zz[((zz['mag'] < 25.) & (zz['mag'] > 0.0))]
+    clean_norm_lc, original_norm_lc = make_lc(zg)
+    LS_dict = run_LS(clean_norm_lc)
+    if make_plots == 1:
+        make_LC_plots(clean_norm_lc, original_norm_lc, LS_dict, scc, t_targets[i])
+    datarow = [
+               str(t_targets["source_id"][i]),
+               t_targets["ra"][i],
+               t_targets["dec"][i],
+               t_targets["parallax"][i],
+               t_targets["Gmag"][i],
+               scc[0],
+               scc[1],
+               scc[2],
+               t_targets["log_tot_bg"][i],
+               t_targets["log_max_bg"][i],
+               t_targets["num_tot_bg"][i],
+               LS_dict['period_best'],
+               LS_dict['Gauss_fit_peak_parameters'][1],
+               LS_dict['Gauss_fit_peak_parameters'][2],
+               LS_dict['period_second'],
+               LS_dict['power_best'],
+               LS_dict['power_best']/LS_dict['power_second'],
+               LS_dict['FAPs'][2],
+               LS_dict['pops_vals'][1],
+               LS_dict['phase_scatter'],
+               LS_dict['frac_phase_outliers'],
+               LS_dict['Ndata']
+              ]
+    final_table.add_row(datarow)
+    final_table.write(period_file, overwrite=True)
 
-        # make an astropy table out of the array, and remove magnitudes brigher than T=0 or fainter than T=25
-        zz = Table(x, names=('num', 'xcenter', 'ycenter', 'flux', 'flux_err',
-                             'bkg', 'total_bkg', 'flux_corr', 'mag',
-                             'mag_err', 'time', 'qual'),
-                      dtype=(int, float, float, float, float, float, float, float,
-                             float, float, float, int))
-        zg = zz[((zz['mag'] < 25.) & (zz['mag'] > 0.0))]
-        clean_norm_lc, original_norm_lc = make_lc(zg)
-        LS_dict = run_LS(clean_norm_lc)
-        if make_plots == 1:
-            make_LC_plots(clean_norm_lc, original_norm_lc, LS_dict, scc, t_targets[i])
-        datarow = [
-                   str(t_targets["source_id"][i]),
-                   t_targets["ra"][i],
-                   t_targets["dec"][i],
-                   t_targets["parallax"][i],
-                   t_targets["Gmag"][i],
-                   scc[0],
-                   scc[1],
-                   scc[2],
-                   t_targets["log_tot_bg"][i],
-                   t_targets["log_max_bg"][i],
-                   t_targets["num_tot_bg"][i],
-                   LS_dict['period_best'],
-                   LS_dict['Gauss_fit_peak_parameters'][1],
-                   LS_dict['Gauss_fit_peak_parameters'][2],
-                   LS_dict['period_second'],
-                   LS_dict['power_best'],
-                   LS_dict['power_best']/LS_dict['power_second'],
-                   LS_dict['FAPs'][2],
-                   LS_dict['pops_vals'][1],
-                   LS_dict['phase_scatter'],
-                   LS_dict['frac_phase_outliers'],
-                   LS_dict['Ndata']
-                  ]
-        final_table.add_row(datarow)
-final_table.write(period_file, overwrite=True)
+
+def iterate_source(coord, src_id, cutout_size=20):
+    manifest = Tesscut.download_cutout(coordinates=coord, size=cutout_size, sector=None)
+    for j in range(len(manifest)):
+         t = single_epoch(manifest, t_target)
+
+def iterate_sources(coords):
+    for i, coo in enumerate(coords):
+        table_one_source = iterate_source(coo, t_target[i])
+
+cutout_coords = SkyCoord(t_targets["ra"], t_targets["dec"], unit="deg")
+
+iterate_sources(cutout_coords)
+
+# if __name__ = "__main__":
+#     iterate_sources(argv[1], etc...)
