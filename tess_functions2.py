@@ -2,6 +2,8 @@
 
 Alexander Binks & Moritz Guenther, January 2023
 
+Licence: MIT 2023
+
 This module contains all the functions called upon by either the tess_cutouts.py
 or tess_large_sectors.py modules. These are:
 

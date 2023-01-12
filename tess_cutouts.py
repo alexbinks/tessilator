@@ -3,6 +3,8 @@ Alexander Binks and Moritz Guenther, 2023
 
 The TESSilator
 
+Licence: MIT
+
 This is a python3 program designed to provide an all-in-one module to measure lightcurves and stellar rotation periods from the Transiting Exoplanet Survey Satellite (TESS). Whilst there are many useful (and powerful) software tools available for working with TESS data, they are mostly provided as various steps in the data reduction process --- to our knowledge there are no programs that automate the full process from downloading the data (start) to obtaining rotation period measurements (finish). The software provided here fills this gap. The user provides a table of targets with basic Gaia DR3 information (source ID, sky positions, parallax and Gaia G magnitude) and simply allows the TESSilator to do the rest! The steps are:
 
 (1) download photometric time-series data from TESS.
