@@ -21,12 +21,14 @@ This is a python3 program designed to provide an all-in-one module to measure li
 
 The calling sequence is:
 
-python tess_cutouts.py use_con make_plots file_cat t_filename
+python tess_cutouts.py use_con calc_con make_plots file_cat t_filename
 
-where use_con is the toggle for applying the contamination calculation (yes=1, no=0)
-      make_plots gives the user the option to make plots (yes=1, no=0)
-      file_cat is a string expression used to reference the files produced.
-      t_filename is the name of the input file required for analysis.
+where
+      "use_con" is the toggle for applying the contamination calculation (yes=1, no=0)
+      "calc_con" determines if lightcurve/periodogram analyses should be carried out for neighbouring contaminants (yes=1, no=0)
+      "make_plots" gives the user the option to make plots (yes=1, no=0)
+      "file_cat" is a string expression used to reference the files produced.
+      "t_filename" is the name of the input file required for analysis.
 
 In this module, the data is downloaded from TESSCut (Brasseur et al. 2019) -- a service which allows the user to acquire a stack of n 20x20 pixel "postage-stamp" image frames ordered in time sequence and centered using the celestial coordinates provided by the user, where n represents the number of TESS sectors available for download. It uses modules from the TesscutClass (https://astroquery.readthedocs.io/en/latest/api/astroquery.mast.TesscutClass.html - part of the astroquery.mast package) to download the data, then applies steps 2-6, sector-by-sector.
 
@@ -41,21 +43,28 @@ If this package is useful for research leading to publication we would appreciat
 "The data from the Transiting Exoplanet Survey Satellite (TESS) was acquired using the TESSilator software package (Binks et al. 2023)."
 '''
 
+#!/usr/bin/env python3
 
-
-import sys
-import os
-import numpy as np
-
+from requirements import *
 
 # Use the sys.argv arguments to save files with appropriate naming conventions
 # Or if these are not fully provided, prompt the user to provide input.
 if len(sys.argv) != 6:
-    use_con = int(input("Do you want to search for contaminants? 1=yes, 0=no"))
-    calc_con = int(input("Would you like to calculate period data for the contaminants? 1=yes, 0=no"))
-    make_plots = int(input("Would you like lightcurve/periodogram/phase plots?"))
-    file_cat = input("Enter the unique name for referencing the output files") 
-    t_filename = input("Enter the file name of your input table")
+    use_con = pyip.inputInt("Do you want to search for contaminants? 1=yes, 0=no", min=0, max=1)
+    calc_con = pyip.inputInt("Would you like to calculate period data for the contaminants? 1=yes, 0=no", min=0, max=1)
+    make_plots = pyip.inputInt("Would you like lightcurve/periodogram/phase plots? 1=yes, 0=no", min=0, max=1)
+    file_cat = pyip.inputStr("Enter the unique name for referencing the output files")
+    while True:
+        t_filename = pyip.inputStr("Enter the file name of your input table or object. If this is an object please use double quotations around the target identifier.")
+        if t_filename.startswith('"') & t_filename.endswith('"'):
+            t_name = t_filename[1:-1]
+            t_name_joined = t_name.replace(' ', '_')+'.dat'
+            with open(t_name_joined, 'a') as single_target:
+                single_target.write(t_name)
+            t_filename = t_name_joined
+            break
+        if os.path.exists(t_filename):
+            break
 else:
     use_con = int(sys.argv[1])
     calc_con = int(sys.argv[2])
@@ -81,60 +90,23 @@ pixel_size = 21.0
 Zpt, eZpt = 20.44, 0.05
 
 
-
-from astropy.io import ascii, fits
-from astropy.table import QTable, Table, Column, join
-
+from tess_functions2 import *
 
 # Produce an astropy table with the relevant column names and data types. These will be filled in list comprehensions later in the program.
-final_table = Table(names=['source_id', 'ra', 'dec', 'parallax', 'Gmag', 'Sector', 'Camera', 'CCD', 'log_tot_bg_star', 'log_max_bg_star', 'n_contaminants', 'Period_Max', 'Period_Gauss', 'e_Period', 'Period_2', 'power1', 'power1_power2', 'FAP_001', 'amp', 'scatter', 'fdev', 'Ndata', 'cont_flags'],
-                    dtype=(str, float, float, float, float, int, int, int, float, float, int, float, float, float, float, float, float, float, float, float, float, int, str))
+final_table = Table(names=['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'Sector', 'Camera', 'CCD', 'log_tot_bg_star', 'log_max_bg_star', 'n_contaminants', 'Period_Max', 'Period_Gauss', 'e_Period', 'Period_2', 'power1', 'power1_power2', 'FAP_001', 'amp', 'scatter', 'fdev', 'Ndata', 'cont_flags'],
+                    dtype=(str, str, float, float, float, float, int, int, int, float, float, int, float, float, float, float, float, float, float, float, float, float, int, str))
 
-
-# import the remaining modules required for the TESS analysis
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-from astropy.timeseries import LombScargle
-from astropy.time import Time
-from astropy.utils.exceptions import AstropyWarning
-from astropy.wcs import WCS
-import warnings
-warnings.simplefilter('ignore', category=AstropyWarning)
-warnings.simplefilter('ignore', category=FutureWarning)
-warnings.simplefilter('ignore', category=RuntimeWarning)
-from photutils.aperture import CircularAperture, CircularAnnulus, aperture_photometry, ApertureStats
-from photutils.centroids import centroid_com
-from astroquery.gaia import Gaia
-from astroquery.vizier import Vizier
-from astroquery.mast import Tesscut
-import time
 
 start_date = time.asctime(time.localtime(time.time()))
 start = time.time()
 print(start_date)
-
-from scipy.stats import median_abs_deviation
-from scipy.optimize import curve_fit
-
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import traceback
-
-from tess_functions2 import *
-
-
-
-mpl.rcParams.update({'font.size': 14})
 
 
 isHeader = 0
 # Read the data from the input file as an astropy table (ascii format)
 # Ensure the source_id has a string type (not long integer).
 if isHeader == 0:
-    t = ascii.read(t_filename, format='no_header')
+    t = ascii.read(t_filename, delimiter=',', format='no_header')
 elif isHeader == 1:
     t = ascii.read(t_filename)
 t_targets = GetGAIAData(t)
@@ -160,7 +132,7 @@ else:
 # input list will be changed (the missing data will still have the
 # dummy values).
 if use_con == 1:
-    t_targets, con_table_full = contamination(t_targets)
+    t_targets, con_table_full = contamination(t_targets, choose_con=1)
     t_contam.write(con_file, overwrite=True)
 else:
     t_targets["log_tot_bg"] = -999.
@@ -178,21 +150,23 @@ else:
 
 
 def single_epoch(file_in, t_target, cutout_size):
-    t_sp = file_in.split('-')
-    scc = [int(t_sp[1][1:]), int(t_sp[2]), int(t_sp[3][0])] # simply extract the sector, ccd and camera numbers from the fits file.
+    print(file_in)
+    t_sp = file_in.split('_')
+    scc = [int(t_sp[-3][1:]), int(t_sp[-2]), int(t_sp[-1][0])] # simply extract the sector, ccd and camera numbers from the fits file.
     print(t_target)
 # create a numpy array which holds the photometric measurements for each timestep from the aper_run_cutouts routine.
     
     XY_ctr = (cutout_size/2., cutout_size/2.)
-    phot_targ = np.array(aper_run_cutouts(file_in, XY_ctr))
+    phot_targ = np.array(aper_run_cutouts(file_in, XY_ctr, store_file=store_file, make_slices=0))
     phot_targ_table = make_phot_table(phot_targ)
-    if len(phot_targ_table) < 50 or phot_targ_table is None:
+    if phot_targ_table is None:
         return
     clean_norm_lc, original_norm_lc = make_lc(phot_targ_table)
-    if len(clean_norm_lc) > 0:
+    if len(clean_norm_lc) != 0:
         d_target = run_LS(clean_norm_lc)
-        print(d_target["period_best"], d_target["pops_vals"])
-        labels_cont = 'z'    
+        labels_cont = 'z'
+    else:
+        return
 
 
     if calc_con == 1:
@@ -206,27 +180,30 @@ def single_epoch(file_in, t_target, cutout_size):
             X_con += XY_ctr[0]
             Y_con += XY_ctr[1]
             XY_arr = np.array([X_con, Y_con]).T
+            phot_cont['XY'] = XY_arr
+            print(XY_arr)
             for z in range(len(XY_arr)):
                 XY_con = tuple((XY_arr[z][0], XY_arr[z][1]))
-                phot_cont[z] = np.array(aper_run_cutouts(file_in, XY_con))
+                phot_cont[z] = np.array(aper_run_cutouts(file_in, XY_con, store_file=store_file))
                 phot_cont_table = make_phot_table(phot_cont[z])
-                if len(phot_cont_table) > 50 or phot_cont_table is not None:
+                if phot_cont_table is None:
+                    labels_cont += 'd'
+                else:
                     clean_norm_lc_cont, original_norm_lc_cont = make_lc(phot_cont_table)
-                    if len(clean_norm_lc) > 0:
-                        d_target = run_LS(clean_norm_lc)
+                    if len(clean_norm_lc_cont) != 0:
                         d_cont = run_LS(clean_norm_lc_cont)
                         labels_cont += isPeriodCont(d_target, d_cont, con_table[z])
                     else:
                         labels_cont += 'd'
-                else:
-                    labels_cont += 'd'
 
 # make an astropy table out of the array
     if make_plots == 1:
-        make_LC_plots(file_in, clean_norm_lc, original_norm_lc, d_target, scc, t_target)
-
-
+        if calc_con == 1:
+            make_LC_plots(file_in, clean_norm_lc, original_norm_lc, d_target, scc, t_target, phot_cont['XY'])
+        else:
+            make_LC_plots(file_in, clean_norm_lc, original_norm_lc, d_target, scc, t_target)
     datarow = [
+               str(t_target["name"]),
                str(t_target["source_id"]),
                t_target["ra"],
                t_target["dec"],
@@ -260,13 +237,17 @@ def iterate_source(coord, target, cutout_size=20):
     for j in range(len(manifest)):
          print(f"{j+1} of {len(manifest)} sectors")
          file_in = manifest["Local Path"][j]
+         name_underscore = str(target['name']).replace(" ", "_")
+         f_sp = file_in.split('-')
+         file_new = '_'.join([name_underscore, f_sp[1][1:], f_sp[2], f_sp[3][0]])+'.fits'
+         os.rename(file_in, file_new)
          with open(store_file, 'a') as file1:
              file1.write(f'{target["source_id"]}, {j+1}/{len(manifest)}\n')
-         t = single_epoch(file_in, target, cutout_size)
+         t = single_epoch(file_new, target, cutout_size)
 
 def iterate_sources(t_targets):
     for i, target in enumerate(t_targets):
-        print(f"{target['source_id']}, star # {i+1} of {len(t_targets)}")
+        print(f"{target['name']}, star # {i+1} of {len(t_targets)}")
         coo = SkyCoord(target["ra"], target["dec"], unit="deg")
         table_one_source = iterate_source(coo, target)
         
