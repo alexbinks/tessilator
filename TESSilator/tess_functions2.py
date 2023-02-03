@@ -37,11 +37,127 @@ or tess_large_sectors.py modules. These are:
     the lightcurve, periodogram and phase-folded lightcurve is provided.
 
 '''
-from __main__ import *
+from .modules_to_import import *
 
 
 
-def GetGAIAData(Gaia_Input):
+# Read the data from the input file as an astropy table (ascii format)
+# Ensure the source_id has a string type (not long integer).
+
+def readascii(input_file):
+    return ascii.read(input_file, delimiter=',', format='no_header')
+
+
+def tableFromSimbad(simbad_names):
+    # Part 1: Use the SIMBAD database to retrieve the Gaia source identifier
+    #         from the target names. 
+    simbad_names.rename_column(simbad_names.colnames[0], 'ID')
+    simbad_names["ID"] = simbad_names["ID"].astype(str) # set the column header = "ID"
+    print(simbad_names) # print the column of targets
+    n_arr, is_Gaia = [], [0 for i in simbad_names]
+    for i, simbad_name in enumerate(simbad_names["ID"]):
+    # if the target name is the numeric part of the Gaia DR3 source identifier
+    # prefix the name with "Gaia DR3 "
+        if simbad_name.isnumeric() and len(simbad_name) > 10:
+            simbad_name = "Gaia DR3 " + simbad_name
+            is_Gaia[i] = 1
+        n_arr.append(simbad_name)
+        # Get a list object identifiers from Simbad
+        result_table = [Simbad.query_objectids(i) for i in n_arr]
+        NameList = []
+        GaiaList = []
+        for i, r in enumerate(result_table):
+            if r is None: # if no targets were resolved by SIMBAD (could be a typo)
+                print(f"Simbad did not resolve {n_arr[i]} - checking Gaia")
+                if is_Gaia[i] == 1:
+                    NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
+                    GaiaList.append(Gaia_Input["ID"][i])
+            else:
+                r_list = [z for z in r["ID"]]
+                m = [s for s in r_list if "Gaia DR3" in s]
+                if len(m) == 0: # if the Gaia identifier is not in the Simbad list
+                    print(f"There are no corresponding Gaia DR3 identifiers for {n_arr[i]}.")
+                    NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
+                    GaiaList.append(Gaia_Input["ID"][i])
+                else:
+                    NameList.append(n_arr[i])
+                    GaiaList.append(m[0].split(' ')[2])
+
+    # Part 2: Query the Gaia database using the Gaia source identifiers retrieved in part 1.
+    ID_string = ""
+    for gi, g in enumerate(GaiaList):
+        if gi < len(GaiaList)-1:
+            ID_string += g+','
+        else:
+            ID_string += g
+    qry = f"SELECT source_id,ra,dec,parallax,phot_g_mean_mag FROM gaiadr3.gaia_source gs WHERE gs.source_id in ({ID_string});"
+    job = Gaia.launch_job_async( qry )
+    gaia_table = job.get_results() # Astropy table
+    # convert the source_id column to string (astroquery returns the column as np.int64)
+    gaia_table["source_id"] = gaia_table["source_id"].astype(str)
+    list_ind = []
+    # astroquery returns the table sorted numerically by the source identifier
+    # the rows are rearranged to match with the input list.
+    for row in GaiaList:
+        list_ind.append(np.where(np.array(gaia_table["source_id"] == str(row)))[0][0])
+    gaia_table = gaia_table[list_ind]
+    gaia_table['name'] = NameList
+    gaia_table.rename_column('phot_g_mean_mag', 'Gmag')
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    gaia_table = gaia_table[new_order]
+    return gaia_table
+
+
+def tableFromCoords(coord_table, ang_max=10.0):
+    gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'), dtype=(int,float,float,float,float))
+    names = ['ra', 'dec'] # set the headers of the 2 columns to "ra" and "dec" 
+    coord_table.rename_column(coord_table.colnames[0], 'ra')
+    coord_table.rename_column(coord_table.colnames[1], 'dec')
+    for i in range(len(coord_table)):
+    # Generate an SQL query for each target, where the nearest source is returned within
+    # a maximum radius of 10 arcseconds.
+        qry = f"SELECT source_id, ra, dec, parallax, phot_g_mean_mag, \
+                DISTANCE(\
+                POINT({coord_table['ra'][i]}, {coord_table['dec'][i]}),\
+                POINT(ra, dec)) AS ang_sep\
+                FROM gaiadr3.gaia_source \
+                WHERE 1 = CONTAINS(\
+                POINT({coord_table['ra'][i]}, {coord_table['dec'][i]}),\
+                CIRCLE(ra, dec, {ang_max}/3600.)) \
+                ORDER BY ang_sep ASC"
+        job = Gaia.launch_job_async( qry )
+        x = job.get_results() # Astropy table
+        # Fill the empty table with results from astroquery
+        y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag']
+        gaia_table.add_row((y))
+    # For each source, query the identifiers resolved by SIMBAD and return the
+    # target with the shortest number of characters (which is more likely to be
+    # the most common reference name for the target).
+    GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
+    result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
+    NameList = []
+    for r in result_table:
+        NameList.append(sorted(r["ID"], key=len)[0])
+    gaia_table["name"] = NameList
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    gaia_table = gaia_table[new_order]
+    return gaia_table
+
+#if len(Gaia_Input.colnames) == 5:
+def tableFromTable(table):
+            # if the Gaia data is supplied by the user (and Gaia source
+            # identifiers are used)
+    gaia_table = Gaia_Input
+    GDR3_Names = ["Gaia DR3 " + i for i in tblGaia['a'].astype(str)]
+    NameList = []
+    GaiaList = []
+    for r in result_table:
+        NameList.append(sorted(r["ID"], key=len)[0])
+    return gaia_table
+
+
+def getGaiaData(gaia_table):
+
     '''
     Reads the input table and returns Gaia data.
     The returned table has the columns:
@@ -52,7 +168,8 @@ def GetGAIAData(Gaia_Input):
         parallax --> parallax from Gaia DR3 (in mas)
         Gmag --> the apparent G-band magnitude from Gaia DR3
         
-    The user may use:
+    THE USER MUST SUPPLLY A TABLE WITH COMMA-SEPARATED VARIABLES!
+    This table can be formatted in either of these 3 ways:
     1) A table with a single column containing the source identifier
        *note that this is the preferred method since the target identified
        in the Gaia query is unambiguously the same as the input value.
@@ -63,119 +180,24 @@ def GetGAIAData(Gaia_Input):
        *note in this case, only the column headers are checked, everything
        else is passed.
     '''
-    if len(Gaia_Input.colnames) in [1, 2, 5]:
-        if len(Gaia_Input.colnames) == 1:
-        
-        # Part 1: Use the SIMBAD database to retrieve the Gaia source identifier
-        #         from the target names. 
-            Gaia_Input.rename_column(Gaia_Input.colnames[0], 'ID')
-            Gaia_Input["ID"] = Gaia_Input["ID"].astype(str) # set the column header = "ID"
-            print(Gaia_Input) # print the column of targets
-            n_arr, is_Gaia = [], [0 for i in Gaia_Input]
-            for i, name in enumerate(Gaia_Input["ID"]):
-            # if the target name is the numeric part of the Gaia DR3 source identifier
-            # prefix the name with "Gaia DR3 "
-                if name.isnumeric() and len(name) > 10:
-                    name = "Gaia DR3 " + name
-                    is_Gaia[i] = 1
-                n_arr.append(name)
-            result_table = [Simbad.query_objectids(i) for i in n_arr]
-            NameList = []
-            GaiaList = []
-            for i, r in enumerate(result_table):
-                if r is None: # if no targets were resolved by SIMBAD (could be a typo)
-                    print(f"Simbad did not resolve {n_arr[i]} - checking Gaia")
-                    if is_Gaia[i] == 1:
-                        NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
-                        GaiaList.append(Gaia_Input["ID"][i])
-                else:
-                    r_list = [z for z in r["ID"]]
-                    m = [s for s in r_list if "Gaia DR3" in s]
-                    if len(m) == 0: # if the target is not in the Gaia catalogue
-                        print(f"There are no corresponding Gaia DR3 identifiers for {n_arr[i]}.")
-                        NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
-                        GaiaList.append(Gaia_Input["ID"][i])
-                    else:
-                        NameList.append(n_arr[i])
-                        GaiaList.append(m[0].split(' ')[2])
 
-        # Part 2: Query the Gaia database using the Gaia source identifiers retrieved in part 1.
-            ID_string = ""
-            for gi, g in enumerate(GaiaList):
-                if gi < len(GaiaList)-1:
-                    ID_string += g+','
-                else:
-                    ID_string += g
-            qry = f"SELECT source_id,ra,dec,parallax,phot_g_mean_mag FROM gaiadr3.gaia_source gs WHERE gs.source_id in ({ID_string});"
-            job = Gaia.launch_job_async( qry )
-            tblGaia = job.get_results() # Astropy table
-            # convert the source_id column to string (astroquery returns the column as np.int64)
-            tblGaia["source_id"] = tblGaia["source_id"].astype(str)
-            list_ind = []
-            # astroquery returns the table sorted numerically by the source identifier
-            # the rows are rearranged to match with the input list.
-            for row in GaiaList:
-                list_ind.append(np.where(np.array(tblGaia["source_id"] == str(row)))[0][0])
-            tblGaia = tblGaia[list_ind]
-
-
-
-        elif len(Gaia_Input.colnames) == 2:
-            # create an empty table with dummy headers to fill with results from astroquery
-            tblGaia = Table(names=('a','b','c','d','e'), dtype=(int,float,float,float,float))
-            names = ['ra', 'dec'] # set the headers of the 2 columns to "ra" and "dec" 
-            for i, n in enumerate(Gaia_Input.colnames):
-                Gaia_Input.rename_column(n, names[i])
-            for i in range(len(Gaia_Input)):
-            # Generate an SQL query for each target, where the nearest source is returned within
-            # a maximum radius of 10 arcseconds.
-                qry = f"SELECT source_id, ra, dec, parallax, phot_g_mean_mag, \
-                        DISTANCE(\
-                        POINT({Gaia_Input['ra'][i]}, {Gaia_Input['dec'][i]}),\
-                        POINT(ra, dec)) AS ang_sep\
-                        FROM gaiadr3.gaia_source \
-                        WHERE 1 = CONTAINS(\
-                        POINT({Gaia_Input['ra'][i]}, {Gaia_Input['dec'][i]}),\
-                        CIRCLE(ra, dec, 10.0/3600.)) \
-                        ORDER BY ang_sep ASC"
-                job = Gaia.launch_job_async( qry )
-                x = job.get_results() # Astropy table
-                # Fill the empty table with results from astroquery
-                y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag']
-                tblGaia.add_row((y))
-            # For each source, query the identifiers resolved by SIMBAD and return the
-            # target with the shortest number of characters (which is more likely to be
-            # the most common reference name for the target).
-            GDR3_Names = ["Gaia DR3 " + i for i in tblGaia['a'].astype(str)]
-            result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
-            NameList = []
-            for r in result_table:
-                NameList.append(sorted(r["ID"], key=len)[0])
-
-
-
-        elif len(Gaia_Input.colnames) == 5:
-            # if the Gaia data is supplied by the user (and Gaia source
-            # identifiers are used)
-            tblGaia = Gaia_Input
-            GDR3_Names = ["Gaia DR3 " + i for i in tblGaia['a'].astype(str)]
-            NameList = []
-            GaiaList = []
-            for r in result_table:
-                NameList.append(sorted(r["ID"], key=len)[0])
-
-
-        # Return the final formatted table
-        tblGaia["Name"] = NameList
-        name_cols = ['source_id', 'ra', 'dec', 'parallax', 'Gmag', 'name']
-        for i, nc in enumerate(name_cols):
-            tblGaia.rename_column(tblGaia.colnames[i], nc)
-        new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
-        tblGaia = tblGaia[new_order]
-
-        return tblGaia 
-    else: # raise an error if the input table has an invalid format.
+    if len(gaia_table.colnames) == 1:
+        tbl = tableFromSimbad(gaia_table)
+    elif len(gaia_table.colnames) == 2:
+        tbl = tableFromCoords(gaia_table)
+    elif len(gaia_table.colnames) == 5:
+        tbl = tableFromTable(*gaia_table)
+    else:
         raise Exception('Input table has invalid format. Please use one of the following formats: \n [1] source_id \n [2] ra and dec \n [3] source_id, ra, dec, parallax and Gmag')
+    return tbl
+
+#select len(Gaiai_Input.colnames):
+#    match 1:
+#        tlb = from Simbas(...)
+#    match 2:
+#        tbl = from Coords(...)
+#    _:
+#        raise Exceptin()
 
 
 
@@ -202,25 +224,48 @@ def get_TESS_XY(t_targets):
 
 
 
-def flux_fraction_contaminant(t_targ, s, d_th=0.000005):
-    '''calculate the amount of flux incident in the aperture from every neighbouring contaminating source. The equation is a converging sum (i.e., infinite indices) so a threshold is made that if the nth contribution to the sum is less than this, the loop breaks.
+def runSQLQueryContaminants(t_target, pixel_size=21.0):
+    # Generate an SQL query for each target.
+    query = f"SELECT source_id, ra, dec, phot_g_mean_mag,\
+    DISTANCE(\
+    POINT({t_target['ra']}, {t_target['dec']}),\
+    POINT(ra, dec)) AS ang_sep\
+    FROM gaiadr3.gaia_source\
+    WHERE 1 = CONTAINS(\
+    POINT({t_target['ra']}, {t_target['dec']}),\
+    CIRCLE(ra, dec, {5.0*pixel_size/3600.})) \
+    AND phot_g_mean_mag < {t_target['Gmag']+3.0} \
+    ORDER BY phot_g_mean_mag ASC"
+
+    # Attempt a synchronous SQL job, otherwise try the asyncronous method.
+    try:
+        job = Gaia.launch_job(query)
+    except Exception:
+        traceback.print_exc(file=log)
+        job = Gaia.launch_job_async(query)
+    return job.get_results()  
+
+
+def flux_fraction_contaminant(ang_sep, s, pixel_size=21.0, exprf=0.65, d_th=0.000005):
+    '''calculate the fraction of flux incident in the aperture from every neighbouring contaminating source. The equation is a converging sum (i.e., infinite indices) so a threshold is made that if the nth contribution to the sum is less than this, the loop breaks.
     '''
     n, n_z = 0, 0
+    t = (ang_sep/pixel_size)**2/(2.0*exprf**(2)) # measured in pixels
     while True:
         sk = np.sum([(s**(k)/np.math.factorial(k)) for k in range(0,n+1)])
         sx = 1.0 - (np.exp(-s)*sk)
-        n_0 = ((t_targ**n)/np.math.factorial(n))*sx
+        n_0 = ((t**n)/np.math.factorial(n))*sx
         n_z += n_0
         if np.abs(n_0) > d_th:
             n = n+1
         if np.abs(n_0) < d_th:
             break
-    return n_z*np.exp(-t_targ)
+    return n_z*np.exp(-t)
 
 
 
 
-def contamination(t_targets, choose_con=0):
+def contamination(t_targets, choose_con=0, Rad=1.0, pixel_size=21.0, exprf=0.65):
     '''
     The purpose of this function is to estimate the amount of flux incident in the TESS aperture that originates
     from neighbouring, contaminating sources. Given that the passbands from TESS (T-band, 600-1000nm) are similar
@@ -250,88 +295,69 @@ def contamination(t_targets, choose_con=0):
     t_contam = Table(names=['source_id', 'log_tot_bg', 'log_max_bg', 'num_tot_bg'],
                   dtype=(str, float, float, int))
 
-    con_table_full = Table(names=('source_id_target', 'source_id_cont', 'RA', 'DEC', 'Gmag', 'd_as', 'fG', 'flux_cont'), dtype=(str, str, float, float, float, float, float, float))
-    for i in range(len(t_targets["Gmag"])):
-        # Generate an SQL query for each target.
-        query = f"SELECT source_id, ra, dec, phot_g_mean_mag,\
-        DISTANCE(\
-        POINT({t_targets['ra'][i]}, {t_targets['dec'][i]}),\
-        POINT(ra, dec)) AS ang_sep\
-        FROM gaiadr3.gaia_source\
-        WHERE 1 = CONTAINS(\
-        POINT({t_targets['ra'][i]}, {t_targets['dec'][i]}),\
-        CIRCLE(ra, dec, {5.0*pixel_size/3600.})) \
-        AND phot_g_mean_mag < {t_targets['Gmag'][i]+3.0} \
-        ORDER BY phot_g_mean_mag ASC"
-
-        # Attempt a synchronous SQL job, otherwise try the asyncronous method.
-        try:
-            job = Gaia.launch_job(query)
-        except Exception:
-            traceback.print_exc(file=log)
-            job = Gaia.launch_job_async(query)
-
-        r = job.get_results()  
-        r["ang_sep"] = r["ang_sep"]*3600.
+    con_table_full = Table(names=('source_id_target', 'source_id_cont', 'RA', 'DEC', 'Gmag', 'd_as', 'log_flux_frac'), dtype=(str, str, float, float, float, float, float))
+    for i in range(len(t_targets)):
+        r = runSQLQueryContaminants(t_targets[i])
+        r["ang_sep"] = r["ang_sep"]*3600. # convert the angular separation from degrees to arcseconds
         if len(r) > 1:
             rx = Table(r[r["source_id"].astype(str) != t_targets["source_id"][i].astype(str)])
+
             # calculate the fraction of flux from the source object that falls into the aperture
             # using the Rayleigh formula P(x) = 1 - exp(-[R^2]/[2*sig^2])
             s = Rad**(2)/(2.0*exprf**(2)) # measured in pixels
-            fg_star = 1.0-np.exp(-s)
+            fg_star = (1.0-np.exp(-s))*10**(-0.4*t_targets["Gmag"][i])
 
-            rx["fG"] = 10**(-0.4*rx["phot_g_mean_mag"])
-            rx["t"] = (rx["ang_sep"]/pixel_size)**2/(2.0*exprf**(2)) # measured in pixels
-            tx = []     
-            
+
+            fg_cont = []                 
             # calculate the fractional flux incident in the aperture from
             # each contaminant.       
-            for G_targ, t_targ in zip(rx["phot_g_mean_mag"], rx["t"]):
-                f_frac = flux_fraction_contaminant(G_targ, t_targ, s)
-                tx.append(f_frac)
+            for G_cont, ang_sep in zip(rx["phot_g_mean_mag"], rx["ang_sep"]):
+                f_frac = flux_fraction_contaminant(ang_sep, s)
+                fg_cont.append(f_frac*10**(-0.4*G_cont))
 
 
-            if choose_con == 1:
-                rx['tx'] = np.log10(tx/fg_star)
+            if choose_con:
+                rx['log_flux_frac'] = np.log10(fg_cont/fg_star)
                 rx['source_id_target'] = t_targets["source_id"][i]
-                new_order = ['source_id_target', 'source_id', 'ra', 'dec', 'phot_g_mean_mag', 'ang_sep', 'fG', 'tx']
-                rx.sort(['tx'], reverse=True)
+                new_order = ['source_id_target', 'source_id', 'ra', 'dec', 'phot_g_mean_mag', 'ang_sep', 'log_flux_frac']
+                rx.sort(['log_flux_frac'], reverse=True)
                 rx = rx[new_order]
                 rx['source_id_target'] = rx['source_id_target'].astype(str)
                 rx['source_id'] = rx['source_id'].astype(str)
                 # get the five highest flux contributors and save them to the con_table_full file
                 for rx_row in rx[0:5][:]:
                     con_table_full.add_row(rx_row)
-            # if the sum is zero, make the results = -999            
-            if np.sum(tx) == 0:
-                con1.append(-999)
-                con2.append(-999)
+                    
+                    
+            # if the sum is very small, make the results = -999
+#            if np.sum(fg_cont) < 10**(-8):
+#                con1.append(-999)
+#                con2.append(-999)
             # otherwise sum up the fluxes from each neighbour and divide by the target flux.
-            else:
-                con1.append(np.log10(np.sum(tx)/fg_star))
-                con2.append(np.log10(max(tx)/fg_star))
-                con3.append(len(tx))
+#            else:
+            con1.append(np.log10(np.sum(fg_cont)/fg_star))
+            con2.append(np.log10(max(fg_cont)/fg_star))
+            con3.append(len(fg_cont))
         else:
             con1.append(-999)
             con2.append(-999)
             con3.append(0)
         # store each entry to file
-        with open(store_file, 'a') as file1:
-            file1.write("Gmag = "+str(t_targets["Gmag"][i])+', log_tot_bg = '+
-                        str(con1[i])+', log_max_bg = '+
-                        str(con2[i])+', num_tot_bg = '+
-                        str(con3[i])+', '+
-                        str(i+1)+'/'+str(len(t_targets["Gmag"]))+
-                        '\n')
+#        with open(store_file, 'a') as file1:
+#            file1.write("Gmag = "+str(t_targets["Gmag"][i])+', log_tot_bg = '+
+#                        str(con1[i])+', log_max_bg = '+
+#                        str(con2[i])+', num_tot_bg = '+
+#                        str(con3[i])+', '+
+#                        str(i+1)+'/'+str(len(t_targets["Gmag"]))+
+#                        '\n')
         # add the entry to the input target table
         t_contam.add_row([str(t_targets["source_id"][i]), con1[i], con2[i], con3[i]])
     t_targets["log_tot_bg"] = con1
     t_targets["log_max_bg"] = con2
     t_targets["num_tot_bg"] = con3
-    if choose_con == 1:
-        return t_targets, con_table_full
-    else:
-        return t_targets
+    if choose_con == False:
+        con_table_full = None
+    return t_targets, t_contam, con_table_full
     
     
 
@@ -722,7 +748,7 @@ def sine_fit(x, y0, A, phi):
 
 
 
-def run_LS(clean, p_min_thresh=0.1, p_max_thresh=50., samples_per_peak=10):
+def run_LS(clean, store_file, p_min_thresh=0.1, p_max_thresh=50., samples_per_peak=10):
     '''
     Runs a Lomb-Scargle periodogram on the cleaned lightcurve
     and returns a dictionary of results.
