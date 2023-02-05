@@ -37,9 +37,72 @@ or tess_large_sectors.py modules. These are:
     the lightcurve, periodogram and phase-folded lightcurve is provided.
 
 '''
-from .modules_to_import import *
+
+import sys
+import os
+import math
+import time
+import traceback
+import warnings
+from astropy.utils.exceptions import AstropyWarning
+warnings.simplefilter('ignore', category=AstropyWarning)
+warnings.simplefilter('ignore', category=FutureWarning)
+warnings.simplefilter('ignore', category=RuntimeWarning)
+warnings.simplefilter('ignore', category=UserWarning)
 
 
+
+# Third party imports
+import numpy as np
+import pyinputplus as pyip
+
+
+from astropy.table import Table
+from astropy.coordinates import SkyCoord, ICRS
+import astropy.units as u
+from astropy.timeseries import LombScargle
+from astropy.wcs import WCS
+from astropy.io import ascii, fits
+from photutils.aperture import CircularAperture, CircularAnnulus, aperture_photometry, ApertureStats
+from astroquery.gaia import Gaia
+from astroquery.vizier import Vizier
+from astroquery.simbad import Simbad
+from astroquery.mast import Tesscut
+from astropy.nddata import Cutout2D
+from scipy.stats import median_abs_deviation
+from scipy.optimize import curve_fit
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+
+# Local application imports
+from TESSilator.tess_stars2px import tess_stars2px_function_entry
+
+
+# determine fixed constants (e.g., pixel size)
+pixel_size=21.0
+'''This is the pixel size for TESS (in arcseconds)
+
+This is held constant. Do not change.
+'''
+
+
+exprf=0.65
+'''This is the full-width half maximum of a TESS pixel
+
+This is held constant. Do not change.
+'''
+
+
+Zpt, eZpt = 20.44, 0.05
+'''The zero-point TESS magnitude
+
+calculated in Vanderspek et al. 2018. Do not change.
+'''
 
 # Read the data from the input file as an astropy table (ascii format)
 # Ensure the source_id has a string type (not long integer).
@@ -49,6 +112,18 @@ def readascii(input_file):
 
 
 def tableFromSimbad(simbad_names):
+    '''Generate the formatted astropy table from a list of target names
+
+    parameters
+    ----------
+    simbad_names : `astropy.table.Table'
+        a list of target names
+
+    returns
+    -------
+    gaia_table : `astropy.table.Table'
+        the astropy table ready for further analysis
+    '''
     # Part 1: Use the SIMBAD database to retrieve the Gaia source identifier
     #         from the target names. 
     simbad_names.rename_column(simbad_names.colnames[0], 'ID')
@@ -70,15 +145,15 @@ def tableFromSimbad(simbad_names):
             if r is None: # if no targets were resolved by SIMBAD (could be a typo)
                 print(f"Simbad did not resolve {n_arr[i]} - checking Gaia")
                 if is_Gaia[i] == 1:
-                    NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
-                    GaiaList.append(Gaia_Input["ID"][i])
+                    NameList.append("Gaia DR3 " + simbad_names["ID"][i])
+                    GaiaList.append(simbad_names["ID"][i])
             else:
                 r_list = [z for z in r["ID"]]
                 m = [s for s in r_list if "Gaia DR3" in s]
                 if len(m) == 0: # if the Gaia identifier is not in the Simbad list
                     print(f"There are no corresponding Gaia DR3 identifiers for {n_arr[i]}.")
-                    NameList.append("Gaia DR3 " + Gaia_Input["ID"][i])
-                    GaiaList.append(Gaia_Input["ID"][i])
+                    NameList.append("Gaia DR3 " + simbad_names["ID"][i])
+                    GaiaList.append(simbad_names["ID"][i])
                 else:
                     NameList.append(n_arr[i])
                     GaiaList.append(m[0].split(' ')[2])
@@ -108,11 +183,35 @@ def tableFromSimbad(simbad_names):
     return gaia_table
 
 
-def tableFromCoords(coord_table, ang_max=10.0):
+def tableFromCoords(coord_table, ang_max=10.0, type_coord='icrs'):
+    '''Generate the formatted astropy table from a list of celestial coordinates
+
+    parameters
+    ----------
+    coord_table : `astropy.table.Table'
+        a table consisting of right ascension and declination coordinates (in degrees)
+
+    ang_max : float
+        
+
+    returns
+    -------
+    gaia_table : `astropy.table.Table'
+        the astropy table ready for further analysis
+    '''
     gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'), dtype=(int,float,float,float,float))
+    if type_coord == 'galactic':
+        gal = SkyCoord(l=coord_table['col1']*u.degree, b=coord_table['col2']*u.degree, frame='galactic')
+        c = gal.transform_to(ICRS)
+        coord_table['col1'], coord_table['col2'] = c.ra.deg, c.dec.deg
+    elif type_coord == 'ecliptic':
+        ecl = SkyCoord(l=coord_table['col1']*u.degree, b=coord_table['col2']*u.degree, frame='ecliptic')
+        c = ecl.transform_to(ICRS)
+        coord_table['col1'], coord_table['col2'] = c.ra.deg, c.dec.deg
     names = ['ra', 'dec'] # set the headers of the 2 columns to "ra" and "dec" 
     coord_table.rename_column(coord_table.colnames[0], 'ra')
     coord_table.rename_column(coord_table.colnames[1], 'dec')
+    print(coord_table['ra'], coord_table['dec'])
     for i in range(len(coord_table)):
     # Generate an SQL query for each target, where the nearest source is returned within
     # a maximum radius of 10 arcseconds.
@@ -128,16 +227,25 @@ def tableFromCoords(coord_table, ang_max=10.0):
         job = Gaia.launch_job_async( qry )
         x = job.get_results() # Astropy table
         # Fill the empty table with results from astroquery
-        y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag']
-        gaia_table.add_row((y))
+        print(x, 'len of x ', len(x))
+        if len(x) == 0:
+            continue
+        else:
+            y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag']
+            gaia_table.add_row((y))
     # For each source, query the identifiers resolved by SIMBAD and return the
     # target with the shortest number of characters (which is more likely to be
     # the most common reference name for the target).
+    print(gaia_table)
     GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
     result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
     NameList = []
-    for r in result_table:
-        NameList.append(sorted(r["ID"], key=len)[0])
+    print(result_table)
+    for i, r in enumerate(result_table):
+        if r is None:
+            NameList.append(gaia_table['source_id'][i].astype(str))
+        else:
+            NameList.append(sorted(r["ID"], key=len)[0])
     gaia_table["name"] = NameList
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
     gaia_table = gaia_table[new_order]
@@ -224,7 +332,7 @@ def get_TESS_XY(t_targets):
 
 
 
-def runSQLQueryContaminants(t_target, pixel_size=21.0):
+def runSQLQueryContaminants(t_target, pix_radius=5.0):
     # Generate an SQL query for each target.
     query = f"SELECT source_id, ra, dec, phot_g_mean_mag,\
     DISTANCE(\
@@ -233,7 +341,7 @@ def runSQLQueryContaminants(t_target, pixel_size=21.0):
     FROM gaiadr3.gaia_source\
     WHERE 1 = CONTAINS(\
     POINT({t_target['ra']}, {t_target['dec']}),\
-    CIRCLE(ra, dec, {5.0*pixel_size/3600.})) \
+    CIRCLE(ra, dec, {pix_radius*pixel_size/3600.})) \
     AND phot_g_mean_mag < {t_target['Gmag']+3.0} \
     ORDER BY phot_g_mean_mag ASC"
 
@@ -246,7 +354,7 @@ def runSQLQueryContaminants(t_target, pixel_size=21.0):
     return job.get_results()  
 
 
-def flux_fraction_contaminant(ang_sep, s, pixel_size=21.0, exprf=0.65, d_th=0.000005):
+def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
     '''calculate the fraction of flux incident in the aperture from every neighbouring contaminating source. The equation is a converging sum (i.e., infinite indices) so a threshold is made that if the nth contribution to the sum is less than this, the loop breaks.
     '''
     n, n_z = 0, 0
@@ -265,7 +373,7 @@ def flux_fraction_contaminant(ang_sep, s, pixel_size=21.0, exprf=0.65, d_th=0.00
 
 
 
-def contamination(t_targets, choose_con=0, Rad=1.0, pixel_size=21.0, exprf=0.65):
+def contamination(t_targets, LC_con, Rad=1.0):
     '''
     The purpose of this function is to estimate the amount of flux incident in the TESS aperture that originates
     from neighbouring, contaminating sources. Given that the passbands from TESS (T-band, 600-1000nm) are similar
@@ -316,7 +424,7 @@ def contamination(t_targets, choose_con=0, Rad=1.0, pixel_size=21.0, exprf=0.65)
                 fg_cont.append(f_frac*10**(-0.4*G_cont))
 
 
-            if choose_con:
+            if LC_con:
                 rx['log_flux_frac'] = np.log10(fg_cont/fg_star)
                 rx['source_id_target'] = t_targets["source_id"][i]
                 new_order = ['source_id_target', 'source_id', 'ra', 'dec', 'phot_g_mean_mag', 'ang_sep', 'log_flux_frac']
@@ -355,7 +463,7 @@ def contamination(t_targets, choose_con=0, Rad=1.0, pixel_size=21.0, exprf=0.65)
     t_targets["log_tot_bg"] = con1
     t_targets["log_max_bg"] = con2
     t_targets["num_tot_bg"] = con3
-    if choose_con == False:
+    if LC_con == False:
         con_table_full = None
     return t_targets, t_contam, con_table_full
     
@@ -747,7 +855,6 @@ def sine_fit(x, y0, A, phi):
     return y0 + A*np.sin(2.*np.pi*x + phi)
 
 
-
 def run_LS(clean, store_file, p_min_thresh=0.1, p_max_thresh=50., samples_per_peak=10):
     '''
     Runs a Lomb-Scargle periodogram on the cleaned lightcurve
@@ -853,7 +960,7 @@ def isPeriodCont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
     '''
     if abs(d_target["period_best"] - d_cont["period_best"] <
           (d_target["Gauss_fit_peak_parameters"][2] + d_cont["Gauss_fit_peak_parameters"][2])):
-        if d_cont["pops_vals"][1]/d_target["pops_vals"][1] > (frac_amp_cont*10**(t_cont["flux_cont"]))**(-1):
+        if d_cont["pops_vals"][1]/d_target["pops_vals"][1] > (frac_amp_cont*10**(t_cont["log_flux_frac"]))**(-1):
             return 'a'
         else:
             return 'b'
@@ -862,49 +969,49 @@ def isPeriodCont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
 
 
 
-def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY_contam=None, p_min_thresh=0.1, p_max_thresh=50.):
+def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0, SkyRad = np.array([6.0,8.0])):
     mpl.rcParams.update({'font.size': 14})
-
-    t_orig0 = orig["time"]-orig["time"][0]
-    if sys.argv[0] == "tess_cutouts.py":
-        with fits.open(f_file) as hdul:
-            data = hdul[1].data
-            flux_vals = np.log10(data["FLUX"][:][:][int(data.shape[0]/2)])
-            circ_aper = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),Rad, linewidth=1.2, fill=False, color='r')
-            circ_ann1 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[0], linewidth=1.2, fill=False, color='b')
-            circ_ann2 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[1], linewidth=1.2, fill=False, color='b')
-    if sys.argv[0] == "tess_large_sectors_jan23.py":
-        flux_vals = np.log10(f_file.data)
-        XY_ctr = (f_file.xmin_original + f_file.center_cutout[0], f_file.ymin_original + f_file.center_cutout[1])
-        circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
-        circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
-        circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
-
     fsize = 22.
     lsize = 0.9*fsize
     fig, axs = plt.subplots(2,2, figsize=(20,15))
-
 
     axs[0,0].set_position([0.05,0.55,0.40,0.40])
     axs[0,1].set_position([0.55,0.55,0.40,0.40])
     axs[1,0].set_position([0.05,0.3,0.90,0.2])
     axs[1,1].set_position([0.05,0.05,0.90,0.2])
 
-    if sys.argv[0] == "tess_cutouts.py":
+
+    t_orig0 = orig["time"]-orig["time"][0]
+    if "ffic" not in f_file:
+        with fits.open(f_file) as hdul:
+            data = hdul[1].data
+            flux_vals = np.log10(data["FLUX"][:][:][int(data.shape[0]/2)])
+            circ_aper = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),
+                                Rad, linewidth=1.2, fill=False, color='r')
+            circ_ann1 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[0], linewidth=1.2, fill=False, color='b')
+            circ_ann2 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[1], linewidth=1.2, fill=False, color='b')
         fig.text(0.5,0.96, f"{t_table['name']}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
-    if sys.argv[0] == "tess_large_sectors_jan23.py":
-        fig.text(0.5,0.96, f"Gaia DR3 {t_table['source_id'][0]}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
+        f = axs[0,0].imshow(flux_vals, cmap='binary')
+        name_underscore = str(t_table['name']).replace(" ", "_")
+    else:
+        flux_vals = np.log10(f_file.data)
+        XY_ctr = (f_file.xmin_original + f_file.center_cutout[0], f_file.ymin_original + f_file.center_cutout[1])
+        circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
+        circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
+        circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
+        fig.text(0.5,0.96, f"Gaia DR3 {t_table['source_id']}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
+        axs[0,0].set_xlim(f_file.xmin_original, f_file.xmax_original)
+        axs[0,0].set_ylim(f_file.ymin_original, f_file.ymax_original)
+        f = axs[0,0].imshow(flux_vals, cmap='binary', extent=[f_file.xmin_original, f_file.xmax_original, f_file.ymin_original, f_file.ymax_original])
+        name_underscore = str(t_table["source_id"])
+
+
 
 
     axs[0,0].set_xlabel("X pixel", fontsize=fsize)
     axs[0,0].set_ylabel("Y pixel", fontsize=fsize)
 
-    if sys.argv[0] == "tess_cutouts.py":
-        f = axs[0,0].imshow(flux_vals, cmap='binary')
-    if sys.argv[0] == "tess_large_sectors_jan23.py":
-        axs[0,0].set_xlim(f_file.xmin_original, f_file.xmax_original)
-        axs[0,0].set_ylim(f_file.ymin_original, f_file.ymax_original)
-        f = axs[0,0].imshow(flux_vals, cmap='binary', extent=[f_file.xmin_original, f_file.xmax_original, f_file.ymin_original, f_file.ymax_original])
+
     axs[0,0].add_patch(circ_aper)
     axs[0,0].add_patch(circ_ann1)
     axs[0,0].add_patch(circ_ann2)
@@ -948,7 +1055,8 @@ def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY
     axs[1,0].scatter(t_orig0, orig["nflux"], s=0.5, alpha=0.3, label='raw, normalized')
     axs[1,0].scatter(clean["time0"], clean["oflux"],s=0.5, c='r', alpha=0.5, label='cleaned, normalized')
     axs[1,0].scatter(clean["time0"], clean["nflux"],s=1.2, c='g', alpha=0.7, label='cleaned, normalized, detrended')
-    axs[1,0].text(0.99,0.90, f"Gaia DR3 {t_table['source_id'][0]}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
+    print(t_table['source_id'])
+    axs[1,0].text(0.99,0.90, f"Gaia DR3 {t_table['source_id']}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.80, f"Gmag = {float(t_table['Gmag']):.3f}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.70, "$\log (f_{\\rm bg}/f_{*})$ = " + f"{float(t_table['log_tot_bg']):.3f}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].legend(loc='lower right')
@@ -972,10 +1080,8 @@ def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY
 
     cbaxes = inset_axes(axs[1,1], width="100%", height="100%", bbox_to_anchor=(0.79, 0.92, 0.20, 0.05), bbox_transform=axs[1,1].transAxes)
     cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal', label='cycle number')
-    if sys.argv[0] == "tess_cutouts.py":
-        name_underscore = str(t_table['name']).replace(" ", "_")
-    if sys.argv[0] == "tess_large_sectors_jan23.py":
-        name_underscore = str(t_table["source_id"][0])
+
+
     plot_name = '_'.join([name_underscore, f"{scc[0]:04d}", str(scc[1]), str(scc[2])])+'.png'
     print(name_underscore, plot_name)
     plt.savefig(plot_name, bbox_inches='tight')
