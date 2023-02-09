@@ -107,10 +107,9 @@ calculated in Vanderspek et al. 2018. Do not change.
 # Read the data from the input file as an astropy table (ascii format)
 # Ensure the source_id has a string type (not long integer).
 
-def readascii(input_file):
-    return ascii.read(input_file, delimiter=',', format='no_header')
-
-
+def readascii(inputFile):
+    return ascii.read(inputFile, delimiter=',')
+    
 def tableFromSimbad(simbad_names):
     '''Generate the formatted astropy table from a list of target names
 
@@ -211,7 +210,6 @@ def tableFromCoords(coord_table, ang_max=10.0, type_coord='icrs'):
     names = ['ra', 'dec'] # set the headers of the 2 columns to "ra" and "dec" 
     coord_table.rename_column(coord_table.colnames[0], 'ra')
     coord_table.rename_column(coord_table.colnames[1], 'dec')
-    print(coord_table['ra'], coord_table['dec'])
     for i in range(len(coord_table)):
     # Generate an SQL query for each target, where the nearest source is returned within
     # a maximum radius of 10 arcseconds.
@@ -236,11 +234,9 @@ def tableFromCoords(coord_table, ang_max=10.0, type_coord='icrs'):
     # For each source, query the identifiers resolved by SIMBAD and return the
     # target with the shortest number of characters (which is more likely to be
     # the most common reference name for the target).
-    print(gaia_table)
     GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
     result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
     NameList = []
-    print(result_table)
     for i, r in enumerate(result_table):
         if r is None:
             NameList.append(gaia_table['source_id'][i].astype(str))
@@ -251,20 +247,37 @@ def tableFromCoords(coord_table, ang_max=10.0, type_coord='icrs'):
     gaia_table = gaia_table[new_order]
     return gaia_table
 
-#if len(Gaia_Input.colnames) == 5:
-def tableFromTable(table):
+def tableFromTable(input_table, name_is_source_id):
             # if the Gaia data is supplied by the user (and Gaia source
             # identifiers are used)
-    gaia_table = Gaia_Input
-    GDR3_Names = ["Gaia DR3 " + i for i in tblGaia['a'].astype(str)]
-    NameList = []
-    GaiaList = []
-    for r in result_table:
-        NameList.append(sorted(r["ID"], key=len)[0])
+    print(input_table)
+    gaia_table = Table(data=input_table, dtype=(str, float, float, float, float),
+                       names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'))
+#    new_cols = ['source_id', 'ra', 'dec', 'parallax', 'Gmag']
+#    for n, nc in enumerate(new_cols):
+#        gaia_table[nc] = input_table[f'col{str(n+1)}', nc)
+    print(gaia_table['source_id'])
+    gaia_table['source_id'] = gaia_table['source_id'].astype(int)
+#    print(gaia_table['source_id'].data)
+    if name_is_source_id:
+        gaia_table['name'] = gaia_table['source_id'].data
+#        print(gaia_table["name"])
+    else:
+        GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
+        NameList = []
+        result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
+        for i, r in enumerate(result_table):
+            if r is None:
+                NameList.append(gaia_table['source_id'][i].astype(str))
+            else:
+                NameList.append(sorted(r["ID"], key=len)[0])
+        gaia_table["name"] = NameList
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    gaia_table = gaia_table[new_order]
     return gaia_table
 
 
-def getGaiaData(gaia_table):
+def getGaiaData(gaia_table, name_is_source_id=0):
 
     '''
     Reads the input table and returns Gaia data.
@@ -289,12 +302,13 @@ def getGaiaData(gaia_table):
        else is passed.
     '''
 
+    print(gaia_table)
     if len(gaia_table.colnames) == 1:
         tbl = tableFromSimbad(gaia_table)
     elif len(gaia_table.colnames) == 2:
         tbl = tableFromCoords(gaia_table)
     elif len(gaia_table.colnames) == 5:
-        tbl = tableFromTable(*gaia_table)
+        tbl = tableFromTable(gaia_table, name_is_source_id)
     else:
         raise Exception('Input table has invalid format. Please use one of the following formats: \n [1] source_id \n [2] ra and dec \n [3] source_id, ra, dec, parallax and Gmag')
     return tbl
@@ -316,7 +330,7 @@ def getGaiaData(gaia_table):
 
 
 
-def get_TESS_XY(t_targets):
+def getTESSPixelXY(t_targets):
     '''
     For a given pair of celestial sky coordinates, this function returns table rows containing the sector,
     camera, CCD, and X/Y position of the full-frame image fits file, so that all stars located in a given
@@ -470,7 +484,7 @@ def contamination(t_targets, LC_con, Rad=1.0):
     
 
 
-def find_XY_cont(f_file, con_table):
+def find_XY_cont(f_file, con_table, XY_ctr):
     '''
     If the user requests a periodogram analysis of neighbouring potential contaminants,
     this function returns the pixel X-Y centroid of the contaminants on the TESS cutout.
@@ -485,11 +499,9 @@ def find_XY_cont(f_file, con_table):
             _, _, _, _, _, _, Col_con, Row_con, _ = tess_stars2px_function_entry(1, RA_con[i], DEC_con[i], trySector=head["SECTOR"])
             X_abs_con.append(Col_con)
             Y_abs_con.append(Row_con)
-        X_con = np.array(X_abs_con - Col_ctr).flatten()
-        Y_con = np.array(Y_abs_con - Row_ctr).flatten()
-        return X_con, Y_con 
-
-
+        X_con = np.array(X_abs_con - Col_ctr).flatten() + XY_ctr[0]
+        Y_con = np.array(Y_abs_con - Row_ctr).flatten() + XY_ctr[1]
+        return np.array([X_con, Y_con]).T
 
 
 def aper_run_cutouts(f_file, XY_pos=(10.,10.), store_file=None, Rad=1, SkyRad=(6,8), Zpt=20.44, eZpt=0.05, make_slices=0):
@@ -565,7 +577,7 @@ def aper_run_cutouts(f_file, XY_pos=(10.,10.), store_file=None, Rad=1, SkyRad=(6
 
 
     
-def aper_run_sectors(f_file, objects, zr, lenzr):
+def aper_run_sectors(f_file, store_file, objects, zr, lenzr, Rad=1.0, SkyRad=np.array([6.0,8.0])):
     try:
         with fits.open(f_file) as hdul:
             with open(store_file, "a") as log:
@@ -982,7 +994,7 @@ def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY
 
 
     t_orig0 = orig["time"]-orig["time"][0]
-    if "ffic" not in f_file:
+    if type(f_file) == str:
         with fits.open(f_file) as hdul:
             data = hdul[1].data
             flux_vals = np.log10(data["FLUX"][:][:][int(data.shape[0]/2)])
@@ -990,28 +1002,24 @@ def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY
                                 Rad, linewidth=1.2, fill=False, color='r')
             circ_ann1 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[0], linewidth=1.2, fill=False, color='b')
             circ_ann2 = Circle((flux_vals.shape[0]/2., flux_vals.shape[1]/2.),SkyRad[1], linewidth=1.2, fill=False, color='b')
-        fig.text(0.5,0.96, f"{t_table['name']}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
+        fig.text(0.5,0.96, f"{t_table['name'][0]}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
         f = axs[0,0].imshow(flux_vals, cmap='binary')
-        name_underscore = str(t_table['name']).replace(" ", "_")
+        name_underscore = t_table['name'].replace(" ", "_")
     else:
         flux_vals = np.log10(f_file.data)
         XY_ctr = (f_file.xmin_original + f_file.center_cutout[0], f_file.ymin_original + f_file.center_cutout[1])
         circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
         circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
         circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
-        fig.text(0.5,0.96, f"Gaia DR3 {t_table['source_id']}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
+        fig.text(0.5,0.96, f"Gaia DR3 {t_table['source_id'][0]}, Sector {str(scc[0])}, Camera {str(scc[1])}, CCD {str(scc[2])}", fontsize=lsize*2.0, horizontalalignment='center')
         axs[0,0].set_xlim(f_file.xmin_original, f_file.xmax_original)
         axs[0,0].set_ylim(f_file.ymin_original, f_file.ymax_original)
         f = axs[0,0].imshow(flux_vals, cmap='binary', extent=[f_file.xmin_original, f_file.xmax_original, f_file.ymin_original, f_file.ymax_original])
-        name_underscore = str(t_table["source_id"])
-
-
+        name_underscore = t_table['source_id'][0]
 
 
     axs[0,0].set_xlabel("X pixel", fontsize=fsize)
     axs[0,0].set_ylabel("Y pixel", fontsize=fsize)
-
-
     axs[0,0].add_patch(circ_aper)
     axs[0,0].add_patch(circ_ann1)
     axs[0,0].add_patch(circ_ann2)
@@ -1056,13 +1064,12 @@ def make_LC_plots(f_file, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10), XY
     axs[1,0].scatter(clean["time0"], clean["oflux"],s=0.5, c='r', alpha=0.5, label='cleaned, normalized')
     axs[1,0].scatter(clean["time0"], clean["nflux"],s=1.2, c='g', alpha=0.7, label='cleaned, normalized, detrended')
     print(t_table['source_id'])
-    axs[1,0].text(0.99,0.90, f"Gaia DR3 {t_table['source_id']}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
+    axs[1,0].text(0.99,0.90, f"Gaia DR3 {t_table['source_id'][0]}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.80, f"Gmag = {float(t_table['Gmag']):.3f}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.70, "$\log (f_{\\rm bg}/f_{*})$ = " + f"{float(t_table['log_tot_bg']):.3f}", fontsize=lsize, horizontalalignment='right', transform=axs[1,0].transAxes)
     axs[1,0].legend(loc='lower right')
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
-    ax2.set_xlim([0, p_max_thresh])
     ax2.invert_yaxis()
     ax2.scatter(t_orig0, orig["mag"], s=0.3, alpha=0.3, color="b", marker="x")
     ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
