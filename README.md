@@ -1,6 +1,6 @@
-.. image:: AB_Dor.gif
-  :width: 800
-  :align: center
+<p align="center">
+  <img src="AB_Dor.gif" width="500" title="AB Doradus TESS periods">
+</p>
   
 **WELCOME TO THE TESSILATOR**
 =============================
