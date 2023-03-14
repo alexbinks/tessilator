@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>TESS Cutouts &#8212; tessilator 0.1 documentation</title>
+    <title>WELCOME TO THE TESSILATOR &#8212; tessilator 0.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css" />
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
@@ -17,7 +17,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Install tessilator software" href="install.html" /> 
+    <link rel="next" title="Installing tessilator software" href="install.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -29,10 +29,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="install.html" title="Install tessilator software"
+          <a href="install.html" title="Installing tessilator software"
              accesskey="N">next</a> |</li>
         <li class="nav-item nav-item-0"><a href="#">tessilator 0.1 documentation</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">TESS Cutouts</a></li> 
+        <li class="nav-item nav-item-this"><a href=""><strong>WELCOME TO THE TESSILATOR</strong></a></li> 
       </ul>
     </div>  
 
@@ -41,23 +41,21 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <hr class="docutils" />
-<a class="reference internal image-reference" href="_images/AB_Dor.gif"><img alt="_images/AB_Dor.gif" src="_images/AB_Dor.gif" style="width: 400px;" /></a>
-<div class="line-block">
-<div class="line"><strong>WELCOME TO THE TESSILATOR</strong></div>
-<div class="line"><em>The one-stop shop for measuring TESS rotation periods</em></div>
-</div>
-<hr class="docutils" />
-<p>This is a python3 program designed to provide an all-in-one module to measure
+  <a class="reference internal image-reference" href="_images/AB_Dor.gif"><img alt="_images/AB_Dor.gif" class="align-center" src="_images/AB_Dor.gif" style="width: 800px;" /></a>
+<section id="welcome-to-the-tessilator">
+<h1><strong>WELCOME TO THE TESSILATOR</strong><a class="headerlink" href="#welcome-to-the-tessilator" title="Permalink to this heading">¶</a></h1>
+<p><strong>The one-stop shop for measuring TESS rotation periods</strong></p>
+<p>The tessilator is a python program designed to provide an all-in-one module to measure
 lightcurves and stellar rotation periods from the Transiting Exoplanet Survey
 Satellite (TESS). Whilst there are many useful (and powerful) software tools
 available for working with TESS data, they are mostly provided as various steps
 in the data reduction process — to our knowledge there are no programs that
 automate the full process from downloading the data (start) to obtaining
 rotation period measurements (finish). The software provided here fills this
-gap. The user provides a table of targets with basic Gaia DR3 information
-(source ID, sky positions, parallax and Gaia G magnitude) and simply allows the
-tessilator to do the rest! The steps are:</p>
+gap. Using as little information as the name of the target, the tessilator is
+capable of providing a robust lightcurve analysis and produces high-quality figures
+and tables ready for publication. Sit back and let the tessilator do the hard work!</p>
+<p>The steps are:</p>
 <ol class="arabic simple">
 <li><p>download photometric time-series data from TESS.</p></li>
 <li><p>scan the Gaia DR3 catalogue to quantify the level of background
@@ -65,29 +63,25 @@ contamination from nearby sources.</p></li>
 <li><p>clean the lightcurves for poor quality data caused by systematic and
 instrumental effects.</p></li>
 <li><p>normalize and detrend lightcurves over the whole sector of observations.</p></li>
-<li><p>measure stellar rotation periods using two processes: the Lomb-Scargle
-periodogram and the Auto-Correlation Function.</p></li>
+<li><p>measure stellar rotation periods using the Lomb-Scargle periodogram method</p></li>
 <li><p>quantify various data quality metrics from photometric time-series data
 which can be used by the user to assess data reliability</p></li>
 </ol>
-<section id="tess-cutouts">
-<h1>TESS Cutouts<a class="headerlink" href="#tess-cutouts" title="Permalink to this heading">¶</a></h1>
-<p>In this module, the data is downloaded from TESSCut <a class="reference external" href="https://mast.stsci.edu/tesscut/">(Brasseur et al. 2019)</a> – a service which allows the user to acquire a stack of “postage-stamp” image frames ordered in time sequence and centered on the supplied sky coordinate. It uses modules from the <a class="reference external" href="https://astroquery.readthedocs.io/en/latest/api/astroquery.mast.TesscutClass.html">TesscutClass</a> to download the data, then applies steps 2-6 (above). This software is recommended for users who require a relatively fast extraction for a manageable number of targets. With the correct pre-requisite Python modules and an uninterrupted internet connection, a target with 5 sectors of TESS data takes approximately 1-2 minutes to complete (and approximately 3-4 minutes should the user want to analyse the lightcurves of a few neighbouring contaminants).</p>
-<p>The user can run a list of targets automatically by calling <strong>all_cutouts.py</strong></p>
-</section>
-<section id="tess-sectors">
-<h1>TESS Sectors<a class="headerlink" href="#tess-sectors" title="Permalink to this heading">¶</a></h1>
+<section id="ways-to-use-the-tessilator">
+<h2>Ways to use the tessilator<a class="headerlink" href="#ways-to-use-the-tessilator" title="Permalink to this heading">¶</a></h2>
+<p><strong>Using TESScut to obtain “cutout” images</strong></p>
+<p>In this module, the data is downloaded from TESSCut <a class="reference external" href="https://mast.stsci.edu/tesscut/">(Brasseur et al. 2019)</a> – a service which allows the user to acquire a stack of “postage-stamp” image frames ordered in time sequence and centered on the supplied sky coordinate. It uses modules from the <a class="reference external" href="https://astroquery.readthedocs.io/en/latest/api/astroquery.mast.TesscutClass.html">TesscutClass</a> to download the data, then applies steps 2-6 (above). This software is recommended for users who require a relatively fast extraction for a manageable number of targets. With the correct pre-requisite Python modules and an uninterrupted internet connection, a target with 5 sectors of TESS data takes approximately 1-2 minutes to complete (and approximately 3-4 minutes should the user want to analyse the lightcurves of a few neighbouring contaminants). The user can process a list of targets automatically by calling the <code class="docutils literal notranslate"><span class="pre">all_sources_cutout.py</span></code> function</p>
+<p><strong>Analysing full-frame calibrated images</strong></p>
 <p>If the user is interested in conducting a much larger survey, it is faster to run
 the tessilator using the calibrated full-frame images. These can be downloaded in
 bulk at the <a class="reference external" href="https://archive.stsci.edu/tess/bulk_downloads/bulk_downloads_ffi-tp-lc-dv.html">MAST archive.</a>
 This method works much faster than TESS Cutouts because multiple lightcurves can be
 extracted simultaneously due to the vectorisation made possible with numpy/C-style
 methods. The authors have tested this method for a catalogue of ~1 million targets,
-which took less than a week to complete.</p>
-<p>The user can run a list of targets automatically by calling <strong>all_sector.py</strong></p>
+which took less than a week to complete. The user can process a list of targets automatically by calling the <code class="docutils literal notranslate"><span class="pre">all_sources_sector.py</span></code> function.</p>
 </section>
 <section id="notes-on-using-the-tessilator">
-<h1>Notes on using the tessilator<a class="headerlink" href="#notes-on-using-the-tessilator" title="Permalink to this heading">¶</a></h1>
+<h2>Notes on using the tessilator<a class="headerlink" href="#notes-on-using-the-tessilator" title="Permalink to this heading">¶</a></h2>
 <p>Should there be any problems in using this software please contact Alex Binks
 (lead author) at <a class="reference external" href="mailto:abinks&#37;&#52;&#48;mit&#46;edu">abinks<span>&#64;</span>mit<span>&#46;</span>edu</a></p>
 <p>If this package is useful for research leading to publication we would
@@ -99,8 +93,9 @@ using the tessilator software package (Binks et al. 2023).”</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="install.html">Install tessilator software</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="install.html#easy-way">Easy way</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing tessilator software</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#direct-installation-using-pip">Direct installation using pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#cloning-the-github-repository">Cloning the GitHub repository</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="howtouse.html">How to use</a><ul>
@@ -120,12 +115,13 @@ using the tessilator software package (Binks et al. 2023).”</p>
 </ul>
 </div>
 <section id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h2>
+<h3>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 <li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
+</section>
 </section>
 </section>
 
@@ -139,10 +135,12 @@ using the tessilator software package (Binks et al. 2023).”</p>
   <div>
     <h3><a href="#">Table of Contents</a></h3>
     <ul>
-<li><a class="reference internal" href="#">TESS Cutouts</a></li>
-<li><a class="reference internal" href="#tess-sectors">TESS Sectors</a></li>
+<li><a class="reference internal" href="#"><strong>WELCOME TO THE TESSILATOR</strong></a><ul>
+<li><a class="reference internal" href="#ways-to-use-the-tessilator">Ways to use the tessilator</a></li>
 <li><a class="reference internal" href="#notes-on-using-the-tessilator">Notes on using the tessilator</a><ul>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -151,7 +149,7 @@ using the tessilator software package (Binks et al. 2023).”</p>
   <div>
     <h4>Next topic</h4>
     <p class="topless"><a href="install.html"
-                          title="next chapter">Install tessilator software</a></p>
+                          title="next chapter">Installing tessilator software</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -184,10 +182,10 @@ using the tessilator software package (Binks et al. 2023).”</p>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="install.html" title="Install tessilator software"
+          <a href="install.html" title="Installing tessilator software"
              >next</a> |</li>
         <li class="nav-item nav-item-0"><a href="#">tessilator 0.1 documentation</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">TESS Cutouts</a></li> 
+        <li class="nav-item nav-item-this"><a href=""><strong>WELCOME TO THE TESSILATOR</strong></a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
