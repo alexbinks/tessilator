@@ -45,7 +45,7 @@ From the command line
 ---------------------
 Enter five inputs following the name of the python module as follows
 
->>> python run_tess_cutouts.py 1 1 1 cutout targets.csv
+   $ python run_tess_cutouts.py 1 1 1 cutout targets.csv
 
 The command-line arguments here are:
 1) Calculate the flux from contaminating sources
