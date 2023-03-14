@@ -4,10 +4,9 @@
    contain the root `toctree` directive.
 
 =========================================================
-
 .. image:: ../AB_Dor.gif
   :width: 400
-  
+  :align: center
 | **WELCOME TO THE TESSILATOR**
 | *The one-stop shop for measuring TESS rotation periods*
 =========================================================
