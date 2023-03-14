@@ -1,0 +1,6 @@
+find_XY_cont
+============
+
+.. currentmodule:: tessilator.tessilator
+
+.. autofunction:: find_XY_cont

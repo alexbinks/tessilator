@@ -1,0 +1,6 @@
+setupInputParameters
+====================
+
+.. currentmodule:: tessilator.tessilator
+
+.. autofunction:: setupInputParameters

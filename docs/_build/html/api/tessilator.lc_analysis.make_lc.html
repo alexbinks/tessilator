@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>make_lc &#8212; tessilator 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="run_ls" href="tessilator.lc_analysis.run_ls.html" />
+    <link rel="prev" title="is_period_cont" href="tessilator.lc_analysis.is_period_cont.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_lc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="make-lc">
+<h1>make_lc<a class="headerlink" href="#make-lc" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tessilator.lc_analysis.make_lc">
+<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">make_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phot_table</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tessilator.lc_analysis.make_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the normalised TESS lightcurve.</p>
+<div class="line-block">
+<div class="line">The function runs the following tasks:</div>
+<div class="line">(1) Read the table produced from the aperture photometry</div>
+<div class="line">(2) Normalise the lightcurve using the median flux value.</div>
+<div class="line">(3) Clean the lightcurve from spurious data using “clean_lc”</div>
+<div class="line">(4) Detrend the lightcurve using “detrend_lc”</div>
+<div class="line">(5) Return the original normalised lightcurve and the cleaned lightcurve</div>
+</div>
+<section id="parameters">
+<h2>parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h2>
+<dl>
+<dt>phot_table<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a> or <a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<div class="line">The data table containing aperture photometry returned by aper_run.py. Columns must include:</div>
+<div class="line">“time” -&gt; The time coordinate for each image</div>
+<div class="line">“mag” -&gt; The target magnitude</div>
+<div class="line">“flux_corr” -&gt; The total flux subtracted by the background flux</div>
+<div class="line">“flux_err” -&gt; The error on flux_corr</div>
+</div>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h2>returns<a class="headerlink" href="#returns" title="Permalink to this heading">¶</a></h2>
+<dl>
+<dt>cln<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<div class="line">The cleaned, detrended, normalised lightcurve, with the keys:</div>
+<div class="line">“time” -&gt; The time coordinate</div>
+<div class="line">“time0” -&gt; The time coordinate relative to the first data point</div>
+<div class="line">“oflux” -&gt; The original, normalised flux values</div>
+<div class="line">“nflux” -&gt; The detrended, cleaned, normalised flux values</div>
+<div class="line">“enflux” -&gt; The error on “nflux”</div>
+<div class="line">“polyord” -&gt; The polynomial order used for each detrend        </div>
+</div>
+</dd>
+<dt>orig<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<div class="line">The original, normalised lightcurve, with the keys:</div>
+<div class="line">“time” -&gt; The time coordinate</div>
+<div class="line">“nflux” -&gt; The original, normalised flux values</div>
+<div class="line">“mag” -&gt; The TESS magnitude values</div>
+</div>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">make_lc</a><ul>
+<li><a class="reference internal" href="#tessilator.lc_analysis.make_lc"><code class="docutils literal notranslate"><span class="pre">make_lc()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="tessilator.lc_analysis.is_period_cont.html"
+                          title="previous chapter">is_period_cont</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="tessilator.lc_analysis.run_ls.html"
+                          title="next chapter">run_ls</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/tessilator.lc_analysis.make_lc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_lc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

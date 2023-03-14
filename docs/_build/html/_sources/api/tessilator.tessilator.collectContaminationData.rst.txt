@@ -1,0 +1,6 @@
+collectContaminationData
+========================
+
+.. currentmodule:: tessilator.tessilator
+
+.. autofunction:: collectContaminationData

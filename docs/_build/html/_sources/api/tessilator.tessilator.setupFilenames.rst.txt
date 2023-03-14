@@ -1,0 +1,6 @@
+setupFilenames
+==============
+
+.. currentmodule:: tessilator.tessilator
+
+.. autofunction:: setupFilenames
