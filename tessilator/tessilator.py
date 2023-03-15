@@ -253,16 +253,15 @@ def test_table_large_sectors(t_filename):
     '''Check if the input file needs modifying at all.
 
     .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
+    .. |astropy.table.Table| replace:: **astropy.table.Table**
     .. _None: https://docs.python.org/3/library/constants.html#None
     .. |None| replace:: **None**
-
-    If running the tessilator for a whole sector, read the input file
-    and if the format is ready for analysis, make a couple of adjustments,
-    then simply pass the file.
+    
+    |If running the tessilator for a whole sector, read the input file and if the format is ready for analysis, make a couple of adjustments, then simply pass the file.
     
     | For a straight pass, the columns must be ordered in two ways. Either:
     * exactly set out with the following columns:
+    
         #. source_id: name of the Gaia DR3 source identifier
         #. ra: right ascension
         #. dec: declination
@@ -273,6 +272,8 @@ def test_table_large_sectors(t_filename):
         #. CCD: The TESS CCD number
         #. Xpos: The TESS X-pixel
         #. Ypos: The TESS Y-pixel
+        
+        
     * The same, but with a preceding column entitled "name", which refers to a target identifier name. This can be any string.
     | In any other case, None is returned and other functions are used to get the table into the correct format.
 
@@ -570,7 +571,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         details of the target star
     make_plots: |bool|_
         decides if plots are made 
-    scc : list (3)
+    scc : |list|_, size=3
         sector, camera, ccd
     cutout_size : |int|_
         the pixel length of the downloaded cutout
@@ -1109,7 +1110,7 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
                              f"Trying next target.")
 
         
-def all_cutouts(t_targets, period_file, LC_con, flux_con, con_file,\
+def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
                        make_plots, choose_sec=None):
     '''Run the tessilator for all targets.
 
