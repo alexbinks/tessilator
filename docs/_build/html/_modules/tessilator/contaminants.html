@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tessilator.contaminants &#8212; tessilator 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.contaminants</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tessilator.contaminants</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+
+<span class="c1"># Third party imports</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astroquery.gaia</span> <span class="kn">import</span> <span class="n">Gaia</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.fixedconstants</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="run_sql_query_contaminants"><a class="viewcode-back" href="../../api/tessilator.contaminants.run_sql_query_contaminants.html#tessilator.contaminants.run_sql_query_contaminants">[docs]</a><span class="k">def</span> <span class="nf">run_sql_query_contaminants</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">pix_radius</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Perform an SQL Query to identify neighbouring contaminants.</span>
+
+<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
+<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
+<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
+<span class="sd">    .. |float| replace:: **float**</span>
+
+
+<span class="sd">    If an analysis of flux contribution from neighbouring contaminants is</span>
+<span class="sd">    specified, this function generates the SQL query to identify targets</span>
+<span class="sd">    within a specified pixel radius. The function returns a table of Gaia</span>
+<span class="sd">    information on the neighbouring sources which is used to quantify the</span>
+<span class="sd">    flux contamination within the target aperture.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_target : |astropy.table.Table|_</span>
+<span class="sd">        The input table</span>
+
+<span class="sd">    pix_radius : |float|_, optional, default=5.0</span>
+<span class="sd">        The maximum angular distance (in arcsecs) to search for contaminants</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    t_gaia : |astropy.table.Table|_</span>
+<span class="sd">        The Gaia results table from the SQL query.    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># Generate an SQL query for each target.</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT source_id, ra, dec, phot_g_mean_mag,</span><span class="se">\</span>
+<span class="s2">    DISTANCE(</span><span class="se">\</span>
+<span class="s2">    POINT(</span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">),</span><span class="se">\</span>
+<span class="s2">    POINT(ra, dec)) AS ang_sep</span><span class="se">\</span>
+<span class="s2">    FROM gaiadr3.gaia_source</span><span class="se">\</span>
+<span class="s2">    WHERE 1 = CONTAINS(</span><span class="se">\</span>
+<span class="s2">    POINT(</span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">),</span><span class="se">\</span>
+<span class="s2">    CIRCLE(ra, dec, </span><span class="si">{</span><span class="n">pix_radius</span><span class="o">*</span><span class="n">pixel_size</span><span class="o">/</span><span class="mf">3600.</span><span class="si">}</span><span class="s2">)) </span><span class="se">\</span>
+<span class="s2">    AND phot_g_mean_mag &lt; </span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;Gmag&#39;</span><span class="p">]</span><span class="o">+</span><span class="mf">3.0</span><span class="si">}</span><span class="s2"> </span><span class="se">\</span>
+<span class="s2">    ORDER BY phot_g_mean_mag ASC&quot;</span>
+
+    <span class="c1"># Attempt a synchronous SQL job, otherwise try the asyncronous method.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">job</span> <span class="o">=</span> <span class="n">Gaia</span><span class="o">.</span><span class="n">launch_job</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t run the sync query for &quot;</span>
+                       <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">job</span> <span class="o">=</span> <span class="n">Gaia</span><span class="o">.</span><span class="n">launch_job_async</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">t_gaia</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">t_gaia</span></div>
+
+
+<div class="viewcode-block" id="flux_fraction_contaminant"><a class="viewcode-back" href="../../api/tessilator.contaminants.flux_fraction_contaminant.html#tessilator.contaminants.flux_fraction_contaminant">[docs]</a><span class="k">def</span> <span class="nf">flux_fraction_contaminant</span><span class="p">(</span><span class="n">ang_sep</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">d_th</span><span class="o">=</span><span class="mf">0.000005</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Quantify the flux contamination from a neighbouring source.</span>
+<span class="sd">    </span>
+<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
+<span class="sd">    .. |float| replace:: **float**</span>
+
+<span class="sd">    Calculates the fraction of flux from a neighbouring contaminating source</span>
+<span class="sd">    that gets scattered into the aperture. The analytic function uses equation</span>
+<span class="sd">    3b-10 from `Biser &amp; Millman (1965) &lt;https://books.google.co.uk/books?id=5XBGAAAAYAAJ&gt;`_, which is a double converging sum with infinite limits, given by</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">       f_{\\rm bg} = e^{-t} \sum_{n=0}^{n\\to{\infty}} {\Bigg\{\\frac{t^{n}}{n!}\\bigg[1-e^{-s}\sum_{k=0}^{n}{\\frac{s^{k}}{k!}}} \\bigg]\Bigg\}</span>
+
+<span class="sd">    To solve the equation computationally, the summation terminates once the</span>
+<span class="sd">    difference from the nth iteration is less than a given threshold value.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ang_sep : |float|_</span>
+<span class="sd">        The angular distance (in arcseconds) between a contaminant and the</span>
+<span class="sd">        aperture centre. </span>
+
+<span class="sd">    s : |float|_</span>
+<span class="sd">        For a given aperture size, Rad (in pixels)</span>
+<span class="sd">        and an FWHM of the TESS PSF, exprf (set at 0.65 pixels), :math:`s = {\\rm Rad}^2/(2.0*{\\rm exprf}^2)`</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    frac_flux_in_aperture : |float|_</span>
+<span class="sd">        Fraction of contaminant flux that gets scattered into the aperture.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">n</span><span class="p">,</span> <span class="n">n_z</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">ang_sep</span><span class="o">/</span><span class="n">pixel_size</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">exprf</span><span class="o">**</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="c1"># measured in pixels</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">sk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([(</span><span class="n">s</span><span class="o">**</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span>
+        <span class="n">sx</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">s</span><span class="p">)</span><span class="o">*</span><span class="n">sk</span><span class="p">)</span>
+        <span class="n">n_0</span> <span class="o">=</span> <span class="p">((</span><span class="n">t</span><span class="o">**</span><span class="n">n</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">*</span><span class="n">sx</span>
+        <span class="n">n_z</span> <span class="o">+=</span> <span class="n">n_0</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">n_0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">d_th</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">n_0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">d_th</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="n">frac_flux_in_aperture</span> <span class="o">=</span> <span class="n">n_z</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frac_flux_in_aperture</span></div>
+
+
+
+<div class="viewcode-block" id="contamination"><a class="viewcode-back" href="../../api/tessilator.contaminants.contamination.html#tessilator.contaminants.contamination">[docs]</a><span class="k">def</span> <span class="nf">contamination</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">n_cont</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Estimate flux from neighbouring contaminant sources.</span>
+<span class="sd">    </span>
+<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
+<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
+<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
+<span class="sd">    .. |bool| replace:: **bool** </span>
+<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
+<span class="sd">    .. |float| replace:: **float**</span>
+<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
+<span class="sd">    .. |int| replace:: **int** </span>
+<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
+<span class="sd">    .. |None| replace:: **None**</span>
+
+
+<span class="sd">    The purpose of this function is to estimate the amount of flux incident in</span>
+<span class="sd">    the TESS aperture that originates from neighbouring, contaminating sources.</span>
+<span class="sd">    Given that the passbands from TESS (T-band, 600-1000nm) are similar to Gaia</span>
+<span class="sd">    G magnitude, and that Gaia is sensitive to G~21, the Gaia DR3 catalogue is</span>
+<span class="sd">    used to quantify contamination.</span>
+<span class="sd">    </span>
+<span class="sd">    For each target in the input file, the function &quot;runSQLQueryContaminants&quot;</span>
+<span class="sd">    returns a catalogue of Gaia DR3 objects of all neighbouring sources that</span>
+<span class="sd">    are within a chosen pixel radius and are brighter than $G_{source} + 3$.</span>
+<span class="sd">    </span>
+<span class="sd">    The Rayleigh formula is used to calculate the fraction of flux incident in</span>
+<span class="sd">    the aperture from the target, and the function &quot;flux_fraction_contaminant&quot;</span>
+<span class="sd">    uses an analytical formula `(Biser &amp; Millman 1965, equation 3b-10) &lt;https://books.google.co.uk/books?id=5XBGAAAAYAAJ&gt;`_ to</span>
+<span class="sd">    calculate the flux contribution from all neighbouring sources incident in</span>
+<span class="sd">    the aperture.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">        The input table for all the targets.</span>
+<span class="sd">    </span>
+<span class="sd">    LC_con : |bool|_</span>
+<span class="sd">        If true, a table of Gaia DR3 information on the contaminants is</span>
+<span class="sd">        returned, else None.</span>
+<span class="sd">    </span>
+<span class="sd">    Rad : |float|_, optional, default=1.0</span>
+<span class="sd">        The size of the radius aperture (in pixels)</span>
+
+<span class="sd">    n_cont : |int|_, optional, default=5</span>
+<span class="sd">        The maximum number of neighbouring contaminants to store to table if</span>
+<span class="sd">        LC_con is True.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">        The input table for all the targets with 3 extra columns to quantify</span>
+<span class="sd">        the flux contamination.</span>
+
+<span class="sd">    t_cont : |astropy.table.Table|_ or |None|_</span>
+<span class="sd">        If LC_con is true, a table of Gaia DR3 information on the contaminants</span>
+<span class="sd">        is returned, else None.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">con1</span><span class="p">,</span> <span class="n">con2</span><span class="p">,</span> <span class="n">con3</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="c1"># Create empty table to fill with results from the contamination analysis.</span>
+    <span class="k">if</span> <span class="n">LC_con</span><span class="p">:</span>
+        <span class="n">t_cont</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source_id_target&#39;</span><span class="p">,</span> <span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;RA&#39;</span><span class="p">,</span>\
+                              <span class="s1">&#39;DEC&#39;</span><span class="p">,</span> <span class="s1">&#39;Gmag&#39;</span><span class="p">,</span> <span class="s1">&#39;d_as&#39;</span><span class="p">,</span> <span class="s1">&#39;log_flux_frac&#39;</span><span class="p">),</span>\
+                       <span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t_targets</span><span class="p">)):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">run_sql_query_contaminants</span><span class="p">(</span><span class="n">t_targets</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="c1"># convert the angular separation from degrees to arcseconds</span>
+        <span class="n">r</span><span class="p">[</span><span class="s2">&quot;ang_sep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;ang_sep&quot;</span><span class="p">]</span><span class="o">*</span><span class="mf">3600.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># make a table of all objects from the SQL except the target itself</span>
+            <span class="n">rx</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">!=</span> \
+                         <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)])</span>
+
+            <span class="c1"># calculate the fraction of flux from the source object that falls</span>
+            <span class="c1"># into the aperture using the Rayleigh formula</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">Rad</span><span class="o">**</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">exprf</span><span class="o">**</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="c1"># measured in pixels</span>
+            <span class="n">fg_star</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">s</span><span class="p">))</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">0.4</span><span class="o">*</span><span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;Gmag&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">fg_cont</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># calculate the fractional flux incident in the aperture from</span>
+            <span class="c1"># each contaminant.</span>
+            <span class="k">for</span> <span class="n">G_cont</span><span class="p">,</span> <span class="n">ang_sep</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rx</span><span class="p">[</span><span class="s2">&quot;phot_g_mean_mag&quot;</span><span class="p">],</span> <span class="n">rx</span><span class="p">[</span><span class="s2">&quot;ang_sep&quot;</span><span class="p">]):</span>
+                <span class="n">f_frac</span> <span class="o">=</span> <span class="n">flux_fraction_contaminant</span><span class="p">(</span><span class="n">ang_sep</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+                <span class="n">fg_cont</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f_frac</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">0.4</span><span class="o">*</span><span class="n">G_cont</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">LC_con</span><span class="p">:</span>
+                <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;log_flux_frac&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">fg_cont</span><span class="o">/</span><span class="n">fg_star</span><span class="p">)</span>
+                <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;source_id_target&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">new_order</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;source_id_target&#39;</span><span class="p">,</span> <span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;ra&#39;</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">,</span> \
+                             <span class="s1">&#39;phot_g_mean_mag&#39;</span><span class="p">,</span> <span class="s1">&#39;ang_sep&#39;</span><span class="p">,</span> <span class="s1">&#39;log_flux_frac&#39;</span><span class="p">]</span>
+                <span class="n">rx</span><span class="o">.</span><span class="n">sort</span><span class="p">([</span><span class="s1">&#39;log_flux_frac&#39;</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">rx</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[</span><span class="n">new_order</span><span class="p">]</span>
+                <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;source_id_target&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;source_id_target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+                <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+                <span class="c1"># store the n_cont highest flux contributors to table</span>
+                <span class="k">for</span> <span class="n">rx_row</span> <span class="ow">in</span> <span class="n">rx</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">n_cont</span><span class="p">][:]:</span>
+                    <span class="n">t_cont</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">rx_row</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">t_cont</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">con1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">fg_cont</span><span class="p">)</span><span class="o">/</span><span class="n">fg_star</span><span class="p">))</span>
+            <span class="n">con2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">fg_cont</span><span class="p">)</span><span class="o">/</span><span class="n">fg_star</span><span class="p">))</span>
+            <span class="n">con3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fg_cont</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">con1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">)</span>
+            <span class="n">con2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">)</span>
+            <span class="n">con3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">con1</span>
+    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">con2</span>
+    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">con3</span>
+
+    <span class="k">return</span> <span class="n">t_targets</span><span class="p">,</span> <span class="n">t_cont</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.contaminants</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 16 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

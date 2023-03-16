@@ -10,13 +10,17 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="clean_lc" href="tessilator.lc_analysis.clean_lc.html" />
-    <link rel="prev" title="test_table_large_sectors" href="tessilator.tessilator.test_table_large_sectors.html" />
+    <link rel="prev" title="setup_input_parameters" href="tessilator.tessilator.setup_input_parameters.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -38,7 +42,7 @@
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.tessilator.test_table_large_sectors.html" title="test_table_large_sectors"
+          <a href="tessilator.tessilator.setup_input_parameters.html" title="setup_input_parameters"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -55,34 +59,34 @@
 <h1>aper_run<a class="headerlink" href="#aper-run" title="Permalink to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="tessilator.lc_analysis.aper_run">
-<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">aper_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SkyRad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[6.0,</span> <span class="pre">8.0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">XY_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(10.0,</span> <span class="pre">10.0)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tessilator.lc_analysis.aper_run" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">aper_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SkyRad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[6.0,</span> <span class="pre">8.0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">XY_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(10.0,</span> <span class="pre">10.0)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/lc_analysis.html#aper_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.lc_analysis.aper_run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform aperture photometry for the image data.</p>
 <p>This function reads in each fits file, and performs aperture photometry.
 A table of aperture photometry results is returned, which forms the raw
 lightcurve to be processed in subsequent functions.</p>
-<section id="parameters">
-<h2>parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>file_in<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a></span></dt><dd><p>Name of the fits file containing image data</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>file_in</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a></span></dt><dd><p>Name of the fits file containing image data</p>
 </dd>
-<dt>targets<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The table of input data</p>
+<dt><strong>targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The table of input data</p>
 </dd>
-<dt>Rad<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=1.</span></dt><dd><p>The pixel radius to define the circular area for the aperture</p>
+<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=1.</span></dt><dd><p>The pixel radius to define the circular area for the aperture</p>
 </dd>
-<dt>SkyRad<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(6.,8.)</span></dt><dd><p>A 2-element tuple defining the inner and outer annulus to calculate
+<dt><strong>SkyRad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(6.,8.)</span></dt><dd><p>A 2-element tuple defining the inner and outer annulus to calculate
 the background flux</p>
 </dd>
-<dt>XY_pos<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(10.,10.)</span></dt><dd><p>The X-Y centroid (in pixels) of the aperture.</p>
+<dt><strong>XY_pos</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(10.,10.)</span></dt><dd><p>The X-Y centroid (in pixels) of the aperture.</p>
 </dd>
 </dl>
-</section>
-<section id="returns">
-<h2>returns<a class="headerlink" href="#returns" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>full_phot_table<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The formatted table containing results from the aperture photometry.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>full_phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The formatted table containing results from the aperture photometry.</p>
 </dd>
 </dl>
-</section>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -104,33 +108,6 @@ the background flux</p>
 </ul>
 
   </div>
-  <div>
-    <h4>Previous topic</h4>
-    <p class="topless"><a href="tessilator.tessilator.test_table_large_sectors.html"
-                          title="previous chapter">test_table_large_sectors</a></p>
-  </div>
-  <div>
-    <h4>Next topic</h4>
-    <p class="topless"><a href="tessilator.lc_analysis.clean_lc.html"
-                          title="next chapter">clean_lc</a></p>
-  </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/tessilator.lc_analysis.aper_run.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -148,7 +125,7 @@ the background flux</p>
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.tessilator.test_table_large_sectors.html" title="test_table_large_sectors"
+          <a href="tessilator.tessilator.setup_input_parameters.html" title="setup_input_parameters"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>
@@ -157,6 +134,7 @@ the background flux</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 16 Mar 2023.
       Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
     </div>
   </body>

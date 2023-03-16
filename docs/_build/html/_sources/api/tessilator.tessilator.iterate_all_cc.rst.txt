@@ -1,6 +1,0 @@
-iterate_all_cc
-==============
-
-.. currentmodule:: tessilator.tessilator
-
-.. autofunction:: iterate_all_cc

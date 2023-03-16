@@ -1,6 +1,0 @@
-readData
-========
-
-.. currentmodule:: tessilator.tessilator
-
-.. autofunction:: readData

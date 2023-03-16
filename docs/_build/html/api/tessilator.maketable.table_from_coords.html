@@ -10,9 +10,13 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="table_from_simbad" href="tessilator.maketable.table_from_simbad.html" />
@@ -55,30 +59,30 @@
 <h1>table_from_coords<a class="headerlink" href="#table-from-coords" title="Permalink to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="tessilator.maketable.table_from_coords">
-<span class="sig-prename descclassname"><span class="pre">tessilator.maketable.</span></span><span class="sig-name descname"><span class="pre">table_from_coords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ang_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_coord</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'icrs'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tessilator.maketable.table_from_coords" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tessilator.maketable.</span></span><span class="sig-name descname"><span class="pre">table_from_coords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ang_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_coord</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'icrs'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/maketable.html#table_from_coords"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.maketable.table_from_coords" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate the formatted astropy table from a list of coordinates.</p>
 <p>Each entry needs to be in comma separated variable(.csv) format.</p>
-<section id="parameters">
-<h2>parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>coord_table<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>a table consisting of right ascension and declination coordinates (in
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>coord_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>a table consisting of right ascension and declination coordinates (in
 degrees) in comma separated variable (.csv) format.</p>
 </dd>
-<dt>ang_max<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=10.0</span></dt><dd><p>the maximum angular distance in arcseconds from the input coordinates
+<dt><strong>ang_max</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=10.0</span></dt><dd><p>the maximum angular distance in arcseconds from the input coordinates
 provided in the table.</p>
 </dd>
-<dt>type_coord<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a>, optional, default=’icrs’</span></dt><dd><p>The coordinate system of the input positions. These can be ‘icrs’
+<dt><strong>type_coord</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a>, optional, default=’icrs’</span></dt><dd><p>The coordinate system of the input positions. These can be ‘icrs’
 (default), ‘galactic’ or ‘ecliptic’.</p>
 </dd>
 </dl>
-</section>
-<section id="returns">
-<h2>returns<a class="headerlink" href="#returns" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>gaia_table<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The output table ready for further analysis</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>gaia_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The output table ready for further analysis</p>
 </dd>
 </dl>
-</section>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -100,33 +104,6 @@ provided in the table.</p>
 </ul>
 
   </div>
-  <div>
-    <h4>Previous topic</h4>
-    <p class="topless"><a href="tessilator.maketable.get_gaia_data.html"
-                          title="previous chapter">get_gaia_data</a></p>
-  </div>
-  <div>
-    <h4>Next topic</h4>
-    <p class="topless"><a href="tessilator.maketable.table_from_simbad.html"
-                          title="next chapter">table_from_simbad</a></p>
-  </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/tessilator.maketable.table_from_coords.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -153,6 +130,7 @@ provided in the table.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 16 Mar 2023.
       Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
     </div>
   </body>

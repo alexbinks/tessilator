@@ -1,6 +1,0 @@
-getTESSPixelXY
-==============
-
-.. currentmodule:: tessilator.tessilator
-
-.. autofunction:: getTESSPixelXY

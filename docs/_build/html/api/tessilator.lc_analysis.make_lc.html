@@ -10,9 +10,13 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="run_ls" href="tessilator.lc_analysis.run_ls.html" />
@@ -55,7 +59,7 @@
 <h1>make_lc<a class="headerlink" href="#make-lc" title="Permalink to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="tessilator.lc_analysis.make_lc">
-<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">make_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phot_table</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tessilator.lc_analysis.make_lc" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">make_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phot_table</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/lc_analysis.html#make_lc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.lc_analysis.make_lc" title="Permalink to this definition">¶</a></dt>
 <dd><p>Construct the normalised TESS lightcurve.</p>
 <div class="line-block">
 <div class="line">The function runs the following tasks:</div>
@@ -65,10 +69,10 @@
 <div class="line">(4) Detrend the lightcurve using “detrend_lc”</div>
 <div class="line">(5) Return the original normalised lightcurve and the cleaned lightcurve</div>
 </div>
-<section id="parameters">
-<h2>parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>phot_table<span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a> or <a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a> or <a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
 <div class="line">The data table containing aperture photometry returned by aper_run.py. Columns must include:</div>
 <div class="line">“time” -&gt; The time coordinate for each image</div>
 <div class="line">“mag” -&gt; The target magnitude</div>
@@ -77,11 +81,10 @@
 </div>
 </dd>
 </dl>
-</section>
-<section id="returns">
-<h2>returns<a class="headerlink" href="#returns" title="Permalink to this heading">¶</a></h2>
-<dl>
-<dt>cln<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
 <div class="line">The cleaned, detrended, normalised lightcurve, with the keys:</div>
 <div class="line">“time” -&gt; The time coordinate</div>
 <div class="line">“time0” -&gt; The time coordinate relative to the first data point</div>
@@ -91,7 +94,7 @@
 <div class="line">“polyord” -&gt; The polynomial order used for each detrend        </div>
 </div>
 </dd>
-<dt>orig<span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
 <div class="line">The original, normalised lightcurve, with the keys:</div>
 <div class="line">“time” -&gt; The time coordinate</div>
 <div class="line">“nflux” -&gt; The original, normalised flux values</div>
@@ -99,7 +102,8 @@
 </div>
 </dd>
 </dl>
-</section>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -121,33 +125,6 @@
 </ul>
 
   </div>
-  <div>
-    <h4>Previous topic</h4>
-    <p class="topless"><a href="tessilator.lc_analysis.is_period_cont.html"
-                          title="previous chapter">is_period_cont</a></p>
-  </div>
-  <div>
-    <h4>Next topic</h4>
-    <p class="topless"><a href="tessilator.lc_analysis.run_ls.html"
-                          title="next chapter">run_ls</a></p>
-  </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/tessilator.lc_analysis.make_lc.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -174,6 +151,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 16 Mar 2023.
       Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
     </div>
   </body>

@@ -1,6 +1,0 @@
-full_run_LC
-===========
-
-.. currentmodule:: tessilator.tessilator
-
-.. autofunction:: full_run_LC
