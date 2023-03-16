@@ -14,6 +14,15 @@ import glob
 from astropy.nddata.utils import Cutout2D
 from collections.abc import Iterable
 
+#__all__ = ['start', 'logger',
+#           'create_table_template', 'setup_input_parameters',
+#           'setup_filenames', 'test_table_large_sectors', 'read_data',
+#           'collect_contamination_data', 'make_datarow', 'make_failrow',
+#           'full_run_lc', 'print_time_taken', 'find_xy_cont',
+#           'run_test_for_contaminant', 'get_tess_pixel_xy', 'get_fits',
+#           'make_2d_cutout', 'get_cutouts', 'one_source_cutout',
+#           'all_sources_cutout', 'one_cc', 'all_sources_sector']
+
 start = datetime.now()
 print("\n")
 print("**********************************************************************")
@@ -22,7 +31,7 @@ print("****|*****/*\*******/*\*******/*\*******/*\*******/*\*******/*\*******")
 print("****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******")
 print("****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****")
 print("****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****")
-print("****|_____________________________________________________________****")
+print("****`____________________________________________________________****")
 print("**********************************************************************")
 print("**********************WELCOME TO THE TESSILATOR***********************")
 print("********The one-stop shop for measuring TESS rotation periods*********")
@@ -44,12 +53,9 @@ logger = logging.getLogger(__name__)
 def create_table_template():
     '''Create a template astropy table to store tessilator results.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-
     returns
     -------
-    final_table : |astropy.table.Table|_
+    final_table : `astropy.table.Table`
         A template table to store tessilator results.
     '''
     final_table = Table(names=['name', 'source_id', 'ra', 'dec', 'parallax',\
@@ -68,13 +74,6 @@ def create_table_template():
 
 def setup_input_parameters():
     '''Retrieve the input parameters to run the tessilator program.
-
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
 
     | The input parameters are:
 
@@ -101,19 +100,19 @@ def setup_input_parameters():
     
     returns
     -------
-    flux_con : |bool|_
+    flux_con : `bool`
         Run lightcurve analysis for contaminant sources
-    scc : |list|_, size=3, only if sector data is used
+    scc : `list`, size=3, only if sector data is used
         List containing the sector number, camera and CCD
-    LC_con : |bool|_, only if cutout data is used
+    LC_con : `bool`, only if cutout data is used
         Decides if a lightcurve analysis is to be performed for the 5 strongest
         contaminants. Here, the data required for further analysis are
         stored in a table.
-    make_plots : |bool|_
+    make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    file_ref : |str|_
+    file_ref : `str`
         A common string to give all output files the same naming convention
-    t_filename : |str|_
+    t_filename : `str`
         The name of the input table containing the targets
      '''
     if len(sys.argv) != 6:
@@ -217,25 +216,18 @@ def setup_input_parameters():
 def setup_filenames(file_ref, scc=None):
     '''Set up the file names to store data
 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
-    
     parameters
     ----------
-    file_ref : |str|_
+    file_ref : `str`
         A common string to give all output files the same naming convention
-    scc : |list|_ or |None|_, size=3, optional, default = |None|_ 
+    scc : `list` or `None`, size=3, optional, default = `None` 
         A list containing the Sector, Camera and CCD.
 
     returns
     -------
-    con_file : |str|_
+    con_file : `str`
         Name of file to store contamination values.
-    period_file : |str|_
+    period_file : `str`
         Name of file for recording parameters measured by the periodogram
         analysis.
     '''    
@@ -252,11 +244,6 @@ def setup_filenames(file_ref, scc=None):
 def test_table_large_sectors(t_filename):
     '''Check if the input file needs modifying at all.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table**
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
-    
     |If running the tessilator for a whole sector, read the input file and if the format is ready for analysis, make a couple of adjustments, then simply pass the file.
     
     | For a straight pass, the columns must be ordered in two ways. Either:
@@ -279,12 +266,12 @@ def test_table_large_sectors(t_filename):
 
     parameters
     ----------
-    table_in : |astropy.table.Table|_
+    table_in : `astropy.table.Table`
         The table input which will be checked for formatting.
 
     returns
     -------
-    t : |astropy.table.Table|_ or |None|_
+    t : `astropy.table.Table` or `None`
         either a ready-prepared table or nothing.
     '''
 
@@ -315,11 +302,6 @@ def test_table_large_sectors(t_filename):
 def read_data(t_filename, name_is_source_id=0):
     '''Read input data and convert to an astropy table ready for analysis
     
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    
     | The input data must be in the form of a comma-separated variable and may take 3 forms:
     | (a) a 1-column table of source identifiers
     | (b) a 2-column table of decimal sky coordinates (celestial or galactic)
@@ -332,16 +314,16 @@ def read_data(t_filename, name_is_source_id=0):
     parameters
     ----------
 
-    t_filename : |astropy.table.Table|_
+    t_filename : `astropy.table.Table`
         name of the file containing the input data
-    name_is_source_id : |int|_, optional, Default=0
+    name_is_source_id : `int`, optional, Default=0
         when running option (c), this toggle if == 1 will automatically set
         the "name" column as the Gaia DR3 identifiers. This avoids long sql
         queries for very large input tables.  
 
     returns
     -------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         a formatted astropy table ready for further analysis
     '''
 
@@ -356,13 +338,6 @@ def collect_contamination_data(t_targets, flux_con, LC_con, con_file,
                                **kwargs):
     '''Collect data on contamination sources around selected targets
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table**
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     This function takes a target table and, if requested, prints out details of
     the total flux contribution from neighbouring contaminating sources for
     each target.
@@ -372,21 +347,21 @@ def collect_contamination_data(t_targets, flux_con, LC_con, con_file,
     
     Parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         target table with columns "name, source_id, ra, dec, parallax, Gmag".
-    flux_con : |bool|_
+    flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
-    LC_con : |bool|_
+    LC_con : `bool`
         Decides if a lightcurve analysis is to be performed for the n_cont strongest
         contaminants, where n_cont is a keyword in the "contamination" function from
         contaminants.py.
-    con_file : |str|_
+    con_file : `str`
         The name of the file to store data from the total flux contribution
         from contaminants.
         
     Returns
     -------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         Input target table with 3 columns added containing details of the
         contamination: "log_tot_bg", "log_max_bg", "num_tot_bg"
     '''
@@ -420,34 +395,25 @@ def make_datarow(t_target, scc, d_target, labels_cont):
     '''Once the tessilator has analysed a target, the results are printed line
     by line to a table.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     parameters
     ----------
-    t_target : |astropy.table.Table|_
+    t_target : `astropy.table.Table`
         The Gaia and contamination details (see 'getGaiaData' and
         'contamination' functions in tessilator.tess_functions.)
 
-    d_target : |dict|_
+    d_target : `dict`
         The dictionary containing details of the periodogram analysis, which is
         returned by 'run_LS' in tessilator.tess_functions.)
     
-    scc : |list|_, size=3
+    scc : `list`, size=3
         A list containing the Sector, Camera and CCD.
 
-    labels_cont : |str|_
+    labels_cont : `str`
         A string of labels listing details of any contaminant sources.
         
     returns
     -------
-    dr : |dict|_
+    dr : `dict`
         A dictionary entry for the target star containing tessilator data
     '''
     dr = [
@@ -481,16 +447,9 @@ def make_datarow(t_target, scc, d_target, labels_cont):
 def make_failrow(t_target, scc):
     '''Print a line with input data if tessilator fails for a given target
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-
     parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         | Table of input data for the tessilator, with the following columns:
         #. name: name of the target (str)
         #. source_id: Gaia DR3 source identifier (str)
@@ -504,12 +463,12 @@ def make_failrow(t_target, scc):
         
         Note that if the contaminantion is not calculated, the final three columns are automatically
         filled with -999 values.
-    scc : |list|_, size=3
+    scc : `list`, size=3
         A list containing the Sector, Camera and CCD.
 
     returns
     -------
-    dr : |dict|_
+    dr : `dict`
         A dictionary entry for the target star containing input data
     '''
     if 'log_tot_bg' not in t_target.colnames:
@@ -542,53 +501,36 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                 XY_pos=(10.,10.), Rad=1.0, SkyRad=[6.,8.]):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
-    .. |tuple| replace:: **tuple**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-
     This function calls a set of functions in the lc_analysis.py module to
     perform aperture photometry, clean the lightcurves from spurious data and
     runs the Lomb-Scargle periodogram to measure rotation periods.
 
     parameters
     ----------
-    file_in : |str|_
+    file_in : `str`
         name of the input TESS fits file
-    t_target : |astropy.table.Table|_
+    t_target : `astropy.table.Table`
         details of the target star
-    make_plots: |bool|_
+    make_plots: `bool`
         decides if plots are made 
-    scc : |list|_, size=3
+    scc : `list`, size=3
         sector, camera, ccd
-    cutout_size : |int|_
+    cutout_size : `int`
         the pixel length of the downloaded cutout
-    flux_con : |bool|_, optional, default=0
+    flux_con : `bool`, optional, default=0
         Decides if the flux contribution from contaminants is to be calculated.
-    LC_con : |bool|_, optional, default=0
+    LC_con : `bool`, optional, default=0
         Decides if a lightcurve analysis is to be performed for the n strongest
         contaminants, where n is a keyword in the "contamination" function from
         tess_functions2.py.
-    con_file : |str|_
+    con_file : `str`
         The name of the file to store data from the total flux contribution
         from contaminants.
-    XY_pos : |tuple|_, size=2x2, optional, default=(10.,10.)
+    XY_pos : `tuple`, size=2x2, optional, default=(10.,10.)
         The centroid of the target in pixels.
-    Rad : |float|_, optional, default=1.0
+    Rad : `float`, optional, default=1.0
         The aperture radius from the aperture photometry
-    SkyRad : |Iterable|_, optional, default=[6.,8.]
+    SkyRad : `Iterable`, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
 
     returns
@@ -616,7 +558,11 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
-        clean_norm_lc, original_norm_lc = make_lc(group)
+        if group is not None:
+            clean_norm_lc, original_norm_lc = make_lc(group)
+        else:
+            logger.error(f"No photometry was recorded for this group.")
+            break
         if len(clean_norm_lc) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
@@ -661,27 +607,20 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
 def print_time_taken(start, finish):
     '''Calculate the time taken for a process.
 
-    .. _datetime.datetime: https://docs.python.org/3/library/datetime.html#module-datetime
-    .. |datetime.datetime| replace:: **datetime.datetime**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     This function takes a start and finish point a calculates the time taken in
     hours, minutes and seconds
 
     parameters
     ----------
-    start : |datetime.datetime|_
+    start : `datetime.datetime`
         The start point of the process
     
-    finish : |datetime.datetime|_
+    finish : `datetime.datetime`
         The end point of the process
 
     returns
     -------
-    time_taken : |str|_
+    time_taken : `str`
         The time taken for the process to complete
     '''
     time_in_secs = (finish - start).seconds
@@ -697,31 +636,22 @@ def print_time_taken(start, finish):
 def find_xy_cont(f_file, con_table, cutout_size):
     '''Identify the pixel X-Y positions for contaminant sources.
 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _np.array: https://numpy.org/doc/stable/reference/generated/numpy.array.html
-    .. |np.array| replace:: **np.array**
-
     If the user requests a periodogram analysis of neighbouring potential
     contaminants (LC_con=1), this function returns their X-Y positions, which are
     used as the centroids for aperture photometry.
 
     parameters
     ----------
-    f_file : |str|_
+    f_file : `str`
         The name of the fits file.
-    con_table : |astropy.table.Table|_
+    con_table : `astropy.table.Table`
         The table containing Gaia data of the contaminants.
-    cutout_size : |int|_
+    cutout_size : `int`
         The length size of the TESS cutout image.
 
     returns
     -------
-    cont_positions : |np.array|_
+    cont_positions : `np.array`
         A 2-column array of the X-Y positions of the contaminants.
     '''
     XY_ctr = (cutout_size/2., cutout_size/2.)
@@ -748,31 +678,22 @@ def find_xy_cont(f_file, con_table, cutout_size):
 def run_test_for_contaminant(XY_arr, file_in, con_table, d_target, cutout_size):
     '''Run the periodogram analyses for neighbouring contaminants if required.
 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     parameters
     ----------
-    XY_arr : |list|_, size=2
+    XY_arr : `list`, size=2
         The X and Y positions of the contaminant (the output form the "find_XY_cont" function).
-    file_in : |str|_
+    file_in : `str`
         The name of the fits file containing the contaminant.
-    con_table : |astropy.table.Table|_
+    con_table : `astropy.table.Table`
         A single row from the contamination table which has
         details of the flux contribution.
-    d_target : |dict|_
+    d_target : `dict`
         The dictionary returned from the periodogram analysis of
         the target star (the output from the "run_LS" function in the lc_analysis.py module)
 
     returns
     -------
-    labels_cont : |str|_ (a, b, c or d)
+    labels_cont : `str` (a, b, c or d)
         A single character which assess if the calculated period for the target
         could actually come from the contaminant. 
     '''
@@ -804,9 +725,6 @@ def run_test_for_contaminant(XY_arr, file_in, con_table, d_target, cutout_size):
 def get_tess_pixel_xy(t_targets):
     '''Get the pixel X-Y positions for all targets in a Sector/Camera/CCD mode.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-
     For a given pair of celestial sky coordinates, this function returns table
     rows containing the sector, camera, CCD, and X/Y position of the full-frame
     image fits file, so that all stars located in a given (large) fits file can
@@ -819,12 +737,12 @@ def get_tess_pixel_xy(t_targets):
     
     parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         The input table created by the function get_gaia_data.py
 
     returns
     -------
-    xy_table : |astropy.table.Table|_
+    xy_table : `astropy.table.Table`
         Output table containing the (*x*, *y*) pixel positions for each target.
     '''
     outID, outEclipLong, outEclipLat, outSec, outCam, outCcd, \
@@ -839,23 +757,18 @@ def get_fits(scc):
     '''Function which returns a list of fits files corresponding to a
     given Sector, Camera and CCD configuration
 
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-
     parameters
     ----------
-    sector_num : |int|_
+    sector_num : `int`
         Sector number required
 
-    cc : |list|_, size=2
+    cc : `list`, size=2
         List of [a, b], where a is the Camera number (1-4)
         and b is the CCD number (1-4)
     
     returns
     -------
-    fits_files : |list|_
+    fits_files : `list`
         A list of the fits files to be used for aperture photometry
     '''
     
@@ -874,31 +787,22 @@ def get_fits(scc):
 def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
     '''Makes a 2D cutout object of a target using the median time-stacked image
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
-    .. |tuple| replace:: **tuple**
-    .. _astropy.nddata.Cutout2D: https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
-    .. |astropy.nddata.Cutout2D| replace:: **astropy.nddata.Cutout2D**
-
     parameters
     ----------
-    target : |astropy.table.Table|_
+    target : `astropy.table.Table`
         The astropy table containing the output from the aperture photometry
         for a given target.
-    fits_files : |list|_
+    fits_files : `list`
         The list of fits files used to make the aperture photometry
-    im_size : |tuple|_, optional, default=(21,21)
+    im_size : `tuple`, optional, default=(21,21)
         The required size of the 2D-cutout object
 
     returns
     -------
-    cutout : |astropy.nddata.Cutout2D|_
+    cutout : `astropy.nddata.Cutout2D`
         A 2D-cutout object
 
-    XY_ctr : |tuple|_
+    XY_ctr : `tuple`
         A tuple containing the X, Y position of the median time-stacked image.
     '''
 
@@ -930,40 +834,24 @@ def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
 def get_cutouts(coord, cutout_size, choose_sec, target_name):
     '''Download TESS cutouts and store to a list for lightcurve analysis.
 
-    .. _astropy.astropy.SkyCoord: https://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html
-    .. |astropy.astropy.SkyCoord| replace:: **astropy.astropy.SkyCoord**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-
-
     The TESScut function will save fits files to the working directory.
     
     parameters
     ----------
-    coord : |astropy.astropy.SkyCoord|_
+    coord : `astropy.astropy.SkyCoord`
         A set of coordinates in the SkyCoord format
-    cutout_size : |float|_
+    cutout_size : `float`
         The pixel length of the downloaded cutout
-    choose_sec : |None|_, |int|_ or |Iterable|_
+    choose_sec : `None`, `int` or `Iterable`
         | The sector, or sectors required for download.
-        * If |None|_, TESScut will download all sectors available for the target.
-        * If |int|_, TESScut will attempt to download this sector number.
-        * If |Iterable|_, TESScut will attempt to download a list of sectors.
-    target_name : |str|_
+        * If `None`, TESScut will download all sectors available for the target.
+        * If `int`, TESScut will attempt to download this sector number.
+        * If `Iterable`, TESScut will attempt to download a list of sectors.
+    target_name : `str`
         Name of the target
     returns
     -------
-    manifest : |list|_
+    manifest : `list`
         A list of the fits files for lightcurve analysis.
     '''
     manifest = []
@@ -1017,52 +905,33 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
                       final_table, choose_sec, cutout_size=20):
     '''Download cutouts and run lightcurve/periodogram analysis for one target.
 
-    .. _astropy.astropy.SkyCoord: https://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html
-    .. |astropy.astropy.SkyCoord| replace:: **astropy.astropy.SkyCoord**
-    .. _astropy.table.row.Row: https://docs.astropy.org/en/stable/api/astropy.table.Row.html
-    .. |astropy.table.row.Row| replace:: **astropy.table.row.Row**
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-
     Called by the function "all_sources".
 
     parameters
     ----------
-    coord : |astropy.astropy.SkyCoord|_
+    coord : `astropy.astropy.SkyCoord`
         A set of coordinates in the SkyCoord format
-    target : |astropy.table.row.Row|_
+    target : `astropy.table.row.Row`
         A row of data from the astropy table
-    LC_con : |bool|_
+    LC_con : `bool`
         Decides if a lightcurve analysis is to be performed for the 5 strongest
         contaminants. Here, the data required for further analysis are
         stored in a table.
-    flux_con : |bool|_
+    flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
-    con_file : |str|_
+    con_file : `str`
         The name of the file to store data from the total flux contribution
         from contaminants.
-    make_plots : |bool|_
+    make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    final_table : |astropy.table.Table|_
+    final_table : `astropy.table.Table`
         The table to store the final tessilator results.
-    choose_sec : |None|_, |int|_ or |Iterable|_
+    choose_sec : `None`, `int` or `Iterable`
         | The sector, or sectors required for download.
-        * If |None|_, TESScut will download all sectors available for the target.
-        * If |int|_, TESScut will attempt to download this sector number.
-        * If |Iterable|_, TESScut will attempt to download a list of sectors.
-    cutout_size : |float|_, Default=20
+        * If `None`, TESScut will download all sectors available for the target.
+        * If `int`, TESScut will attempt to download this sector number.
+        * If `Iterable`, TESScut will attempt to download a list of sectors.
+    cutout_size : `float`, Default=20
         the pixel length of the downloaded cutout
         
     returns
@@ -1114,22 +983,9 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
                        make_plots, choose_sec=None):
     '''Run the tessilator for all targets.
 
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |None| replace:: **None**
-    .. |str| replace:: **str**
-    .. |int| replace:: **int** 
-    .. |bool| replace:: **bool** 
-    .. |Iterable| replace:: **Iterable** 
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-
     parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         | Table of input data for the tessilator, with the following columns:
         #. name: name of the target (str)
         #. source_id: Gaia DR3 source identifier (str)
@@ -1140,24 +996,24 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         #. log_tot_bg_star: log-10 value of the flux ratio between contaminants and target (optional)
         #. log_max_bg_star: log-10 value of the flux ratio between the largest contaminant and target (optional)
         #. n_contaminants: number of contaminant sources (optional)
-    period_file : |str|_ 
+    period_file : `str` 
         Name of the file to store periodogram results.
-    LC_con : |bool|_
+    LC_con : `bool`
         Decides if a lightcurve analysis is to be performed for the 5 strongest
         contaminants. Here, the data required for further analysis are
         stored in a table.
-    flux_con : |bool|_
+    flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
-    con_file : |str|_
+    con_file : `str`
         The name of the file to store data from the total flux contribution
         from contaminants.
-    make_plots : |bool|_
+    make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    choose_sec : |None|_, |int|_, or |Iterable|_, optional
+    choose_sec : `None`, `int`, or `Iterable`, optional
         | The sector, or sectors required for download.
-        * If |None|_, TESScut will download all sectors available for the target.
-        * If |int|_, TESScut will attempt to download this sector number.
-        * If |Iterable|_, TESScut will attempt to download a list of sectors.
+        * If `None`, TESScut will download all sectors available for the target.
+        * If `int`, TESScut will attempt to download this sector number.
+        * If `Iterable`, TESScut will attempt to download a list of sectors.
 
     returns
     -------
@@ -1190,19 +1046,6 @@ def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
                       SkyRad=[6.,8.]):
     '''Run the tessilator for targets in a given Sector/Camera/CCD configuration
 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-
     This routine finds the full-frame calibrated fits files and targets which
     land in a given Sector/Camera/CCD configuration (SCC). Aperture photometry
     is carried out simultaneously for all stars in a given SCC for each fits
@@ -1212,20 +1055,20 @@ def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
 
     parameters
     ----------
-    cc : |list|_ size=2
+    cc : `list` size=2
         List of [a, b], where a is the Camera number (1-4)
         and b is the CCD number (1-4)
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         Table containing the targets to be analysed
-    sector_num : |int|_
+    sector_num : `int`
         Sector number required
-    make_plots : |bool|_
+    make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    final_table : |astropy.table.Table|_
+    final_table : `astropy.table.Table`
         The table to store tessilator results.
-    Rad : |float|_, optional, default=1.0
+    Rad : `float`, optional, default=1.0
         The pixel radius of the flux collecting area for aperture photometry
-    SkyRad: |Iterable|_, size=2, optional, default=[6.,8.]
+    SkyRad: `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli used for aperture photometry
 
     returns
@@ -1246,24 +1089,15 @@ def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
 def all_sources_sector(t_targets, scc, make_plots, period_file):
     '''Iterate over all cameras and CCDs for a given sector
     
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         Input data for the targets to be analysed
-    scc : |list|_, size=3
+    scc : `list`, size=3
         List containing the sector number, camera and CCD
-    make_plots : |bool|_
+    make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    period_file : |str|_
+    period_file : `str`
         Name of file for recording parameters measured by the periodogram
         analysis.
         

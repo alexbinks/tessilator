@@ -6,6 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+
 project = 'tessilator'
 copyright = '2023, Alex Binks & Moritz Guenther'
 author = 'Alex Binks & Moritz Guenther'
@@ -14,7 +15,17 @@ release = '0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx_automodapi.automodapi']
+extensions = ['sphinx_automodapi.automodapi', 
+              'sphinx.ext.intersphinx'
+              ]
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+
+try:
+    from sphinx_astropy.conf.v1 import *  # noqa
+    print("Imported sphinx!")
+except ImportError:
+    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
+    sys.exit(1)
 
 numpydoc_show_class_members = False
 
