@@ -10,27 +10,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from collections.abc import Iterable
 
+__all__ = ['make_plot']
+
 def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
               SkyRad = [6.,8.]):
     '''Produce a plot of tessilator results.
-
-    .. _astropy.nddata.Cutout2D: https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
-    .. |astropy.nddata.Cutout2D| replace:: **astropy.nddata.Cutout2D**
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
-    .. |tuple| replace:: **tuple**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
 
     | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
     | 1) An TESS cut-out image of the target, with aperture and sky annulus.
@@ -40,29 +25,29 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
 
     parameters
     ----------
-    im_plot : |astropy.nddata.Cutout2D|_
+    im_plot : `astropy.nddata.Cutout2D`
         The cut-out image of the target
-    clean : |dict|_
+    clean : `dict`
         The modified (cleaned) lightcurve after processing
-    orig : |dict|_
+    orig : `dict`
         The original normalised lightcurve before processing.
-    LS_dict : |dict|_
+    LS_dict : `dict`
         The dictionary of parameters calculated by the Lomb-Scargle periodogram
-    scc : |list|_, size=3
+    scc : `list`, size=3
         List containing the sector number, camera and CCD
-    t_table : |astropy.table.Table|_
+    t_table : `astropy.table.Table`
         Table containing the input data for the target
-    XY_ctr : |tuple|_, optional, default=(10,10)
+    XY_ctr : `tuple`, optional, default=(10,10)
         The centroid (in pixels) of the target in the TESS image.
-    XY_contam : |Iterable|_ or |None|_, optional, default = |None|_
+    XY_contam : `Iterable` or `None`, optional, default = `None`
         The pixel positions of the strongest contaminants
-    p_min_thresh : |float|_, optional, default=0.1
+    p_min_thresh : `float`, optional, default=0.1
         The shortest period calculated in the Lomb-Scargle periodogram
-    p_max_thresh : |float|_, optional, default=50.
+    p_max_thresh : `float`, optional, default=50.
         The longest period calculated in the Lomb-Scargle periodogram
-    Rad : |float|_, optional, default=1.0
+    Rad : `float`, optional, default=1.0
         The aperture radius from the aperture photometry
-    SkyRad : |Iterable|_, size=2, optional, default=[6.,8.]
+    SkyRad : `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
 
     returns

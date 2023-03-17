@@ -8,19 +8,15 @@ import numpy as np
 from astroquery.gaia import Gaia
 from astropy.table import Table
 
-logger = logging.getLogger(__name__)
-
 from .fixedconstants import *
+
+#__all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 'contamination']
+
+logger = logging.getLogger(__name__)
 
 
 def run_sql_query_contaminants(t_target, pix_radius=5.0):
     '''Perform an SQL Query to identify neighbouring contaminants.
-
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-
 
     If an analysis of flux contribution from neighbouring contaminants is
     specified, this function generates the SQL query to identify targets
@@ -30,15 +26,15 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0):
 
     parameters
     ----------
-    t_target : |astropy.table.Table|_
+    t_target : `astropy.table.Table`
         The input table
 
-    pix_radius : |float|_, optional, default=5.0
+    pix_radius : `float`, optional, default=5.0
         The maximum angular distance (in arcsecs) to search for contaminants
 
     returns
     -------
-    t_gaia : |astropy.table.Table|_
+    t_gaia : `astropy.table.Table`
         The Gaia results table from the SQL query.    
     '''
     # Generate an SQL query for each target.
@@ -66,9 +62,6 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0):
 
 def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
     '''Quantify the flux contamination from a neighbouring source.
-    
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
 
     Calculates the fraction of flux from a neighbouring contaminating source
     that gets scattered into the aperture. The analytic function uses equation
@@ -83,17 +76,17 @@ def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
 
     parameters
     ----------
-    ang_sep : |float|_
+    ang_sep : `float`
         The angular distance (in arcseconds) between a contaminant and the
         aperture centre. 
 
-    s : |float|_
+    s : `float`
         For a given aperture size, Rad (in pixels)
         and an FWHM of the TESS PSF, exprf (set at 0.65 pixels), :math:`s = {\\rm Rad}^2/(2.0*{\\rm exprf}^2)`
 
     returns
     -------
-    frac_flux_in_aperture : |float|_
+    frac_flux_in_aperture : `float`
         Fraction of contaminant flux that gets scattered into the aperture.
     '''
     n, n_z = 0, 0
@@ -114,18 +107,6 @@ def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
 
 def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
     '''Estimate flux from neighbouring contaminant sources.
-    
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _None: https://docs.python.org/3/library/constants.html#None
-    .. |None| replace:: **None**
-
 
     The purpose of this function is to estimate the amount of flux incident in
     the TESS aperture that originates from neighbouring, contaminating sources.
@@ -145,27 +126,27 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
 
     parameters
     ----------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         The input table for all the targets.
     
-    LC_con : |bool|_
+    LC_con : `bool`
         If true, a table of Gaia DR3 information on the contaminants is
         returned, else None.
     
-    Rad : |float|_, optional, default=1.0
+    Rad : `float`, optional, default=1.0
         The size of the radius aperture (in pixels)
 
-    n_cont : |int|_, optional, default=5
+    n_cont : `int`, optional, default=5
         The maximum number of neighbouring contaminants to store to table if
         LC_con is True.
 
     returns
     -------
-    t_targets : |astropy.table.Table|_
+    t_targets : `astropy.table.Table`
         The input table for all the targets with 3 extra columns to quantify
         the flux contamination.
 
-    t_cont : |astropy.table.Table|_ or |None|_
+    t_cont : `astropy.table.Table` or `None`
         If LC_con is true, a table of Gaia DR3 information on the contaminants
         is returned, else None.
     '''

@@ -14,14 +14,14 @@ import glob
 from astropy.nddata.utils import Cutout2D
 from collections.abc import Iterable
 
-#__all__ = ['start', 'logger',
-#           'create_table_template', 'setup_input_parameters',
-#           'setup_filenames', 'test_table_large_sectors', 'read_data',
-#           'collect_contamination_data', 'make_datarow', 'make_failrow',
-#           'full_run_lc', 'print_time_taken', 'find_xy_cont',
-#           'run_test_for_contaminant', 'get_tess_pixel_xy', 'get_fits',
-#           'make_2d_cutout', 'get_cutouts', 'one_source_cutout',
-#           'all_sources_cutout', 'one_cc', 'all_sources_sector']
+__all__ = ['start', 'logger',
+           'create_table_template', 'setup_input_parameters',
+           'setup_filenames', 'test_table_large_sectors', 'read_data',
+           'collect_contamination_data', 'make_datarow', 'make_failrow',
+           'full_run_lc', 'print_time_taken', 'find_xy_cont',
+           'run_test_for_contaminant', 'get_tess_pixel_xy', 'get_fits',
+           'make_2d_cutout', 'get_cutouts', 'one_source_cutout',
+           'all_sources_cutout', 'one_cc', 'all_sources_sector']
 
 start = datetime.now()
 print("\n")
