@@ -1,7 +1,7 @@
 How to use
 ==========
 
-There are two YES TWO ways in which the user can supply input to run the
+There are two ways in which the user can supply input to run the
 tessilator - either straight from the command line if a program
 is designed to run from start to finish from one single command
 line prompt. The alternative is to call the function

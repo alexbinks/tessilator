@@ -19,8 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="sine_fit" href="tessilator.lc_analysis.sine_fit.html" />
-    <link rel="prev" title="make_lc" href="tessilator.lc_analysis.make_lc.html" />
+    <link rel="next" title="is_period_cont" href="tessilator.lc_analysis.is_period_cont.html" />
+    <link rel="prev" title="sin_fit" href="tessilator.lc_analysis.sin_fit.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -39,10 +39,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.sine_fit.html" title="sine_fit"
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
+          <a href="tessilator.lc_analysis.sin_fit.html" title="sin_fit"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -64,21 +64,21 @@
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>A dictionary containing the lightcurve data. The keys must include
+<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A dictionary containing the lightcurve data. The keys must include
 | “time0” -&gt; The time coordinate relative to the first data point
 | “nflux” -&gt; The detrended, cleaned, normalised flux values</p>
 </dd>
-<dt><strong>p_min_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=0.05</span></dt><dd><p>The minimum period (in days) to be calculated.</p>
+<dt><strong>p_min_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=0.05</span></dt><dd><p>The minimum period (in days) to be calculated.</p>
 </dd>
-<dt><strong>p_max_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=100.</span></dt><dd><p>The maximum period (in days) to be calculated.</p>
+<dt><strong>p_max_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=100.</span></dt><dd><p>The maximum period (in days) to be calculated.</p>
 </dd>
-<dt><strong>samples_per_peak</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int"><strong>int</strong></a>, optional, default=10</span></dt><dd><p>The number of samples to measure in each periodogram peak.</p>
+<dt><strong>samples_per_peak</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional, default=10</span></dt><dd><p>The number of samples to measure in each periodogram peak.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>LS_dict</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>A dictionary of parameters calculated from the periodogram analysis</p>
+<dt><strong>LS_dict</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A dictionary of parameters calculated from the periodogram analysis</p>
 </dd>
 </dl>
 </dd>
@@ -118,10 +118,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.sine_fit.html" title="sine_fit"
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
+          <a href="tessilator.lc_analysis.sin_fit.html" title="sin_fit"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

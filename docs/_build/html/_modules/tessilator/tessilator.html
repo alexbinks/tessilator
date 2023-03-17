@@ -63,7 +63,14 @@
 <span class="kn">from</span> <span class="nn">astropy.nddata.utils</span> <span class="kn">import</span> <span class="n">Cutout2D</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;create_table_template&#39;</span><span class="p">,</span> <span class="s1">&#39;setup_input_parameters&#39;</span><span class="p">,</span> <span class="s1">&#39;logger&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="s1">&#39;logger&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;create_table_template&#39;</span><span class="p">,</span> <span class="s1">&#39;setup_input_parameters&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;setup_filenames&#39;</span><span class="p">,</span> <span class="s1">&#39;test_table_large_sectors&#39;</span><span class="p">,</span> <span class="s1">&#39;read_data&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;collect_contamination_data&#39;</span><span class="p">,</span> <span class="s1">&#39;make_datarow&#39;</span><span class="p">,</span> <span class="s1">&#39;make_failrow&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;full_run_lc&#39;</span><span class="p">,</span> <span class="s1">&#39;print_time_taken&#39;</span><span class="p">,</span> <span class="s1">&#39;find_xy_cont&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;run_test_for_contaminant&#39;</span><span class="p">,</span> <span class="s1">&#39;get_tess_pixel_xy&#39;</span><span class="p">,</span> <span class="s1">&#39;get_fits&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;make_2d_cutout&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cutouts&#39;</span><span class="p">,</span> <span class="s1">&#39;one_source_cutout&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;all_sources_cutout&#39;</span><span class="p">,</span> <span class="s1">&#39;one_cc&#39;</span><span class="p">,</span> <span class="s1">&#39;all_sources_sector&#39;</span><span class="p">]</span>
 
 <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -73,7 +80,7 @@
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|_____________________________________________________________****&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****`____________________________________________________________****&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************************************************************&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************WELCOME TO THE TESSILATOR***********************&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;********The one-stop shop for measuring TESS rotation periods*********&quot;</span><span class="p">)</span>
@@ -144,7 +151,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    flux_con : `bool`</span>
 <span class="sd">        Run lightcurve analysis for contaminant sources</span>
-<span class="sd">    scc : |list|_, size=3, only if sector data is used</span>
+<span class="sd">    scc : `list`, size=3, only if sector data is used</span>
 <span class="sd">        List containing the sector number, camera and CCD</span>
 <span class="sd">    LC_con : `bool`, only if cutout data is used</span>
 <span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
@@ -255,16 +262,9 @@
         <span class="k">return</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">t_filename</span></div>
 
 
-<span class="k">def</span> <span class="nf">setup_filenames</span><span class="p">(</span><span class="n">file_ref</span><span class="p">,</span> <span class="n">scc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="setup_filenames"><a class="viewcode-back" href="../../api/tessilator.tessilator.setup_filenames.html#tessilator.tessilator.setup_filenames">[docs]</a><span class="k">def</span> <span class="nf">setup_filenames</span><span class="p">(</span><span class="n">file_ref</span><span class="p">,</span> <span class="n">scc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Set up the file names to store data</span>
 
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. |None| replace:: **None**</span>
-<span class="sd">    </span>
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    file_ref : `str`</span>
@@ -287,10 +287,10 @@
         <span class="n">sn</span> <span class="o">=</span> <span class="s1">&#39;sector&#39;</span><span class="o">+</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">con_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;contamination&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">sn</span><span class="p">])</span>
         <span class="n">period_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;periods&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">sn</span><span class="p">])</span>
-    <span class="k">return</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">period_file</span>
+    <span class="k">return</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">period_file</span></div>
 
 
-<span class="k">def</span> <span class="nf">test_table_large_sectors</span><span class="p">(</span><span class="n">t_filename</span><span class="p">):</span>
+<div class="viewcode-block" id="test_table_large_sectors"><a class="viewcode-back" href="../../api/tessilator.tessilator.test_table_large_sectors.html#tessilator.tessilator.test_table_large_sectors">[docs]</a><span class="k">def</span> <span class="nf">test_table_large_sectors</span><span class="p">(</span><span class="n">t_filename</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Check if the input file needs modifying at all.</span>
 
 <span class="sd">    |If running the tessilator for a whole sector, read the input file and if the format is ready for analysis, make a couple of adjustments, then simply pass the file.</span>
@@ -345,16 +345,11 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="c1"># return nothing if neither of the above two conditions are met.</span>
-        <span class="k">return</span> <span class="n">t</span>
+        <span class="k">return</span> <span class="n">t</span></div>
 
 
-<span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="read_data"><a class="viewcode-back" href="../../api/tessilator.tessilator.read_data.html#tessilator.tessilator.read_data">[docs]</a><span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Read input data and convert to an astropy table ready for analysis</span>
-<span class="sd">    </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
 <span class="sd">    </span>
 <span class="sd">    | The input data must be in the form of a comma-separated variable and may take 3 forms:</span>
 <span class="sd">    | (a) a 1-column table of source identifiers</span>
@@ -385,19 +380,12 @@
     <span class="n">t_input</span> <span class="o">=</span> <span class="n">ascii</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;no_header&#39;</span><span class="p">)</span>
     <span class="n">t_targets</span> <span class="o">=</span> <span class="n">get_gaia_data</span><span class="p">(</span><span class="n">t_input</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">t_targets</span>
+    <span class="k">return</span> <span class="n">t_targets</span></div>
 
 
-<span class="k">def</span> <span class="nf">collect_contamination_data</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>
+<div class="viewcode-block" id="collect_contamination_data"><a class="viewcode-back" href="../../api/tessilator.tessilator.collect_contamination_data.html#tessilator.tessilator.collect_contamination_data">[docs]</a><span class="k">def</span> <span class="nf">collect_contamination_data</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>
                                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Collect data on contamination sources around selected targets</span>
-
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table**</span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
 
 <span class="sd">    This function takes a target table and, if requested, prints out details of</span>
 <span class="sd">    the total flux contribution from neighbouring contaminating sources for</span>
@@ -410,19 +398,19 @@
 <span class="sd">    ----------</span>
 <span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        target table with columns &quot;name, source_id, ra, dec, parallax, Gmag&quot;.</span>
-<span class="sd">    flux_con : |bool|_</span>
+<span class="sd">    flux_con : `bool`</span>
 <span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
-<span class="sd">    LC_con : |bool|_</span>
+<span class="sd">    LC_con : `bool`</span>
 <span class="sd">        Decides if a lightcurve analysis is to be performed for the n_cont strongest</span>
 <span class="sd">        contaminants, where n_cont is a keyword in the &quot;contamination&quot; function from</span>
 <span class="sd">        contaminants.py.</span>
-<span class="sd">    con_file : |str|_</span>
+<span class="sd">    con_file : `str`</span>
 <span class="sd">        The name of the file to store data from the total flux contribution</span>
 <span class="sd">        from contaminants.</span>
 <span class="sd">        </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        Input target table with 3 columns added containing details of the</span>
 <span class="sd">        contamination: &quot;log_tot_bg&quot;, &quot;log_max_bg&quot;, &quot;num_tot_bg&quot;</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -449,41 +437,32 @@
                     <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
                     <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
                     <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">t_targets</span>
+    <span class="k">return</span> <span class="n">t_targets</span></div>
 
 
-<span class="k">def</span> <span class="nf">make_datarow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">labels_cont</span><span class="p">):</span>
+<div class="viewcode-block" id="make_datarow"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_datarow.html#tessilator.tessilator.make_datarow">[docs]</a><span class="k">def</span> <span class="nf">make_datarow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">labels_cont</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Once the tessilator has analysed a target, the results are printed line</span>
 <span class="sd">    by line to a table.</span>
 
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_target : |astropy.table.Table|_</span>
+<span class="sd">    t_target : `astropy.table.Table`</span>
 <span class="sd">        The Gaia and contamination details (see &#39;getGaiaData&#39; and</span>
 <span class="sd">        &#39;contamination&#39; functions in tessilator.tess_functions.)</span>
 
-<span class="sd">    d_target : |dict|_</span>
+<span class="sd">    d_target : `dict`</span>
 <span class="sd">        The dictionary containing details of the periodogram analysis, which is</span>
 <span class="sd">        returned by &#39;run_LS&#39; in tessilator.tess_functions.)</span>
 <span class="sd">    </span>
-<span class="sd">    scc : |list|_, size=3</span>
+<span class="sd">    scc : `list`, size=3</span>
 <span class="sd">        A list containing the Sector, Camera and CCD.</span>
 
-<span class="sd">    labels_cont : |str|_</span>
+<span class="sd">    labels_cont : `str`</span>
 <span class="sd">        A string of labels listing details of any contaminant sources.</span>
 <span class="sd">        </span>
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dr : |dict|_</span>
+<span class="sd">    dr : `dict`</span>
 <span class="sd">        A dictionary entry for the target star containing tessilator data</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">dr</span> <span class="o">=</span> <span class="p">[</span>
@@ -512,21 +491,14 @@
           <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;Ndata&#39;</span><span class="p">],</span>
           <span class="n">labels_cont</span>
           <span class="p">]</span>
-    <span class="k">return</span> <span class="n">dr</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
 
-<span class="k">def</span> <span class="nf">make_failrow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">):</span>
+<div class="viewcode-block" id="make_failrow"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_failrow.html#tessilator.tessilator.make_failrow">[docs]</a><span class="k">def</span> <span class="nf">make_failrow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Print a line with input data if tessilator fails for a given target</span>
-
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        | Table of input data for the tessilator, with the following columns:</span>
 <span class="sd">        #. name: name of the target (str)</span>
 <span class="sd">        #. source_id: Gaia DR3 source identifier (str)</span>
@@ -540,12 +512,12 @@
 <span class="sd">        </span>
 <span class="sd">        Note that if the contaminantion is not calculated, the final three columns are automatically</span>
 <span class="sd">        filled with -999 values.</span>
-<span class="sd">    scc : |list|_, size=3</span>
+<span class="sd">    scc : `list`, size=3</span>
 <span class="sd">        A list containing the Sector, Camera and CCD.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dr : |dict|_</span>
+<span class="sd">    dr : `dict`</span>
 <span class="sd">        A dictionary entry for the target star containing input data</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">if</span> <span class="s1">&#39;log_tot_bg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t_target</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
@@ -570,30 +542,13 @@
         <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
     <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">dr</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
 
 
-<span class="k">def</span> <span class="nf">full_run_lc</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">t_target</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span>\
+<div class="viewcode-block" id="full_run_lc"><a class="viewcode-back" href="../../api/tessilator.tessilator.full_run_lc.html#tessilator.tessilator.full_run_lc">[docs]</a><span class="k">def</span> <span class="nf">full_run_lc</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">t_target</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span>\
                 <span class="n">cutout_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">flux_con</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">LC_con</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">con_file</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>\
                 <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">),</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Aperture photometry, lightcurve cleaning and periodogram analysis.</span>
-
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences</span>
-<span class="sd">    .. |tuple| replace:: **tuple**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
 
 <span class="sd">    This function calls a set of functions in the lc_analysis.py module to</span>
 <span class="sd">    perform aperture photometry, clean the lightcurves from spurious data and</span>
@@ -601,30 +556,30 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    file_in : |str|_</span>
+<span class="sd">    file_in : `str`</span>
 <span class="sd">        name of the input TESS fits file</span>
-<span class="sd">    t_target : |astropy.table.Table|_</span>
+<span class="sd">    t_target : `astropy.table.Table`</span>
 <span class="sd">        details of the target star</span>
-<span class="sd">    make_plots: |bool|_</span>
+<span class="sd">    make_plots: `bool`</span>
 <span class="sd">        decides if plots are made </span>
-<span class="sd">    scc : |list|_, size=3</span>
+<span class="sd">    scc : `list`, size=3</span>
 <span class="sd">        sector, camera, ccd</span>
-<span class="sd">    cutout_size : |int|_</span>
+<span class="sd">    cutout_size : `int`</span>
 <span class="sd">        the pixel length of the downloaded cutout</span>
-<span class="sd">    flux_con : |bool|_, optional, default=0</span>
+<span class="sd">    flux_con : `bool`, optional, default=0</span>
 <span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
-<span class="sd">    LC_con : |bool|_, optional, default=0</span>
+<span class="sd">    LC_con : `bool`, optional, default=0</span>
 <span class="sd">        Decides if a lightcurve analysis is to be performed for the n strongest</span>
 <span class="sd">        contaminants, where n is a keyword in the &quot;contamination&quot; function from</span>
 <span class="sd">        tess_functions2.py.</span>
-<span class="sd">    con_file : |str|_</span>
+<span class="sd">    con_file : `str`</span>
 <span class="sd">        The name of the file to store data from the total flux contribution</span>
 <span class="sd">        from contaminants.</span>
-<span class="sd">    XY_pos : |tuple|_, size=2x2, optional, default=(10.,10.)</span>
+<span class="sd">    XY_pos : `tuple`, size=2x2, optional, default=(10.,10.)</span>
 <span class="sd">        The centroid of the target in pixels.</span>
-<span class="sd">    Rad : |float|_, optional, default=1.0</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
 <span class="sd">        The aperture radius from the aperture photometry</span>
-<span class="sd">    SkyRad : |Iterable|_, optional, default=[6.,8.]</span>
+<span class="sd">    SkyRad : `Iterable`, optional, default=[6.,8.]</span>
 <span class="sd">        The inner and outer background annuli from aperture photometry  </span>
 
 <span class="sd">    returns</span>
@@ -696,55 +651,39 @@
                          <span class="n">p_min_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>\
                          <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">])</span>
         <span class="n">final_table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">make_datarow</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span>\
-                                         <span class="n">labels_cont</span><span class="p">))</span>
+                                         <span class="n">labels_cont</span><span class="p">))</span></div>
 
-<span class="k">def</span> <span class="nf">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">):</span>
+<div class="viewcode-block" id="print_time_taken"><a class="viewcode-back" href="../../api/tessilator.tessilator.print_time_taken.html#tessilator.tessilator.print_time_taken">[docs]</a><span class="k">def</span> <span class="nf">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Calculate the time taken for a process.</span>
-
-<span class="sd">    .. _datetime.datetime: https://docs.python.org/3/library/datetime.html#module-datetime</span>
-<span class="sd">    .. |datetime.datetime| replace:: **datetime.datetime**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
 
 <span class="sd">    This function takes a start and finish point a calculates the time taken in</span>
 <span class="sd">    hours, minutes and seconds</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    start : |datetime.datetime|_</span>
+<span class="sd">    start : `datetime.datetime`</span>
 <span class="sd">        The start point of the process</span>
 <span class="sd">    </span>
-<span class="sd">    finish : |datetime.datetime|_</span>
+<span class="sd">    finish : `datetime.datetime`</span>
 <span class="sd">        The end point of the process</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    time_taken : |str|_</span>
+<span class="sd">    time_taken : `str`</span>
 <span class="sd">        The time taken for the process to complete</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">time_in_secs</span> <span class="o">=</span> <span class="p">(</span><span class="n">finish</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">seconds</span>
     <span class="n">mins</span><span class="p">,</span> <span class="n">secs</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">time_in_secs</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
     <span class="n">hrs</span><span class="p">,</span> <span class="n">mins</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
     <span class="n">time_taken</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">hrs</span><span class="si">}</span><span class="s2"> hours, </span><span class="si">{</span><span class="n">mins</span><span class="si">}</span><span class="s2"> minutes, </span><span class="si">{</span><span class="n">secs</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
-    <span class="k">return</span> <span class="n">time_taken</span>
+    <span class="k">return</span> <span class="n">time_taken</span></div>
 
 
 
 
 
-<span class="k">def</span> <span class="nf">find_xy_cont</span><span class="p">(</span><span class="n">f_file</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
+<div class="viewcode-block" id="find_xy_cont"><a class="viewcode-back" href="../../api/tessilator.tessilator.find_xy_cont.html#tessilator.tessilator.find_xy_cont">[docs]</a><span class="k">def</span> <span class="nf">find_xy_cont</span><span class="p">(</span><span class="n">f_file</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Identify the pixel X-Y positions for contaminant sources.</span>
-
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _np.array: https://numpy.org/doc/stable/reference/generated/numpy.array.html</span>
-<span class="sd">    .. |np.array| replace:: **np.array**</span>
 
 <span class="sd">    If the user requests a periodogram analysis of neighbouring potential</span>
 <span class="sd">    contaminants (LC_con=1), this function returns their X-Y positions, which are</span>
@@ -752,16 +691,16 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    f_file : |str|_</span>
+<span class="sd">    f_file : `str`</span>
 <span class="sd">        The name of the fits file.</span>
-<span class="sd">    con_table : |astropy.table.Table|_</span>
+<span class="sd">    con_table : `astropy.table.Table`</span>
 <span class="sd">        The table containing Gaia data of the contaminants.</span>
-<span class="sd">    cutout_size : |int|_</span>
+<span class="sd">    cutout_size : `int`</span>
 <span class="sd">        The length size of the TESS cutout image.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cont_positions : |np.array|_</span>
+<span class="sd">    cont_positions : `np.array`</span>
 <span class="sd">        A 2-column array of the X-Y positions of the contaminants.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">XY_ctr</span> <span class="o">=</span> <span class="p">(</span><span class="n">cutout_size</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="n">cutout_size</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
@@ -782,37 +721,28 @@
         <span class="n">X_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X_abs_con</span> <span class="o">-</span> <span class="n">Col_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">+</span> <span class="n">XY_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">Y_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y_abs_con</span> <span class="o">-</span> <span class="n">Row_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">+</span> <span class="n">XY_ctr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">cont_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">X_con</span><span class="p">,</span> <span class="n">Y_con</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
-        <span class="k">return</span> <span class="n">cont_positions</span>
+        <span class="k">return</span> <span class="n">cont_positions</span></div>
         
 
-<span class="k">def</span> <span class="nf">run_test_for_contaminant</span><span class="p">(</span><span class="n">XY_arr</span><span class="p">,</span> <span class="n">file_in</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
+<div class="viewcode-block" id="run_test_for_contaminant"><a class="viewcode-back" href="../../api/tessilator.tessilator.run_test_for_contaminant.html#tessilator.tessilator.run_test_for_contaminant">[docs]</a><span class="k">def</span> <span class="nf">run_test_for_contaminant</span><span class="p">(</span><span class="n">XY_arr</span><span class="p">,</span> <span class="n">file_in</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the periodogram analyses for neighbouring contaminants if required.</span>
-
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    XY_arr : |list|_, size=2</span>
+<span class="sd">    XY_arr : `list`, size=2</span>
 <span class="sd">        The X and Y positions of the contaminant (the output form the &quot;find_XY_cont&quot; function).</span>
-<span class="sd">    file_in : |str|_</span>
+<span class="sd">    file_in : `str`</span>
 <span class="sd">        The name of the fits file containing the contaminant.</span>
-<span class="sd">    con_table : |astropy.table.Table|_</span>
+<span class="sd">    con_table : `astropy.table.Table`</span>
 <span class="sd">        A single row from the contamination table which has</span>
 <span class="sd">        details of the flux contribution.</span>
-<span class="sd">    d_target : |dict|_</span>
+<span class="sd">    d_target : `dict`</span>
 <span class="sd">        The dictionary returned from the periodogram analysis of</span>
 <span class="sd">        the target star (the output from the &quot;run_LS&quot; function in the lc_analysis.py module)</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    labels_cont : |str|_ (a, b, c or d)</span>
+<span class="sd">    labels_cont : `str` (a, b, c or d)</span>
 <span class="sd">        A single character which assess if the calculated period for the target</span>
 <span class="sd">        could actually come from the contaminant. </span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -829,7 +759,7 @@
             <span class="n">labels_cont</span> <span class="o">=</span> <span class="n">is_period_cont</span><span class="p">(</span><span class="n">d_target</span><span class="p">,</span> <span class="n">d_cont</span><span class="p">,</span> <span class="n">con_table</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;d&#39;</span>
-    <span class="k">return</span> <span class="n">labels_cont</span>
+    <span class="k">return</span> <span class="n">labels_cont</span></div>
 
 
 
@@ -841,11 +771,8 @@
 
 
 
-<span class="k">def</span> <span class="nf">get_tess_pixel_xy</span><span class="p">(</span><span class="n">t_targets</span><span class="p">):</span>
+<div class="viewcode-block" id="get_tess_pixel_xy"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_tess_pixel_xy.html#tessilator.tessilator.get_tess_pixel_xy">[docs]</a><span class="k">def</span> <span class="nf">get_tess_pixel_xy</span><span class="p">(</span><span class="n">t_targets</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Get the pixel X-Y positions for all targets in a Sector/Camera/CCD mode.</span>
-
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
 
 <span class="sd">    For a given pair of celestial sky coordinates, this function returns table</span>
 <span class="sd">    rows containing the sector, camera, CCD, and X/Y position of the full-frame</span>
@@ -859,12 +786,12 @@
 <span class="sd">    </span>
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        The input table created by the function get_gaia_data.py</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    xy_table : |astropy.table.Table|_</span>
+<span class="sd">    xy_table : `astropy.table.Table`</span>
 <span class="sd">        Output table containing the (*x*, *y*) pixel positions for each target.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">outID</span><span class="p">,</span> <span class="n">outEclipLong</span><span class="p">,</span> <span class="n">outEclipLat</span><span class="p">,</span> <span class="n">outSec</span><span class="p">,</span> <span class="n">outCam</span><span class="p">,</span> <span class="n">outCcd</span><span class="p">,</span> \
@@ -872,30 +799,25 @@
            <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">],</span> <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">])</span>
     <span class="n">xy_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">([</span><span class="n">outID</span><span class="p">,</span> <span class="n">outSec</span><span class="p">,</span> <span class="n">outCam</span><span class="p">,</span> <span class="n">outCcd</span><span class="p">,</span> <span class="n">outCPix</span><span class="p">,</span> <span class="n">outRPix</span><span class="p">],</span>
             <span class="n">names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;Sector&#39;</span><span class="p">,</span> <span class="s1">&#39;Camera&#39;</span><span class="p">,</span> <span class="s1">&#39;CCD&#39;</span><span class="p">,</span> <span class="s1">&#39;Xpos&#39;</span><span class="p">,</span> <span class="s1">&#39;Ypos&#39;</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">xy_table</span>
+    <span class="k">return</span> <span class="n">xy_table</span></div>
 
 
-<span class="k">def</span> <span class="nf">get_fits</span><span class="p">(</span><span class="n">scc</span><span class="p">):</span>
+<div class="viewcode-block" id="get_fits"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_fits.html#tessilator.tessilator.get_fits">[docs]</a><span class="k">def</span> <span class="nf">get_fits</span><span class="p">(</span><span class="n">scc</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Function which returns a list of fits files corresponding to a</span>
 <span class="sd">    given Sector, Camera and CCD configuration</span>
 
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    sector_num : |int|_</span>
+<span class="sd">    sector_num : `int`</span>
 <span class="sd">        Sector number required</span>
 
-<span class="sd">    cc : |list|_, size=2</span>
+<span class="sd">    cc : `list`, size=2</span>
 <span class="sd">        List of [a, b], where a is the Camera number (1-4)</span>
 <span class="sd">        and b is the CCD number (1-4)</span>
 <span class="sd">    </span>
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    fits_files : |list|_</span>
+<span class="sd">    fits_files : `list`</span>
 <span class="sd">        A list of the fits files to be used for aperture photometry</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -908,37 +830,28 @@
     <span class="n">l_ccd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">list_fits</span><span class="p">])</span>
     <span class="n">fits_indices</span> <span class="o">=</span> <span class="p">(</span><span class="n">l_cam</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">l_ccd</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
     <span class="n">fits_files</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">list_fits</span><span class="p">)[</span><span class="n">fits_indices</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">fits_files</span>
+    <span class="k">return</span> <span class="n">fits_files</span></div>
 
 
-<span class="k">def</span> <span class="nf">make_2d_cutout</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">phot_table</span><span class="p">,</span> <span class="n">im_size</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">)):</span>
+<div class="viewcode-block" id="make_2d_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_2d_cutout.html#tessilator.tessilator.make_2d_cutout">[docs]</a><span class="k">def</span> <span class="nf">make_2d_cutout</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">phot_table</span><span class="p">,</span> <span class="n">im_size</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Makes a 2D cutout object of a target using the median time-stacked image</span>
-
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences</span>
-<span class="sd">    .. |tuple| replace:: **tuple**</span>
-<span class="sd">    .. _astropy.nddata.Cutout2D: https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html</span>
-<span class="sd">    .. |astropy.nddata.Cutout2D| replace:: **astropy.nddata.Cutout2D**</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    target : |astropy.table.Table|_</span>
+<span class="sd">    target : `astropy.table.Table`</span>
 <span class="sd">        The astropy table containing the output from the aperture photometry</span>
 <span class="sd">        for a given target.</span>
-<span class="sd">    fits_files : |list|_</span>
+<span class="sd">    fits_files : `list`</span>
 <span class="sd">        The list of fits files used to make the aperture photometry</span>
-<span class="sd">    im_size : |tuple|_, optional, default=(21,21)</span>
+<span class="sd">    im_size : `tuple`, optional, default=(21,21)</span>
 <span class="sd">        The required size of the 2D-cutout object</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cutout : |astropy.nddata.Cutout2D|_</span>
+<span class="sd">    cutout : `astropy.nddata.Cutout2D`</span>
 <span class="sd">        A 2D-cutout object</span>
 
-<span class="sd">    XY_ctr : |tuple|_</span>
+<span class="sd">    XY_ctr : `tuple`</span>
 <span class="sd">        A tuple containing the X, Y position of the median time-stacked image.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -961,49 +874,33 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Fits file </span><span class="si">{file_in}</span><span class="s2"> has the invalid type: {type(file_in)}&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">cutout</span><span class="p">,</span> <span class="n">ctr_pt</span>
+    <span class="k">return</span> <span class="n">cutout</span><span class="p">,</span> <span class="n">ctr_pt</span></div>
 
 
 
 
 
-<span class="k">def</span> <span class="nf">get_cutouts</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">target_name</span><span class="p">):</span>
+<div class="viewcode-block" id="get_cutouts"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_cutouts.html#tessilator.tessilator.get_cutouts">[docs]</a><span class="k">def</span> <span class="nf">get_cutouts</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">target_name</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Download TESS cutouts and store to a list for lightcurve analysis.</span>
-
-<span class="sd">    .. _astropy.astropy.SkyCoord: https://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html</span>
-<span class="sd">    .. |astropy.astropy.SkyCoord| replace:: **astropy.astropy.SkyCoord**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. |None| replace:: **None**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-
 
 <span class="sd">    The TESScut function will save fits files to the working directory.</span>
 <span class="sd">    </span>
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    coord : |astropy.astropy.SkyCoord|_</span>
+<span class="sd">    coord : `astropy.astropy.SkyCoord`</span>
 <span class="sd">        A set of coordinates in the SkyCoord format</span>
-<span class="sd">    cutout_size : |float|_</span>
+<span class="sd">    cutout_size : `float`</span>
 <span class="sd">        The pixel length of the downloaded cutout</span>
-<span class="sd">    choose_sec : |None|_, |int|_ or |Iterable|_</span>
+<span class="sd">    choose_sec : `None`, `int` or `Iterable`</span>
 <span class="sd">        | The sector, or sectors required for download.</span>
-<span class="sd">        * If |None|_, TESScut will download all sectors available for the target.</span>
-<span class="sd">        * If |int|_, TESScut will attempt to download this sector number.</span>
-<span class="sd">        * If |Iterable|_, TESScut will attempt to download a list of sectors.</span>
-<span class="sd">    target_name : |str|_</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
+<span class="sd">    target_name : `str`</span>
 <span class="sd">        Name of the target</span>
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    manifest : |list|_</span>
+<span class="sd">    manifest : `list`</span>
 <span class="sd">        A list of the fits files for lightcurve analysis.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">manifest</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1050,59 +947,40 @@
               <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The choose_sec parameter has an invalid format type: &quot;</span>
                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">manifest</span>
+    <span class="k">return</span> <span class="n">manifest</span></div>
 
 
-<span class="k">def</span> <span class="nf">one_source_cutout</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span>\
+<div class="viewcode-block" id="one_source_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.one_source_cutout.html#tessilator.tessilator.one_source_cutout">[docs]</a><span class="k">def</span> <span class="nf">one_source_cutout</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span>\
                       <span class="n">final_table</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">cutout_size</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Download cutouts and run lightcurve/periodogram analysis for one target.</span>
-
-<span class="sd">    .. _astropy.astropy.SkyCoord: https://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html</span>
-<span class="sd">    .. |astropy.astropy.SkyCoord| replace:: **astropy.astropy.SkyCoord**</span>
-<span class="sd">    .. _astropy.table.row.Row: https://docs.astropy.org/en/stable/api/astropy.table.Row.html</span>
-<span class="sd">    .. |astropy.table.row.Row| replace:: **astropy.table.row.Row**</span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. |None| replace:: **None**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
 
 <span class="sd">    Called by the function &quot;all_sources&quot;.</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    coord : |astropy.astropy.SkyCoord|_</span>
+<span class="sd">    coord : `astropy.astropy.SkyCoord`</span>
 <span class="sd">        A set of coordinates in the SkyCoord format</span>
-<span class="sd">    target : |astropy.table.row.Row|_</span>
+<span class="sd">    target : `astropy.table.row.Row`</span>
 <span class="sd">        A row of data from the astropy table</span>
-<span class="sd">    LC_con : |bool|_</span>
+<span class="sd">    LC_con : `bool`</span>
 <span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
 <span class="sd">        contaminants. Here, the data required for further analysis are</span>
 <span class="sd">        stored in a table.</span>
-<span class="sd">    flux_con : |bool|_</span>
+<span class="sd">    flux_con : `bool`</span>
 <span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
-<span class="sd">    con_file : |str|_</span>
+<span class="sd">    con_file : `str`</span>
 <span class="sd">        The name of the file to store data from the total flux contribution</span>
 <span class="sd">        from contaminants.</span>
-<span class="sd">    make_plots : |bool|_</span>
+<span class="sd">    make_plots : `bool`</span>
 <span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
-<span class="sd">    final_table : |astropy.table.Table|_</span>
+<span class="sd">    final_table : `astropy.table.Table`</span>
 <span class="sd">        The table to store the final tessilator results.</span>
-<span class="sd">    choose_sec : |None|_, |int|_ or |Iterable|_</span>
+<span class="sd">    choose_sec : `None`, `int` or `Iterable`</span>
 <span class="sd">        | The sector, or sectors required for download.</span>
-<span class="sd">        * If |None|_, TESScut will download all sectors available for the target.</span>
-<span class="sd">        * If |int|_, TESScut will attempt to download this sector number.</span>
-<span class="sd">        * If |Iterable|_, TESScut will attempt to download a list of sectors.</span>
-<span class="sd">    cutout_size : |float|_, Default=20</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
+<span class="sd">    cutout_size : `float`, Default=20</span>
 <span class="sd">        the pixel length of the downloaded cutout</span>
 <span class="sd">        </span>
 <span class="sd">    returns</span>
@@ -1147,29 +1025,16 @@
                                    <span class="n">con_file</span><span class="o">=</span><span class="n">con_file</span><span class="p">,</span> <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">))</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error occurred when processing </span><span class="si">{</span><span class="n">file_new</span><span class="si">}</span><span class="s2">. &quot;</span>
-                             <span class="sa">f</span><span class="s2">&quot;Trying next target.&quot;</span><span class="p">)</span>
+                             <span class="sa">f</span><span class="s2">&quot;Trying next target.&quot;</span><span class="p">)</span></div>
 
         
-<span class="k">def</span> <span class="nf">all_sources_cutout</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">period_file</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>\
+<div class="viewcode-block" id="all_sources_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.all_sources_cutout.html#tessilator.tessilator.all_sources_cutout">[docs]</a><span class="k">def</span> <span class="nf">all_sources_cutout</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">period_file</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>\
                        <span class="n">make_plots</span><span class="p">,</span> <span class="n">choose_sec</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the tessilator for all targets.</span>
 
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |None| replace:: **None**</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        | Table of input data for the tessilator, with the following columns:</span>
 <span class="sd">        #. name: name of the target (str)</span>
 <span class="sd">        #. source_id: Gaia DR3 source identifier (str)</span>
@@ -1180,24 +1045,24 @@
 <span class="sd">        #. log_tot_bg_star: log-10 value of the flux ratio between contaminants and target (optional)</span>
 <span class="sd">        #. log_max_bg_star: log-10 value of the flux ratio between the largest contaminant and target (optional)</span>
 <span class="sd">        #. n_contaminants: number of contaminant sources (optional)</span>
-<span class="sd">    period_file : |str|_ </span>
+<span class="sd">    period_file : `str` </span>
 <span class="sd">        Name of the file to store periodogram results.</span>
-<span class="sd">    LC_con : |bool|_</span>
+<span class="sd">    LC_con : `bool`</span>
 <span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
 <span class="sd">        contaminants. Here, the data required for further analysis are</span>
 <span class="sd">        stored in a table.</span>
-<span class="sd">    flux_con : |bool|_</span>
+<span class="sd">    flux_con : `bool`</span>
 <span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
-<span class="sd">    con_file : |str|_</span>
+<span class="sd">    con_file : `str`</span>
 <span class="sd">        The name of the file to store data from the total flux contribution</span>
 <span class="sd">        from contaminants.</span>
-<span class="sd">    make_plots : |bool|_</span>
+<span class="sd">    make_plots : `bool`</span>
 <span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
-<span class="sd">    choose_sec : |None|_, |int|_, or |Iterable|_, optional</span>
+<span class="sd">    choose_sec : `None`, `int`, or `Iterable`, optional</span>
 <span class="sd">        | The sector, or sectors required for download.</span>
-<span class="sd">        * If |None|_, TESScut will download all sectors available for the target.</span>
-<span class="sd">        * If |int|_, TESScut will attempt to download this sector number.</span>
-<span class="sd">        * If |Iterable|_, TESScut will attempt to download a list of sectors.</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
@@ -1222,26 +1087,13 @@
     <span class="n">final_table</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">period_file</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">dt_string</span><span class="o">+</span><span class="s1">&#39;.ecsv&#39;</span><span class="p">)</span>
 
     <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t_targets</span><span class="p">)</span><span class="si">}</span><span class="s2"> targets in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t_targets</span><span class="p">)</span><span class="si">}</span><span class="s2"> targets in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
-<span class="k">def</span> <span class="nf">one_cc</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<div class="viewcode-block" id="one_cc"><a class="viewcode-back" href="../../api/tessilator.tessilator.one_cc.html#tessilator.tessilator.one_cc">[docs]</a><span class="k">def</span> <span class="nf">one_cc</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
                       <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the tessilator for targets in a given Sector/Camera/CCD configuration</span>
-
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
 
 <span class="sd">    This routine finds the full-frame calibrated fits files and targets which</span>
 <span class="sd">    land in a given Sector/Camera/CCD configuration (SCC). Aperture photometry</span>
@@ -1252,20 +1104,20 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    cc : |list|_ size=2</span>
+<span class="sd">    cc : `list` size=2</span>
 <span class="sd">        List of [a, b], where a is the Camera number (1-4)</span>
 <span class="sd">        and b is the CCD number (1-4)</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        Table containing the targets to be analysed</span>
-<span class="sd">    sector_num : |int|_</span>
+<span class="sd">    sector_num : `int`</span>
 <span class="sd">        Sector number required</span>
-<span class="sd">    make_plots : |bool|_</span>
+<span class="sd">    make_plots : `bool`</span>
 <span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
-<span class="sd">    final_table : |astropy.table.Table|_</span>
+<span class="sd">    final_table : `astropy.table.Table`</span>
 <span class="sd">        The table to store tessilator results.</span>
-<span class="sd">    Rad : |float|_, optional, default=1.0</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
 <span class="sd">        The pixel radius of the flux collecting area for aperture photometry</span>
-<span class="sd">    SkyRad: |Iterable|_, size=2, optional, default=[6.,8.]</span>
+<span class="sd">    SkyRad: `Iterable`, size=2, optional, default=[6.,8.]</span>
 <span class="sd">        The inner and outer background annuli used for aperture photometry</span>
 
 <span class="sd">    returns</span>
@@ -1278,32 +1130,23 @@
           <span class="p">(</span><span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;CCD&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">ind</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
         <span class="k">return</span>
-    <span class="n">full_run_lc</span><span class="p">(</span><span class="n">fits_files</span><span class="p">,</span> <span class="n">t_targets</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">)</span>
+    <span class="n">full_run_lc</span><span class="p">(</span><span class="n">fits_files</span><span class="p">,</span> <span class="n">t_targets</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">)</span></div>
 
 
 
 
-<span class="k">def</span> <span class="nf">all_sources_sector</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">period_file</span><span class="p">):</span>
+<div class="viewcode-block" id="all_sources_sector"><a class="viewcode-back" href="../../api/tessilator.tessilator.all_sources_sector.html#tessilator.tessilator.all_sources_sector">[docs]</a><span class="k">def</span> <span class="nf">all_sources_sector</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">period_file</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Iterate over all cameras and CCDs for a given sector</span>
 <span class="sd">    </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        Input data for the targets to be analysed</span>
-<span class="sd">    scc : |list|_, size=3</span>
+<span class="sd">    scc : `list`, size=3</span>
 <span class="sd">        List containing the sector number, camera and CCD</span>
-<span class="sd">    make_plots : |bool|_</span>
+<span class="sd">    make_plots : `bool`</span>
 <span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
-<span class="sd">    period_file : |str|_</span>
+<span class="sd">    period_file : `str`</span>
 <span class="sd">        Name of file for recording parameters measured by the periodogram</span>
 <span class="sd">        analysis.</span>
 <span class="sd">        </span>
@@ -1336,7 +1179,7 @@
                   <span class="sa">f</span><span class="s2">&quot;Camera </span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, CCD </span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">finish</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
         <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished the whole of Sector </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished the whole of Sector </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 </pre></div>
 
             <div class="clearer"></div>

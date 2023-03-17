@@ -19,7 +19,7 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="get_gaia_data" href="tessilator.maketable.get_gaia_data.html" />
+    <link rel="next" title="table_from_simbad" href="tessilator.maketable.table_from_simbad.html" />
     <link rel="prev" title="run_sql_query_contaminants" href="tessilator.contaminants.run_sql_query_contaminants.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
@@ -39,7 +39,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.maketable.get_gaia_data.html" title="get_gaia_data"
+          <a href="tessilator.maketable.table_from_simbad.html" title="table_from_simbad"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="tessilator.contaminants.run_sql_query_contaminants.html" title="run_sql_query_contaminants"
@@ -71,29 +71,29 @@
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>im_plot</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html"><strong>astropy.nddata.Cutout2D</strong></a></span></dt><dd><p>The cut-out image of the target</p>
+<dt><strong>im_plot</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html#astropy.nddata.Cutout2D" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.nddata.Cutout2D</span></code></a></span></dt><dd><p>The cut-out image of the target</p>
 </dd>
-<dt><strong>clean</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>The modified (cleaned) lightcurve after processing</p>
+<dt><strong>clean</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>The modified (cleaned) lightcurve after processing</p>
 </dd>
-<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>The original normalised lightcurve before processing.</p>
+<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>The original normalised lightcurve before processing.</p>
 </dd>
-<dt><strong>LS_dict</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>The dictionary of parameters calculated by the Lomb-Scargle periodogram</p>
+<dt><strong>LS_dict</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>The dictionary of parameters calculated by the Lomb-Scargle periodogram</p>
 </dd>
-<dt><strong>scc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html"><strong>list</strong></a>, size=3</span></dt><dd><p>List containing the sector number, camera and CCD</p>
+<dt><strong>scc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, size=3</span></dt><dd><p>List containing the sector number, camera and CCD</p>
 </dd>
-<dt><strong>t_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>Table containing the input data for the target</p>
+<dt><strong>t_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>Table containing the input data for the target</p>
 </dd>
-<dt><strong>XY_ctr</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(10,10)</span></dt><dd><p>The centroid (in pixels) of the target in the TESS image.</p>
+<dt><strong>XY_ctr</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a>, optional, default=(10,10)</span></dt><dd><p>The centroid (in pixels) of the target in the TESS image.</p>
 </dd>
-<dt><strong>XY_contam</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None"><strong>None</strong></a>, optional, default = <a class="reference external" href="https://docs.python.org/3/library/constants.html#None"><strong>None</strong></a></span></dt><dd><p>The pixel positions of the strongest contaminants</p>
+<dt><strong>XY_contam</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, optional, default = <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></dt><dd><p>The pixel positions of the strongest contaminants</p>
 </dd>
-<dt><strong>p_min_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=0.1</span></dt><dd><p>The shortest period calculated in the Lomb-Scargle periodogram</p>
+<dt><strong>p_min_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=0.1</span></dt><dd><p>The shortest period calculated in the Lomb-Scargle periodogram</p>
 </dd>
-<dt><strong>p_max_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=50.</span></dt><dd><p>The longest period calculated in the Lomb-Scargle periodogram</p>
+<dt><strong>p_max_thresh</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=50.</span></dt><dd><p>The longest period calculated in the Lomb-Scargle periodogram</p>
 </dd>
-<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=1.0</span></dt><dd><p>The aperture radius from the aperture photometry</p>
+<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=1.0</span></dt><dd><p>The aperture radius from the aperture photometry</p>
 </dd>
-<dt><strong>SkyRad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a>, size=2, optional, default=[6.,8.]</span></dt><dd><p>The inner and outer background annuli from aperture photometry</p>
+<dt><strong>SkyRad</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code>, size=2, optional, default=[6.,8.]</span></dt><dd><p>The inner and outer background annuli from aperture photometry</p>
 </dd>
 </dl>
 </dd>
@@ -138,7 +138,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.maketable.get_gaia_data.html" title="get_gaia_data"
+          <a href="tessilator.maketable.table_from_simbad.html" title="table_from_simbad"
              >next</a> |</li>
         <li class="right" >
           <a href="tessilator.contaminants.run_sql_query_contaminants.html" title="run_sql_query_contaminants"

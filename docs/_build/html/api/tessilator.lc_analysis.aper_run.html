@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="clean_lc" href="tessilator.lc_analysis.clean_lc.html" />
-    <link rel="prev" title="setup_input_parameters" href="tessilator.tessilator.setup_input_parameters.html" />
+    <link rel="prev" title="get_xy_pos" href="tessilator.lc_analysis.get_xy_pos.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -42,7 +42,7 @@
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.tessilator.setup_input_parameters.html" title="setup_input_parameters"
+          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -67,22 +67,22 @@ lightcurve to be processed in subsequent functions.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>file_in</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a></span></dt><dd><p>Name of the fits file containing image data</p>
+<dt><strong>file_in</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>Name of the fits file containing image data</p>
 </dd>
-<dt><strong>targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The table of input data</p>
+<dt><strong>targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The table of input data</p>
 </dd>
-<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=1.</span></dt><dd><p>The pixel radius to define the circular area for the aperture</p>
+<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=1.</span></dt><dd><p>The pixel radius to define the circular area for the aperture</p>
 </dd>
-<dt><strong>SkyRad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(6.,8.)</span></dt><dd><p>A 2-element tuple defining the inner and outer annulus to calculate
+<dt><strong>SkyRad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a>, optional, default=(6.,8.)</span></dt><dd><p>A 2-element tuple defining the inner and outer annulus to calculate
 the background flux</p>
 </dd>
-<dt><strong>XY_pos</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences"><strong>tuple</strong></a>, optional, default=(10.,10.)</span></dt><dd><p>The X-Y centroid (in pixels) of the aperture.</p>
+<dt><strong>XY_pos</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a>, optional, default=(10.,10.)</span></dt><dd><p>The X-Y centroid (in pixels) of the aperture.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>full_phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The formatted table containing results from the aperture photometry.</p>
+<dt><strong>full_phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The formatted table containing results from the aperture photometry.</p>
 </dd>
 </dl>
 </dd>
@@ -125,7 +125,7 @@ the background flux</p>
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.tessilator.setup_input_parameters.html" title="setup_input_parameters"
+          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

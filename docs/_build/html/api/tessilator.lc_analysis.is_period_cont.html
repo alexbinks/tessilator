@@ -19,8 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="make_lc" href="tessilator.lc_analysis.make_lc.html" />
-    <link rel="prev" title="get_xy_pos" href="tessilator.lc_analysis.get_xy_pos.html" />
+    <link rel="next" title="contamination" href="tessilator.contaminants.contamination.html" />
+    <link rel="prev" title="run_ls" href="tessilator.lc_analysis.run_ls.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -39,10 +39,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
+          <a href="tessilator.contaminants.contamination.html" title="contamination"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
+          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -67,13 +67,13 @@ the source causing the observed periodicity.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>d_target</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>A dictionary containing periodogram data of the target star.</p>
+<dt><strong>d_target</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A dictionary containing periodogram data of the target star.</p>
 </dd>
-<dt><strong>d_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><p>A dictionary containing periodogram data of the contaminant star.</p>
+<dt><strong>d_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A dictionary containing periodogram data of the contaminant star.</p>
 </dd>
-<dt><strong>t_cont</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>A table containing Gaia data for the contaminant star</p>
+<dt><strong>t_cont</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>A table containing Gaia data for the contaminant star</p>
 </dd>
-<dt><strong>frac_amp_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=0.5</span></dt><dd><p>The threshold factor to account for the difference in amplitude
+<dt><strong>frac_amp_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=0.5</span></dt><dd><p>The threshold factor to account for the difference in amplitude
 of the two stars. If this is high, then the contaminants will be
 less likely to be flagged as the potential source</p>
 </dd>
@@ -81,7 +81,7 @@ less likely to be flagged as the potential source</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>output</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>output</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">Either <a href="#id1"><span class="problematic" id="id2">`</span></a>a’, <a href="#id3"><span class="problematic" id="id4">`</span></a>b’ or <a href="#id5"><span class="problematic" id="id6">`</span></a>c’</div>
 <div class="line">(a) The contaminant is probably the source causing the periodicity</div>
 <div class="line">(b) The contaminant might be the source causing the periodicity</div>
@@ -126,10 +126,10 @@ less likely to be flagged as the potential source</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
+          <a href="tessilator.contaminants.contamination.html" title="contamination"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
+          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

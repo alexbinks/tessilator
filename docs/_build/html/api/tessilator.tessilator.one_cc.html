@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>one_cc &#8212; tessilator 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="all_sources_sector" href="tessilator.tessilator.all_sources_sector.html" />
+    <link rel="prev" title="all_sources_cutout" href="tessilator.tessilator.all_sources_cutout.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_sector.html" title="all_sources_sector"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_cutout.html" title="all_sources_cutout"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">one_cc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="one-cc">
+<h1>one_cc<a class="headerlink" href="#one-cc" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tessilator.tessilator.one_cc">
+<span class="sig-prename descclassname"><span class="pre">tessilator.tessilator.</span></span><span class="sig-name descname"><span class="pre">one_cc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t_targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_plots</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SkyRad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[6.0,</span> <span class="pre">8.0]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/tessilator.html#one_cc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.tessilator.one_cc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the tessilator for targets in a given Sector/Camera/CCD configuration</p>
+<p>This routine finds the full-frame calibrated fits files and targets which
+land in a given Sector/Camera/CCD configuration (SCC). Aperture photometry
+is carried out simultaneously for all stars in a given SCC for each fits
+file in chronological order. This makes the method run much faster than
+doing it star-by-star (i.e. vectorisation). The output is a table for each
+SCC and plots for each target (if required).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>cc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> size=2</span></dt><dd><p>List of [a, b], where a is the Camera number (1-4)
+and b is the CCD number (1-4)</p>
+</dd>
+<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>Table containing the targets to be analysed</p>
+</dd>
+<dt><strong>sector_num</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a></span></dt><dd><p>Sector number required</p>
+</dd>
+<dt><strong>make_plots</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>Decides is plots are made from the lightcurve analysis.</p>
+</dd>
+<dt><strong>final_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The table to store tessilator results.</p>
+</dd>
+<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=1.0</span></dt><dd><p>The pixel radius of the flux collecting area for aperture photometry</p>
+</dd>
+<dt><strong>SkyRad: `Iterable`, size=2, optional, default=[6.,8.]</strong></dt><dd><p>The inner and outer background annuli used for aperture photometry</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>Nothing returned, but the final tessilator table is saved to file.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">one_cc</a><ul>
+<li><a class="reference internal" href="#tessilator.tessilator.one_cc"><code class="docutils literal notranslate"><span class="pre">one_cc()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_sector.html" title="all_sources_sector"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_cutout.html" title="all_sources_cutout"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">one_cc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 16 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

@@ -77,23 +77,23 @@ ensure there are enough datapoints to construct a periodogram analysis.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>t</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The set of time coordinates (in days)</p>
+<dt><strong>t</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>The set of time coordinates (in days)</p>
 </dd>
-<dt><strong>f</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The set of normalised flux coordinates</p>
+<dt><strong>f</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>The set of normalised flux coordinates</p>
 </dd>
-<dt><strong>MAD_fac</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=2.</span></dt><dd><p>The threshold number of MAD values to allow.</p>
+<dt><strong>MAD_fac</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=2.</span></dt><dd><p>The threshold number of MAD values to allow.</p>
 </dd>
-<dt><strong>time_fac</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=10.</span></dt><dd><p>The maximum time gap allowed between neighbouring datapoints.</p>
+<dt><strong>time_fac</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=10.</span></dt><dd><p>The maximum time gap allowed between neighbouring datapoints.</p>
 </dd>
-<dt><strong>min_num_per_group</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int"><strong>int</strong></a>, optional, default=50</span></dt><dd><p>The minimum number of datapoints allowed in a contiguous set.</p>
+<dt><strong>min_num_per_group</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional, default=50</span></dt><dd><p>The minimum number of datapoints allowed in a contiguous set.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>start_index</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html"><strong>list</strong></a></span></dt><dd><p>The start indices for each saved data string.</p>
+<dt><strong>start_index</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a></span></dt><dd><p>The start indices for each saved data string.</p>
 </dd>
-<dt><strong>end_index</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html"><strong>list</strong></a></span></dt><dd><p>The end indices for each saved data string.</p>
+<dt><strong>end_index</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a></span></dt><dd><p>The end indices for each saved data string.</p>
 </dd>
 </dl>
 </dd>

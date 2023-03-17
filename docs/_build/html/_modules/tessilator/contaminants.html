@@ -57,19 +57,15 @@
 <span class="kn">from</span> <span class="nn">astroquery.gaia</span> <span class="kn">import</span> <span class="n">Gaia</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-
 <span class="kn">from</span> <span class="nn">.fixedconstants</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1">#__all__ = [&#39;logger&#39;, &#39;run_sql_query_contaminants&#39;, &#39;flux_fraction_contaminant&#39;, &#39;contamination&#39;]</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="run_sql_query_contaminants"><a class="viewcode-back" href="../../api/tessilator.contaminants.run_sql_query_contaminants.html#tessilator.contaminants.run_sql_query_contaminants">[docs]</a><span class="k">def</span> <span class="nf">run_sql_query_contaminants</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">pix_radius</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Perform an SQL Query to identify neighbouring contaminants.</span>
-
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-
 
 <span class="sd">    If an analysis of flux contribution from neighbouring contaminants is</span>
 <span class="sd">    specified, this function generates the SQL query to identify targets</span>
@@ -79,15 +75,15 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_target : |astropy.table.Table|_</span>
+<span class="sd">    t_target : `astropy.table.Table`</span>
 <span class="sd">        The input table</span>
 
-<span class="sd">    pix_radius : |float|_, optional, default=5.0</span>
+<span class="sd">    pix_radius : `float`, optional, default=5.0</span>
 <span class="sd">        The maximum angular distance (in arcsecs) to search for contaminants</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    t_gaia : |astropy.table.Table|_</span>
+<span class="sd">    t_gaia : `astropy.table.Table`</span>
 <span class="sd">        The Gaia results table from the SQL query.    </span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Generate an SQL query for each target.</span>
@@ -115,9 +111,6 @@
 
 <div class="viewcode-block" id="flux_fraction_contaminant"><a class="viewcode-back" href="../../api/tessilator.contaminants.flux_fraction_contaminant.html#tessilator.contaminants.flux_fraction_contaminant">[docs]</a><span class="k">def</span> <span class="nf">flux_fraction_contaminant</span><span class="p">(</span><span class="n">ang_sep</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">d_th</span><span class="o">=</span><span class="mf">0.000005</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Quantify the flux contamination from a neighbouring source.</span>
-<span class="sd">    </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
 
 <span class="sd">    Calculates the fraction of flux from a neighbouring contaminating source</span>
 <span class="sd">    that gets scattered into the aperture. The analytic function uses equation</span>
@@ -132,17 +125,17 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    ang_sep : |float|_</span>
+<span class="sd">    ang_sep : `float`</span>
 <span class="sd">        The angular distance (in arcseconds) between a contaminant and the</span>
 <span class="sd">        aperture centre. </span>
 
-<span class="sd">    s : |float|_</span>
+<span class="sd">    s : `float`</span>
 <span class="sd">        For a given aperture size, Rad (in pixels)</span>
 <span class="sd">        and an FWHM of the TESS PSF, exprf (set at 0.65 pixels), :math:`s = {\\rm Rad}^2/(2.0*{\\rm exprf}^2)`</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    frac_flux_in_aperture : |float|_</span>
+<span class="sd">    frac_flux_in_aperture : `float`</span>
 <span class="sd">        Fraction of contaminant flux that gets scattered into the aperture.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">n</span><span class="p">,</span> <span class="n">n_z</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
@@ -163,18 +156,6 @@
 
 <div class="viewcode-block" id="contamination"><a class="viewcode-back" href="../../api/tessilator.contaminants.contamination.html#tessilator.contaminants.contamination">[docs]</a><span class="k">def</span> <span class="nf">contamination</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">n_cont</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Estimate flux from neighbouring contaminant sources.</span>
-<span class="sd">    </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. |None| replace:: **None**</span>
-
 
 <span class="sd">    The purpose of this function is to estimate the amount of flux incident in</span>
 <span class="sd">    the TESS aperture that originates from neighbouring, contaminating sources.</span>
@@ -194,27 +175,27 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        The input table for all the targets.</span>
 <span class="sd">    </span>
-<span class="sd">    LC_con : |bool|_</span>
+<span class="sd">    LC_con : `bool`</span>
 <span class="sd">        If true, a table of Gaia DR3 information on the contaminants is</span>
 <span class="sd">        returned, else None.</span>
 <span class="sd">    </span>
-<span class="sd">    Rad : |float|_, optional, default=1.0</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
 <span class="sd">        The size of the radius aperture (in pixels)</span>
 
-<span class="sd">    n_cont : |int|_, optional, default=5</span>
+<span class="sd">    n_cont : `int`, optional, default=5</span>
 <span class="sd">        The maximum number of neighbouring contaminants to store to table if</span>
 <span class="sd">        LC_con is True.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    t_targets : |astropy.table.Table|_</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
 <span class="sd">        The input table for all the targets with 3 extra columns to quantify</span>
 <span class="sd">        the flux contamination.</span>
 
-<span class="sd">    t_cont : |astropy.table.Table|_ or |None|_</span>
+<span class="sd">    t_cont : `astropy.table.Table` or `None`</span>
 <span class="sd">        If LC_con is true, a table of Gaia DR3 information on the contaminants</span>
 <span class="sd">        is returned, else None.</span>
 <span class="sd">    &#39;&#39;&#39;</span>

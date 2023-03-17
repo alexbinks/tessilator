@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>sine_fit &#8212; tessilator 0.1 documentation</title>
+    <title>all_sources_sector &#8212; tessilator 0.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
@@ -19,8 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="contamination" href="tessilator.contaminants.contamination.html" />
-    <link rel="prev" title="run_ls" href="tessilator.lc_analysis.run_ls.html" />
+    <link rel="next" title="get_xy_pos" href="tessilator.lc_analysis.get_xy_pos.html" />
+    <link rel="prev" title="one_cc" href="tessilator.tessilator.one_cc.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -39,14 +39,14 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.contaminants.contamination.html" title="contamination"
+          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+          <a href="tessilator.tessilator.one_cc.html" title="one_cc"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">sine_fit</a></li> 
+        <li class="nav-item nav-item-this"><a href="">all_sources_sector</a></li> 
       </ul>
     </div>  
 
@@ -55,30 +55,30 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="sine-fit">
-<h1>sine_fit<a class="headerlink" href="#sine-fit" title="Permalink to this heading">¶</a></h1>
+  <section id="all-sources-sector">
+<h1>all_sources_sector<a class="headerlink" href="#all-sources-sector" title="Permalink to this heading">¶</a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="tessilator.lc_analysis.sine_fit">
-<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">sine_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/lc_analysis.html#sine_fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.lc_analysis.sine_fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the best parameters (y_offset, amplitude, and phase) to a regular
-sinusoidal function.</p>
+<dt class="sig sig-object py" id="tessilator.tessilator.all_sources_sector">
+<span class="sig-prename descclassname"><span class="pre">tessilator.tessilator.</span></span><span class="sig-name descname"><span class="pre">all_sources_sector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t_targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_plots</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/tessilator.html#all_sources_sector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.tessilator.all_sources_sector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over all cameras and CCDs for a given sector</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>x</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>list of input values</p>
+<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>Input data for the targets to be analysed</p>
 </dd>
-<dt><strong>y0</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a></span></dt><dd><p>The midpoint of the sine curve</p>
+<dt><strong>scc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, size=3</span></dt><dd><p>List containing the sector number, camera and CCD</p>
 </dd>
-<dt><strong>A</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a></span></dt><dd><p>The amplitude of the sine curve</p>
+<dt><strong>make_plots</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>Decides is plots are made from the lightcurve analysis.</p>
 </dd>
-<dt><strong>phi</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a></span></dt><dd><p>The phase angle of the sine curve</p>
+<dt><strong>period_file</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>Name of file for recording parameters measured by the periodogram
+analysis.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl>
-<dt><strong>sine</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html"><strong>list</strong></a></span></dt><dd><p>A list of sine curve values.</p>
-</dd>
+<dd class="field-even"><dl class="simple">
+<dt>Nothing returned. The Tessilator data for each camera/CCD configuration</dt><dd></dd>
+<dt>is saved to file.</dt><dd></dd>
 </dl>
 </dd>
 </dl>
@@ -96,8 +96,8 @@ sinusoidal function.</p>
   <div>
     <h3><a href="../index.html">Table of Contents</a></h3>
     <ul>
-<li><a class="reference internal" href="#">sine_fit</a><ul>
-<li><a class="reference internal" href="#tessilator.lc_analysis.sine_fit"><code class="docutils literal notranslate"><span class="pre">sine_fit()</span></code></a></li>
+<li><a class="reference internal" href="#">all_sources_sector</a><ul>
+<li><a class="reference internal" href="#tessilator.tessilator.all_sources_sector"><code class="docutils literal notranslate"><span class="pre">all_sources_sector()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -117,14 +117,14 @@ sinusoidal function.</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.contaminants.contamination.html" title="contamination"
+          <a href="tessilator.lc_analysis.get_xy_pos.html" title="get_xy_pos"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+          <a href="tessilator.tessilator.one_cc.html" title="one_cc"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">sine_fit</a></li> 
+        <li class="nav-item nav-item-this"><a href="">all_sources_sector</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

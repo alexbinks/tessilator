@@ -97,7 +97,8 @@
 <span class="kn">from</span> <span class="nn">.tess_stars2px</span> <span class="kn">import</span> <span class="n">tess_stars2px_function_entry</span>
 <span class="kn">from</span> <span class="nn">.fixedconstants</span> <span class="kn">import</span> <span class="o">*</span>
 
-
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;logger&#39;</span><span class="p">,</span> <span class="s1">&#39;get_xy_pos&#39;</span><span class="p">,</span> <span class="s1">&#39;aper_run&#39;</span><span class="p">,</span> <span class="s1">&#39;clean_lc&#39;</span><span class="p">,</span> <span class="s1">&#39;detrend_lc&#39;</span><span class="p">,</span> <span class="s1">&#39;make_lc&#39;</span><span class="p">,</span> 
+           <span class="s1">&#39;get_second_peak&#39;</span><span class="p">,</span> <span class="s1">&#39;gauss_fit&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_fit&#39;</span><span class="p">,</span> <span class="s1">&#39;run_ls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_period_cont&#39;</span><span class="p">]</span>
 
 <span class="c1"># initialize the logger object</span>
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -109,24 +110,17 @@
 
 <div class="viewcode-block" id="get_xy_pos"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.get_xy_pos.html#tessilator.lc_analysis.get_xy_pos">[docs]</a><span class="k">def</span> <span class="nf">get_xy_pos</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">head</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Locate the X-Y position for targets in a given Sector/CCD/Camera mode</span>
-<span class="sd">    </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _astropy.io.fits: https://docs.astropy.org/en/stable/io/fits/index.html</span>
-<span class="sd">    .. |astropy.io.fits| replace:: **astropy.io.fits**</span>
-<span class="sd">    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences</span>
-<span class="sd">    .. |tuple| replace:: **tuple**</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    targets : |astropy.table.Table|_</span>
+<span class="sd">    targets : `astropy.table.Table`</span>
 <span class="sd">        The table of input data with celestial coordinates.</span>
-<span class="sd">    head : |astropy.io.fits|_</span>
+<span class="sd">    head : `astropy.io.fits`</span>
 <span class="sd">        The fits header containing the WCS coordinate details.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    positions : |tuple|_</span>
+<span class="sd">    positions : `tuple`</span>
 <span class="sd">        A tuple of X-Y pixel positions for each target.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">WCS</span><span class="p">(</span><span class="n">head</span><span class="p">)</span>
@@ -145,36 +139,27 @@
 <div class="viewcode-block" id="aper_run"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.aper_run.html#tessilator.lc_analysis.aper_run">[docs]</a><span class="k">def</span> <span class="nf">aper_run</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">],</span> <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Perform aperture photometry for the image data.</span>
 
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences</span>
-<span class="sd">    .. |tuple| replace:: **tuple**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-
 <span class="sd">    This function reads in each fits file, and performs aperture photometry.</span>
 <span class="sd">    A table of aperture photometry results is returned, which forms the raw</span>
 <span class="sd">    lightcurve to be processed in subsequent functions.</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    file_in : |str|_</span>
+<span class="sd">    file_in : `str`</span>
 <span class="sd">        Name of the fits file containing image data</span>
-<span class="sd">    targets : |astropy.table.Table|_</span>
+<span class="sd">    targets : `astropy.table.Table`</span>
 <span class="sd">        The table of input data</span>
-<span class="sd">    Rad : |float|_, optional, default=1.</span>
+<span class="sd">    Rad : `float`, optional, default=1.</span>
 <span class="sd">        The pixel radius to define the circular area for the aperture</span>
-<span class="sd">    SkyRad : |tuple|_, optional, default=(6.,8.)</span>
+<span class="sd">    SkyRad : `tuple`, optional, default=(6.,8.)</span>
 <span class="sd">        A 2-element tuple defining the inner and outer annulus to calculate</span>
 <span class="sd">        the background flux</span>
-<span class="sd">    XY_pos : |tuple|_, optional, default=(10.,10.)</span>
+<span class="sd">    XY_pos : `tuple`, optional, default=(10.,10.)</span>
 <span class="sd">        The X-Y centroid (in pixels) of the aperture.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    full_phot_table : |astropy.table.Table|_</span>
+<span class="sd">    full_phot_table : `astropy.table.Table`</span>
 <span class="sd">        The formatted table containing results from the aperture photometry.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
@@ -261,15 +246,6 @@
 <div class="viewcode-block" id="clean_lc"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.clean_lc.html#tessilator.lc_analysis.clean_lc">[docs]</a><span class="k">def</span> <span class="nf">clean_lc</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">MAD_fac</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">time_fac</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">min_num_per_group</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Remove data points from the lightcurve that are likely to be spurious.</span>
 
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-
 <span class="sd">    Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and</span>
 <span class="sd">    ensure the data is efficiently normalized, the lightcurve is split into</span>
 <span class="sd">    &quot;strings&quot; of contiguous data. Neighbouring data points must have been</span>
@@ -288,22 +264,22 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    t : |Iterable|_</span>
+<span class="sd">    t : `Iterable`</span>
 <span class="sd">        The set of time coordinates (in days)</span>
-<span class="sd">    f : |Iterable|_</span>
+<span class="sd">    f : `Iterable`</span>
 <span class="sd">        The set of normalised flux coordinates</span>
-<span class="sd">    MAD_fac : |float|_, optional, default=2.</span>
+<span class="sd">    MAD_fac : `float`, optional, default=2.</span>
 <span class="sd">        The threshold number of MAD values to allow. </span>
-<span class="sd">    time_fac : |float|_, optional, default=10.</span>
+<span class="sd">    time_fac : `float`, optional, default=10.</span>
 <span class="sd">        The maximum time gap allowed between neighbouring datapoints.</span>
-<span class="sd">    min_num_per_group : |int|_, optional, default=50</span>
+<span class="sd">    min_num_per_group : `int`, optional, default=50</span>
 <span class="sd">        The minimum number of datapoints allowed in a contiguous set.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    start_index : |list|_</span>
+<span class="sd">    start_index : `list`</span>
 <span class="sd">       The start indices for each saved data string.</span>
-<span class="sd">    end_index : |list|_</span>
+<span class="sd">    end_index : `list`</span>
 <span class="sd">       The end indices for each saved data string.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -352,12 +328,6 @@
 <div class="viewcode-block" id="detrend_lc"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.detrend_lc.html#tessilator.lc_analysis.detrend_lc">[docs]</a><span class="k">def</span> <span class="nf">detrend_lc</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span><span class="n">df</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">f</span><span class="p">,</span><span class="n">err</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Detrend and normalise the lightcurves.</span>
 
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-
-
 <span class="sd">    This function operates on each section of data returned from the &quot;clean_lc&quot;</span>
 <span class="sd">    function and performs a detrending routine so that data from separate</span>
 <span class="sd">    sections can be connected. Five lists are outputted which form the</span>
@@ -369,20 +339,20 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    ds : |Iterable|_</span>
+<span class="sd">    ds : `Iterable`</span>
 <span class="sd">        the start indices for the lightcurve.</span>
-<span class="sd">    df : |Iterable|_</span>
+<span class="sd">    df : `Iterable`</span>
 <span class="sd">        the end indices for the lightcurve.</span>
-<span class="sd">    t : |Iterable|_</span>
+<span class="sd">    t : `Iterable`</span>
 <span class="sd">        The list of time coordinates.</span>
-<span class="sd">    f : |Iterable|_</span>
+<span class="sd">    f : `Iterable`</span>
 <span class="sd">        The list of flux coordinates.</span>
-<span class="sd">    err : |Iterable|_</span>
+<span class="sd">    err : `Iterable`</span>
 <span class="sd">        The list of flux error coordinates.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dict_lc : |dict|_</span>
+<span class="sd">    dict_lc : `dict`</span>
 <span class="sd">        | A dictionary containing the following keys:</span>
 <span class="sd">        | &quot;time&quot; -&gt; The time coordinate</span>
 <span class="sd">        | &quot;oflux&quot; -&gt; The original, normalised flux values</span>
@@ -416,11 +386,6 @@
 
 <div class="viewcode-block" id="make_lc"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.make_lc.html#tessilator.lc_analysis.make_lc">[docs]</a><span class="k">def</span> <span class="nf">make_lc</span><span class="p">(</span><span class="n">phot_table</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Construct the normalised TESS lightcurve.</span>
-<span class="sd">    </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
 
 <span class="sd">    | The function runs the following tasks:</span>
 <span class="sd">    | (1) Read the table produced from the aperture photometry</span>
@@ -431,7 +396,7 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    phot_table : |astropy.table.Table|_ or |dict|_</span>
+<span class="sd">    phot_table : `astropy.table.Table` or `dict`</span>
 <span class="sd">        | The data table containing aperture photometry returned by aper_run.py. Columns must include:</span>
 <span class="sd">        | &quot;time&quot; -&gt; The time coordinate for each image</span>
 <span class="sd">        | &quot;mag&quot; -&gt; The target magnitude</span>
@@ -441,7 +406,7 @@
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cln : |dict|_</span>
+<span class="sd">    cln : `dict`</span>
 <span class="sd">        | The cleaned, detrended, normalised lightcurve, with the keys:</span>
 <span class="sd">        | &quot;time&quot; -&gt; The time coordinate</span>
 <span class="sd">        | &quot;time0&quot; -&gt; The time coordinate relative to the first data point</span>
@@ -450,7 +415,7 @@
 <span class="sd">        | &quot;enflux&quot; -&gt; The error on &quot;nflux&quot;</span>
 <span class="sd">        | &quot;polyord&quot; -&gt; The polynomial order used for each detrend        </span>
 
-<span class="sd">    orig : |dict|_</span>
+<span class="sd">    orig : `dict`</span>
 <span class="sd">        | The original, normalised lightcurve, with the keys:</span>
 <span class="sd">        | &quot;time&quot; -&gt; The time coordinate</span>
 <span class="sd">        | &quot;nflux&quot; -&gt; The original, normalised flux values</span>
@@ -487,22 +452,17 @@
 
 <div class="viewcode-block" id="get_second_peak"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.get_second_peak.html#tessilator.lc_analysis.get_second_peak">[docs]</a><span class="k">def</span> <span class="nf">get_second_peak</span><span class="p">(</span><span class="n">power</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;An algorithm to identify the second-highest peak in the periodogram</span>
-<span class="sd">    </span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    power : |Iterable|_</span>
+<span class="sd">    power : `Iterable`</span>
 <span class="sd">        A set of power values calculated from the periodogram analysis.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    a_g : |list|_</span>
+<span class="sd">    a_g : `list`</span>
 <span class="sd">        A list of indices corresponding to the Gaussian around the peak power.</span>
-<span class="sd">    a_o : |list|_</span>
+<span class="sd">    a_o : `list`</span>
 <span class="sd">        A list of indices corresponding to all other parts of the periodogram.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Get the left side of the peak</span>
@@ -546,92 +506,51 @@
     <span class="k">return</span> <span class="n">a_g</span><span class="p">,</span> <span class="n">a_o</span></div>
 
 
-<div class="viewcode-block" id="filter_out_none"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.filter_out_none.html#tessilator.lc_analysis.filter_out_none">[docs]</a><span class="k">def</span> <span class="nf">filter_out_none</span><span class="p">(</span><span class="n">unfiltered</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Simple function to remove list items if they are empty.</span>
-
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-
-<span class="sd">    parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    unfiltered : |Iterable|_</span>
-<span class="sd">        The input set of values</span>
-
-<span class="sd">    returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    filtered : |list|_</span>
-<span class="sd">        The filtered list.</span>
-
-<span class="sd">    &gt;&gt;&gt; filter_out_none([1, 4, None, 6, 9])</span>
-<span class="sd">    [1, 4, 6, 9]</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-
-    <span class="n">filtered</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unfiltered</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">filtered</span></div>
-
-
 <div class="viewcode-block" id="gauss_fit"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.gauss_fit.html#tessilator.lc_analysis.gauss_fit">[docs]</a><span class="k">def</span> <span class="nf">gauss_fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_mean</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Construct a simple Gaussian.</span>
-<span class="sd">    </span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
 
 <span class="sd">    Return Gaussian values from a given amplitude (a0), mean (x_mean) and</span>
 <span class="sd">    uncertainty (sigma) for a distribution of values</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : |Iterable|_</span>
+<span class="sd">    x : `Iterable`</span>
 <span class="sd">        list of input values</span>
-<span class="sd">    a0 : |float|_</span>
+<span class="sd">    a0 : `float`</span>
 <span class="sd">        Amplitude of a Gaussian</span>
-<span class="sd">    x_mean : |float|_</span>
+<span class="sd">    x_mean : `float`</span>
 <span class="sd">        The mean value of a Gaussian</span>
-<span class="sd">    sigma : |float|_</span>
+<span class="sd">    sigma : `float`</span>
 <span class="sd">        The Gaussian uncertainty</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    gaussian : |list|_</span>
+<span class="sd">    gaussian : `list`</span>
 <span class="sd">        A list of Gaussian values.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="n">gaussian</span> <span class="o">=</span> <span class="n">a0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">x_mean</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">gaussian</span></div>
 
-<div class="viewcode-block" id="sine_fit"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.sine_fit.html#tessilator.lc_analysis.sine_fit">[docs]</a><span class="k">def</span> <span class="nf">sine_fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+<div class="viewcode-block" id="sin_fit"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.sin_fit.html#tessilator.lc_analysis.sin_fit">[docs]</a><span class="k">def</span> <span class="nf">sin_fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Returns the best parameters (y_offset, amplitude, and phase) to a regular</span>
 <span class="sd">    sinusoidal function.</span>
 
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : |Iterable|_</span>
+<span class="sd">    x : `Iterable`</span>
 <span class="sd">        list of input values</span>
-<span class="sd">    y0 : |float|_</span>
+<span class="sd">    y0 : `float`</span>
 <span class="sd">        The midpoint of the sine curve</span>
-<span class="sd">    A : |float|_</span>
+<span class="sd">    A : `float`</span>
 <span class="sd">        The amplitude of the sine curve</span>
-<span class="sd">    phi : |float|_</span>
+<span class="sd">    phi : `float`</span>
 <span class="sd">        The phase angle of the sine curve</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sine : |list|_</span>
+<span class="sd">    sine : `list`</span>
 <span class="sd">        A list of sine curve values.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">sine</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">A</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="n">phi</span><span class="p">)</span>
@@ -641,29 +560,22 @@
 <div class="viewcode-block" id="run_ls"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.run_ls.html#tessilator.lc_analysis.run_ls">[docs]</a><span class="k">def</span> <span class="nf">run_ls</span><span class="p">(</span><span class="n">cln</span><span class="p">,</span> <span class="n">p_min_thresh</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="o">=</span><span class="mf">100.</span><span class="p">,</span> <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Run Lomb-Scargle periodogram and return a dictionary of results.</span>
 
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _int: https://docs.python.org/3/library/functions.html#int</span>
-<span class="sd">    .. |int| replace:: **int** </span>
-
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    cln : |dict|_</span>
+<span class="sd">    cln : `dict`</span>
 <span class="sd">        A dictionary containing the lightcurve data. The keys must include</span>
 <span class="sd">        | &quot;time0&quot; -&gt; The time coordinate relative to the first data point</span>
 <span class="sd">        | &quot;nflux&quot; -&gt; The detrended, cleaned, normalised flux values</span>
-<span class="sd">    p_min_thresh : |float|_, optional, default=0.05</span>
+<span class="sd">    p_min_thresh : `float`, optional, default=0.05</span>
 <span class="sd">        The minimum period (in days) to be calculated.</span>
-<span class="sd">    p_max_thresh : |float|_, optional, default=100.</span>
+<span class="sd">    p_max_thresh : `float`, optional, default=100.</span>
 <span class="sd">        The maximum period (in days) to be calculated.</span>
-<span class="sd">    samples_per_peak : |int|_, optional, default=10</span>
+<span class="sd">    samples_per_peak : `int`, optional, default=10</span>
 <span class="sd">        The number of samples to measure in each periodogram peak.</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    LS_dict : |dict|_</span>
+<span class="sd">    LS_dict : `dict`</span>
 <span class="sd">        A dictionary of parameters calculated from the periodogram analysis</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">LS_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -749,35 +661,26 @@
 <div class="viewcode-block" id="is_period_cont"><a class="viewcode-back" href="../../api/tessilator.lc_analysis.is_period_cont.html#tessilator.lc_analysis.is_period_cont">[docs]</a><span class="k">def</span> <span class="nf">is_period_cont</span><span class="p">(</span><span class="n">d_target</span><span class="p">,</span> <span class="n">d_cont</span><span class="p">,</span> <span class="n">t_cont</span><span class="p">,</span> <span class="n">frac_amp_cont</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Identify neighbouring contaminants that may cause the periodicity.</span>
 
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-
 <span class="sd">    If the user selects to measure periods for the neighbouring contaminants</span>
 <span class="sd">    this function returns a flag to assess if a contaminant may actually be</span>
 <span class="sd">    the source causing the observed periodicity.</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    d_target : |dict|_</span>
+<span class="sd">    d_target : `dict`</span>
 <span class="sd">        A dictionary containing periodogram data of the target star.</span>
-<span class="sd">    d_cont : |dict|_</span>
+<span class="sd">    d_cont : `dict`</span>
 <span class="sd">        A dictionary containing periodogram data of the contaminant star.</span>
-<span class="sd">    t_cont : |astropy.table.Table|_</span>
+<span class="sd">    t_cont : `astropy.table.Table`</span>
 <span class="sd">        A table containing Gaia data for the contaminant star</span>
-<span class="sd">    frac_amp_cont : |float|_, optional, default=0.5</span>
+<span class="sd">    frac_amp_cont : `float`, optional, default=0.5</span>
 <span class="sd">        The threshold factor to account for the difference in amplitude</span>
 <span class="sd">        of the two stars. If this is high, then the contaminants will be</span>
 <span class="sd">        less likely to be flagged as the potential source</span>
 <span class="sd">    </span>
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    output : |str|_</span>
+<span class="sd">    output : `str`</span>
 <span class="sd">        | Either `a&#39;, `b&#39; or `c&#39;</span>
 <span class="sd">        | (a) The contaminant is probably the source causing the periodicity</span>
 <span class="sd">        | (b) The contaminant might be the source causing the periodicity</span>

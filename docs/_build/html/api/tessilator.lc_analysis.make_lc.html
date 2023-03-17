@@ -19,8 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="run_ls" href="tessilator.lc_analysis.run_ls.html" />
-    <link rel="prev" title="is_period_cont" href="tessilator.lc_analysis.is_period_cont.html" />
+    <link rel="next" title="get_second_peak" href="tessilator.lc_analysis.get_second_peak.html" />
+    <link rel="prev" title="detrend_lc" href="tessilator.lc_analysis.detrend_lc.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -39,10 +39,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+          <a href="tessilator.lc_analysis.get_second_peak.html" title="get_second_peak"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
+          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -72,7 +72,7 @@
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a> or <a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">The data table containing aperture photometry returned by aper_run.py. Columns must include:</div>
 <div class="line">“time” -&gt; The time coordinate for each image</div>
 <div class="line">“mag” -&gt; The target magnitude</div>
@@ -84,7 +84,7 @@
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">The cleaned, detrended, normalised lightcurve, with the keys:</div>
 <div class="line">“time” -&gt; The time coordinate</div>
 <div class="line">“time0” -&gt; The time coordinate relative to the first data point</div>
@@ -94,7 +94,7 @@
 <div class="line">“polyord” -&gt; The polynomial order used for each detrend        </div>
 </div>
 </dd>
-<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">The original, normalised lightcurve, with the keys:</div>
 <div class="line">“time” -&gt; The time coordinate</div>
 <div class="line">“nflux” -&gt; The original, normalised flux values</div>
@@ -139,10 +139,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.run_ls.html" title="run_ls"
+          <a href="tessilator.lc_analysis.get_second_peak.html" title="get_second_peak"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
+          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

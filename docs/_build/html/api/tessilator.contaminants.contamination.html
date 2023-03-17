@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="flux_fraction_contaminant" href="tessilator.contaminants.flux_fraction_contaminant.html" />
-    <link rel="prev" title="sine_fit" href="tessilator.lc_analysis.sine_fit.html" />
+    <link rel="prev" title="is_period_cont" href="tessilator.lc_analysis.is_period_cont.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -42,7 +42,7 @@
           <a href="tessilator.contaminants.flux_fraction_contaminant.html" title="flux_fraction_contaminant"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.sine_fit.html" title="sine_fit"
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -77,24 +77,24 @@ the aperture.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The input table for all the targets.</p>
+<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The input table for all the targets.</p>
 </dd>
-<dt><strong>LC_con</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool"><strong>bool</strong></a></span></dt><dd><p>If true, a table of Gaia DR3 information on the contaminants is
+<dt><strong>LC_con</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>If true, a table of Gaia DR3 information on the contaminants is
 returned, else None.</p>
 </dd>
-<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>, optional, default=1.0</span></dt><dd><p>The size of the radius aperture (in pixels)</p>
+<dt><strong>Rad</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional, default=1.0</span></dt><dd><p>The size of the radius aperture (in pixels)</p>
 </dd>
-<dt><strong>n_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int"><strong>int</strong></a>, optional, default=5</span></dt><dd><p>The maximum number of neighbouring contaminants to store to table if
+<dt><strong>n_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional, default=5</span></dt><dd><p>The maximum number of neighbouring contaminants to store to table if
 LC_con is True.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>The input table for all the targets with 3 extra columns to quantify
+<dt><strong>t_targets</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The input table for all the targets with 3 extra columns to quantify
 the flux contamination.</p>
 </dd>
-<dt><strong>t_cont</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None"><strong>None</strong></a></span></dt><dd><p>If LC_con is true, a table of Gaia DR3 information on the contaminants
+<dt><strong>t_cont</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></dt><dd><p>If LC_con is true, a table of Gaia DR3 information on the contaminants
 is returned, else None.</p>
 </dd>
 </dl>
@@ -138,7 +138,7 @@ is returned, else None.</p>
           <a href="tessilator.contaminants.flux_fraction_contaminant.html" title="flux_fraction_contaminant"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.sine_fit.html" title="sine_fit"
+          <a href="tessilator.lc_analysis.is_period_cont.html" title="is_period_cont"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

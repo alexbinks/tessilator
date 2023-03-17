@@ -64,6 +64,8 @@
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;logger&#39;</span><span class="p">,</span> <span class="s1">&#39;table_from_simbad&#39;</span><span class="p">,</span> <span class="s1">&#39;table_from_coords&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;table_from_table&#39;</span><span class="p">,</span> <span class="s1">&#39;get_gaia_data&#39;</span><span class="p">]</span>
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
@@ -74,20 +76,17 @@
 <div class="viewcode-block" id="table_from_simbad"><a class="viewcode-back" href="../../api/tessilator.maketable.table_from_simbad.html#tessilator.maketable.table_from_simbad">[docs]</a><span class="k">def</span> <span class="nf">table_from_simbad</span><span class="p">(</span><span class="n">input_names</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Generate the formatted astropy table from a list of target names.</span>
 
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-
 <span class="sd">    All characters can be parsed except commas, since the table is in comma</span>
 <span class="sd">    separated variable (.csv) format.</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    input_names : |astropy.table.Table|_</span>
+<span class="sd">    input_names : `astropy.table.Table`</span>
 <span class="sd">        an input list of target names</span>
 
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    gaia_table : |astropy.table.Table|_</span>
+<span class="sd">    gaia_table : `astropy.table.Table`</span>
 <span class="sd">        the output table ready for further analysis</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Part 1: Use the SIMBAD database to retrieve the Gaia source identifier</span>
@@ -171,30 +170,23 @@
 <div class="viewcode-block" id="table_from_coords"><a class="viewcode-back" href="../../api/tessilator.maketable.table_from_coords.html#tessilator.maketable.table_from_coords">[docs]</a><span class="k">def</span> <span class="nf">table_from_coords</span><span class="p">(</span><span class="n">coord_table</span><span class="p">,</span> <span class="n">ang_max</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">type_coord</span><span class="o">=</span><span class="s1">&#39;icrs&#39;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Generate the formatted astropy table from a list of coordinates.</span>
 
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-
 <span class="sd">    Each entry needs to be in comma separated variable(.csv) format.</span>
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    coord_table : |astropy.table.Table|_</span>
+<span class="sd">    coord_table : `astropy.table.Table`</span>
 <span class="sd">        a table consisting of right ascension and declination coordinates (in</span>
 <span class="sd">        degrees) in comma separated variable (.csv) format.</span>
-<span class="sd">    ang_max : |float|_, optional, default=10.0</span>
+<span class="sd">    ang_max : `float`, optional, default=10.0</span>
 <span class="sd">        the maximum angular distance in arcseconds from the input coordinates</span>
 <span class="sd">        provided in the table.</span>
-<span class="sd">    type_coord : |str|_, optional, default=&#39;icrs&#39;</span>
+<span class="sd">    type_coord : `str`, optional, default=&#39;icrs&#39;</span>
 <span class="sd">        The coordinate system of the input positions. These can be &#39;icrs&#39;</span>
 <span class="sd">        (default), &#39;galactic&#39; or &#39;ecliptic&#39;.</span>
 <span class="sd">        </span>
 <span class="sd">    returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    gaia_table : |astropy.table.Table|_</span>
+<span class="sd">    gaia_table : `astropy.table.Table`</span>
 <span class="sd">        The output table ready for further analysis</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">gaia_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;ra&#39;</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">,</span> <span class="s1">&#39;parallax&#39;</span><span class="p">,</span> <span class="s1">&#39;Gmag&#39;</span><span class="p">),</span> \
@@ -255,26 +247,19 @@
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Generate the formatted astropy table from a pre-formatted astropy</span>
 <span class="sd">    table.</span>
 
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _str: https://docs.python.org/3/library/stdtypes.html#str</span>
-<span class="sd">    .. |str| replace:: **str**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-
 <span class="sd">    Each entry needs to be in comma separated variable(.csv) format. This</span>
 <span class="sd">    is the quickest way to produce the table ready for analysis, but it is</span>
 <span class="sd">    important the input data is properly formatted.</span>
 <span class="sd">    </span>
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    input_table : |astropy.table.Table|_</span>
+<span class="sd">    input_table : `astropy.table.Table`</span>
 <span class="sd">        | The columns of table must be in the following order:</span>
-<span class="sd">        * source_id (data type: |str|_)</span>
-<span class="sd">        * ra (data type: |float|_)</span>
-<span class="sd">        * dec (data type: |float|_)</span>
-<span class="sd">        * parallax (data type: |float|_)</span>
-<span class="sd">        * Gmag (data type: |float|_)</span>
+<span class="sd">        * source_id (data type: `str`)</span>
+<span class="sd">        * ra (data type: `float`)</span>
+<span class="sd">        * dec (data type: `float`)</span>
+<span class="sd">        * parallax (data type: `float`)</span>
+<span class="sd">        * Gmag (data type: `float`)</span>
 
 <span class="sd">        The column headers are not necessary.</span>
 
@@ -307,11 +292,6 @@
 <div class="viewcode-block" id="get_gaia_data"><a class="viewcode-back" href="../../api/tessilator.maketable.get_gaia_data.html#tessilator.maketable.get_gaia_data">[docs]</a><span class="k">def</span> <span class="nf">get_gaia_data</span><span class="p">(</span><span class="n">gaia_table</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Reads the input table and returns a table in the correct format for</span>
 <span class="sd">    TESSilator.</span>
-<span class="sd">        </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _bool: https://docs.python.org/3/library/functions.html#bool</span>
-<span class="sd">    .. |bool| replace:: **bool** </span>
 
 <span class="sd">    | The table must be in comma-separated variable format, in either of these 3 ways:</span>
 <span class="sd">    | 1) A table with a single column containing the source identifier</span>
@@ -322,17 +302,17 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    gaia_table : |astropy.table.Table|_</span>
+<span class="sd">    gaia_table : `astropy.table.Table`</span>
 <span class="sd">        The input table</span>
 
-<span class="sd">    name_is_source_id : |bool|_, optional, default=0</span>
+<span class="sd">    name_is_source_id : `bool`, optional, default=0</span>
 <span class="sd">        If the input table has 5 columns, this provides the choice to set the</span>
 <span class="sd">        name column equal to &quot;source_id&quot; (=1), or to find a common target</span>
 <span class="sd">        identifier (=0)</span>
 <span class="sd">    </span>
 <span class="sd">    results</span>
 <span class="sd">    -------</span>
-<span class="sd">    tbl : |astropy.table.Table|_</span>
+<span class="sd">    tbl : `astropy.table.Table`</span>
 <span class="sd">        | The table ready for TESSilator analysis, with the columns:</span>
 <span class="sd">        * name: the preferred choice of source identifier</span>
 <span class="sd">        * source_id: the Gaia DR3 source identifier</span>

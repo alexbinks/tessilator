@@ -19,7 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="table_from_simbad" href="tessilator.maketable.table_from_simbad.html" />
+    <link rel="next" title="get_gaia_data" href="tessilator.maketable.get_gaia_data.html" />
+    <link rel="prev" title="table_from_coords" href="tessilator.maketable.table_from_coords.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -38,7 +39,10 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.maketable.table_from_simbad.html" title="table_from_simbad"
+          <a href="tessilator.maketable.get_gaia_data.html" title="get_gaia_data"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.maketable.table_from_coords.html" title="table_from_coords"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
@@ -64,15 +68,15 @@ important the input data is properly formatted.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>input_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>input_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">The columns of table must be in the following order:</div>
 </div>
 <ul class="simple">
-<li><p>source_id (data type: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str"><strong>str</strong></a>)</p></li>
-<li><p>ra (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>)</p></li>
-<li><p>dec (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>)</p></li>
-<li><p>parallax (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>)</p></li>
-<li><p>Gmag (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float"><strong>float</strong></a>)</p></li>
+<li><p>source_id (data type: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>)</p></li>
+<li><p>ra (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>)</p></li>
+<li><p>dec (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>)</p></li>
+<li><p>parallax (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>)</p></li>
+<li><p>Gmag (data type: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>)</p></li>
 </ul>
 <p>The column headers are not necessary.</p>
 </dd>
@@ -80,7 +84,7 @@ important the input data is properly formatted.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>gaia_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table"><strong>astropy.table.Table</strong></a></span></dt><dd><p>the output table ready for further analysis</p>
+<dt><strong>gaia_table</strong><span class="classifier"><a href="#id3"><span class="problematic" id="id4">|astropy.table.Table|_</span></a></span></dt><dd><p>the output table ready for further analysis</p>
 </dd>
 </dl>
 </dd>
@@ -120,7 +124,10 @@ important the input data is properly formatted.</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.maketable.table_from_simbad.html" title="table_from_simbad"
+          <a href="tessilator.maketable.get_gaia_data.html" title="get_gaia_data"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.maketable.table_from_coords.html" title="table_from_coords"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>

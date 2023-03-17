@@ -19,7 +19,7 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="filter_out_none" href="tessilator.lc_analysis.filter_out_none.html" />
+    <link rel="next" title="make_lc" href="tessilator.lc_analysis.make_lc.html" />
     <link rel="prev" title="clean_lc" href="tessilator.lc_analysis.clean_lc.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
@@ -39,7 +39,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.filter_out_none.html" title="filter_out_none"
+          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"
@@ -71,21 +71,21 @@ Information Criterion.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>ds</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>the start indices for the lightcurve.</p>
+<dt><strong>ds</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>the start indices for the lightcurve.</p>
 </dd>
-<dt><strong>df</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>the end indices for the lightcurve.</p>
+<dt><strong>df</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>the end indices for the lightcurve.</p>
 </dd>
-<dt><strong>t</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The list of time coordinates.</p>
+<dt><strong>t</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>The list of time coordinates.</p>
 </dd>
-<dt><strong>f</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The list of flux coordinates.</p>
+<dt><strong>f</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>The list of flux coordinates.</p>
 </dd>
-<dt><strong>err</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The list of flux error coordinates.</p>
+<dt><strong>err</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><p>The list of flux error coordinates.</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>dict_lc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html#dictionaries"><strong>dict</strong></a></span></dt><dd><div class="line-block">
+<dt><strong>dict_lc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
 <div class="line">A dictionary containing the following keys:</div>
 <div class="line">“time” -&gt; The time coordinate</div>
 <div class="line">“oflux” -&gt; The original, normalised flux values</div>
@@ -132,7 +132,7 @@ Information Criterion.</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.filter_out_none.html" title="filter_out_none"
+          <a href="tessilator.lc_analysis.make_lc.html" title="make_lc"
              >next</a> |</li>
         <li class="right" >
           <a href="tessilator.lc_analysis.clean_lc.html" title="clean_lc"

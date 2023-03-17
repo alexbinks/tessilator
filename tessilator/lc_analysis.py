@@ -48,7 +48,8 @@ from scipy.optimize import curve_fit
 from .tess_stars2px import tess_stars2px_function_entry
 from .fixedconstants import *
 
-
+__all__ = ['logger', 'get_xy_pos', 'aper_run', 'clean_lc', 'detrend_lc', 'make_lc', 
+           'get_second_peak', 'gauss_fit', 'sin_fit', 'run_ls', 'is_period_cont']
 
 # initialize the logger object
 logger = logging.getLogger(__name__)
@@ -60,24 +61,17 @@ logger_aq.setLevel(logging.ERROR)
 
 def get_xy_pos(targets, head):
     '''Locate the X-Y position for targets in a given Sector/CCD/Camera mode
-    
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _astropy.io.fits: https://docs.astropy.org/en/stable/io/fits/index.html
-    .. |astropy.io.fits| replace:: **astropy.io.fits**
-    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
-    .. |tuple| replace:: **tuple**
 
     parameters
     ----------
-    targets : |astropy.table.Table|_
+    targets : `astropy.table.Table`
         The table of input data with celestial coordinates.
-    head : |astropy.io.fits|_
+    head : `astropy.io.fits`
         The fits header containing the WCS coordinate details.
 
     returns
     -------
-    positions : |tuple|_
+    positions : `tuple`
         A tuple of X-Y pixel positions for each target.
     '''
     w = WCS(head)
@@ -96,36 +90,27 @@ def get_xy_pos(targets, head):
 def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     '''Perform aperture photometry for the image data.
 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
-    .. |tuple| replace:: **tuple**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-
     This function reads in each fits file, and performs aperture photometry.
     A table of aperture photometry results is returned, which forms the raw
     lightcurve to be processed in subsequent functions.
 
     parameters
     ----------
-    file_in : |str|_
+    file_in : `str`
         Name of the fits file containing image data
-    targets : |astropy.table.Table|_
+    targets : `astropy.table.Table`
         The table of input data
-    Rad : |float|_, optional, default=1.
+    Rad : `float`, optional, default=1.
         The pixel radius to define the circular area for the aperture
-    SkyRad : |tuple|_, optional, default=(6.,8.)
+    SkyRad : `tuple`, optional, default=(6.,8.)
         A 2-element tuple defining the inner and outer annulus to calculate
         the background flux
-    XY_pos : |tuple|_, optional, default=(10.,10.)
+    XY_pos : `tuple`, optional, default=(10.,10.)
         The X-Y centroid (in pixels) of the aperture.
 
     returns
     -------
-    full_phot_table : |astropy.table.Table|_
+    full_phot_table : `astropy.table.Table`
         The formatted table containing results from the aperture photometry.
     '''
     if isinstance(file_in, np.ndarray):
@@ -212,15 +197,6 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
 def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
     '''Remove data points from the lightcurve that are likely to be spurious.
 
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-
     Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and
     ensure the data is efficiently normalized, the lightcurve is split into
     "strings" of contiguous data. Neighbouring data points must have been
@@ -239,22 +215,22 @@ def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
 
     parameters
     ----------
-    t : |Iterable|_
+    t : `Iterable`
         The set of time coordinates (in days)
-    f : |Iterable|_
+    f : `Iterable`
         The set of normalised flux coordinates
-    MAD_fac : |float|_, optional, default=2.
+    MAD_fac : `float`, optional, default=2.
         The threshold number of MAD values to allow. 
-    time_fac : |float|_, optional, default=10.
+    time_fac : `float`, optional, default=10.
         The maximum time gap allowed between neighbouring datapoints.
-    min_num_per_group : |int|_, optional, default=50
+    min_num_per_group : `int`, optional, default=50
         The minimum number of datapoints allowed in a contiguous set.
 
     returns
     -------
-    start_index : |list|_
+    start_index : `list`
        The start indices for each saved data string.
-    end_index : |list|_
+    end_index : `list`
        The end indices for each saved data string.
     '''
     
@@ -303,12 +279,6 @@ def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
 def detrend_lc(ds,df,t,f,err):
     '''Detrend and normalise the lightcurves.
 
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-
-
     This function operates on each section of data returned from the "clean_lc"
     function and performs a detrending routine so that data from separate
     sections can be connected. Five lists are outputted which form the
@@ -320,20 +290,20 @@ def detrend_lc(ds,df,t,f,err):
 
     parameters
     ----------
-    ds : |Iterable|_
+    ds : `Iterable`
         the start indices for the lightcurve.
-    df : |Iterable|_
+    df : `Iterable`
         the end indices for the lightcurve.
-    t : |Iterable|_
+    t : `Iterable`
         The list of time coordinates.
-    f : |Iterable|_
+    f : `Iterable`
         The list of flux coordinates.
-    err : |Iterable|_
+    err : `Iterable`
         The list of flux error coordinates.
 
     returns
     -------
-    dict_lc : |dict|_
+    dict_lc : `dict`
         | A dictionary containing the following keys:
         | "time" -> The time coordinate
         | "oflux" -> The original, normalised flux values
@@ -367,11 +337,6 @@ def detrend_lc(ds,df,t,f,err):
 
 def make_lc(phot_table):
     '''Construct the normalised TESS lightcurve.
-    
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
 
     | The function runs the following tasks:
     | (1) Read the table produced from the aperture photometry
@@ -382,7 +347,7 @@ def make_lc(phot_table):
 
     parameters
     ----------
-    phot_table : |astropy.table.Table|_ or |dict|_
+    phot_table : `astropy.table.Table` or `dict`
         | The data table containing aperture photometry returned by aper_run.py. Columns must include:
         | "time" -> The time coordinate for each image
         | "mag" -> The target magnitude
@@ -392,7 +357,7 @@ def make_lc(phot_table):
 
     returns
     -------
-    cln : |dict|_
+    cln : `dict`
         | The cleaned, detrended, normalised lightcurve, with the keys:
         | "time" -> The time coordinate
         | "time0" -> The time coordinate relative to the first data point
@@ -401,7 +366,7 @@ def make_lc(phot_table):
         | "enflux" -> The error on "nflux"
         | "polyord" -> The polynomial order used for each detrend        
 
-    orig : |dict|_
+    orig : `dict`
         | The original, normalised lightcurve, with the keys:
         | "time" -> The time coordinate
         | "nflux" -> The original, normalised flux values
@@ -438,22 +403,17 @@ def make_lc(phot_table):
 
 def get_second_peak(power):
     '''An algorithm to identify the second-highest peak in the periodogram
-    
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
 
     parameters
     ----------
-    power : |Iterable|_
+    power : `Iterable`
         A set of power values calculated from the periodogram analysis.
 
     returns
     -------
-    a_g : |list|_
+    a_g : `list`
         A list of indices corresponding to the Gaussian around the peak power.
-    a_o : |list|_
+    a_o : `list`
         A list of indices corresponding to all other parts of the periodogram.
     '''
     # Get the left side of the peak
@@ -497,92 +457,51 @@ def get_second_peak(power):
     return a_g, a_o
 
 
-def filter_out_none(unfiltered):
-    '''
-    Simple function to remove list items if they are empty.
-
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-
-    parameters
-    ----------
-    unfiltered : |Iterable|_
-        The input set of values
-
-    returns
-    -------
-    filtered : |list|_
-        The filtered list.
-
-    >>> filter_out_none([1, 4, None, 6, 9])
-    [1, 4, 6, 9]
-    '''
-
-    filtered = list(filter(lambda item: item is not None, unfiltered))
-    return filtered
-
-
 def gauss_fit(x, a0, x_mean, sigma):
     '''Construct a simple Gaussian.
-    
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
 
     Return Gaussian values from a given amplitude (a0), mean (x_mean) and
     uncertainty (sigma) for a distribution of values
 
     parameters
     ----------
-    x : |Iterable|_
+    x : `Iterable`
         list of input values
-    a0 : |float|_
+    a0 : `float`
         Amplitude of a Gaussian
-    x_mean : |float|_
+    x_mean : `float`
         The mean value of a Gaussian
-    sigma : |float|_
+    sigma : `float`
         The Gaussian uncertainty
 
     returns
     -------
-    gaussian : |list|_
+    gaussian : `list`
         A list of Gaussian values.
     '''
 
     gaussian = a0*np.exp(-(x-x_mean)**2/(2*sigma**2))
     return gaussian
 
-def sine_fit(x, y0, A, phi):
+def sin_fit(x, y0, A, phi):
     '''
     Returns the best parameters (y_offset, amplitude, and phase) to a regular
     sinusoidal function.
 
-    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable
-    .. |Iterable| replace:: **Iterable** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _list: https://docs.python.org/3/tutorial/datastructures.html
-    .. |list| replace:: **list**
-
     parameters
     ----------
-    x : |Iterable|_
+    x : `Iterable`
         list of input values
-    y0 : |float|_
+    y0 : `float`
         The midpoint of the sine curve
-    A : |float|_
+    A : `float`
         The amplitude of the sine curve
-    phi : |float|_
+    phi : `float`
         The phase angle of the sine curve
 
     returns
     -------
-    sine : |list|_
+    sine : `list`
         A list of sine curve values.
     '''
     sine = y0 + A*np.sin(2.*np.pi*x + phi)
@@ -592,29 +511,22 @@ def sine_fit(x, y0, A, phi):
 def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _int: https://docs.python.org/3/library/functions.html#int
-    .. |int| replace:: **int** 
-
     parameters
     ----------
-    cln : |dict|_
+    cln : `dict`
         A dictionary containing the lightcurve data. The keys must include
         | "time0" -> The time coordinate relative to the first data point
         | "nflux" -> The detrended, cleaned, normalised flux values
-    p_min_thresh : |float|_, optional, default=0.05
+    p_min_thresh : `float`, optional, default=0.05
         The minimum period (in days) to be calculated.
-    p_max_thresh : |float|_, optional, default=100.
+    p_max_thresh : `float`, optional, default=100.
         The maximum period (in days) to be calculated.
-    samples_per_peak : |int|_, optional, default=10
+    samples_per_peak : `int`, optional, default=10
         The number of samples to measure in each periodogram peak.
 
     returns
     -------
-    LS_dict : |dict|_
+    LS_dict : `dict`
         A dictionary of parameters calculated from the periodogram analysis
     '''
     LS_dict = dict()
@@ -700,35 +612,26 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
 def is_period_cont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
     '''Identify neighbouring contaminants that may cause the periodicity.
 
-    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
-    .. |dict| replace:: **dict**
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     If the user selects to measure periods for the neighbouring contaminants
     this function returns a flag to assess if a contaminant may actually be
     the source causing the observed periodicity.
 
     parameters
     ----------
-    d_target : |dict|_
+    d_target : `dict`
         A dictionary containing periodogram data of the target star.
-    d_cont : |dict|_
+    d_cont : `dict`
         A dictionary containing periodogram data of the contaminant star.
-    t_cont : |astropy.table.Table|_
+    t_cont : `astropy.table.Table`
         A table containing Gaia data for the contaminant star
-    frac_amp_cont : |float|_, optional, default=0.5
+    frac_amp_cont : `float`, optional, default=0.5
         The threshold factor to account for the difference in amplitude
         of the two stars. If this is high, then the contaminants will be
         less likely to be flagged as the potential source
     
     returns
     -------
-    output : |str|_
+    output : `str`
         | Either `a', `b' or `c'
         | (a) The contaminant is probably the source causing the periodicity
         | (b) The contaminant might be the source causing the periodicity

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>filter_out_none &#8212; tessilator 0.1 documentation</title>
+    <title>print_time_taken &#8212; tessilator 0.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
@@ -19,8 +19,8 @@
     <link rel="icon" href="../_static/astropy_logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="gauss_fit" href="tessilator.lc_analysis.gauss_fit.html" />
-    <link rel="prev" title="detrend_lc" href="tessilator.lc_analysis.detrend_lc.html" />
+    <link rel="next" title="find_xy_cont" href="tessilator.tessilator.find_xy_cont.html" />
+    <link rel="prev" title="full_run_lc" href="tessilator.tessilator.full_run_lc.html" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -39,14 +39,14 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.gauss_fit.html" title="gauss_fit"
+          <a href="tessilator.tessilator.find_xy_cont.html" title="find_xy_cont"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
+          <a href="tessilator.tessilator.full_run_lc.html" title="full_run_lc"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" accesskey="U">How to use</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">filter_out_none</a></li> 
+        <li class="nav-item nav-item-this"><a href="">print_time_taken</a></li> 
       </ul>
     </div>  
 
@@ -55,30 +55,27 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="filter-out-none">
-<h1>filter_out_none<a class="headerlink" href="#filter-out-none" title="Permalink to this heading">¶</a></h1>
+  <section id="print-time-taken">
+<h1>print_time_taken<a class="headerlink" href="#print-time-taken" title="Permalink to this heading">¶</a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="tessilator.lc_analysis.filter_out_none">
-<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">filter_out_none</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unfiltered</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/lc_analysis.html#filter_out_none"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.lc_analysis.filter_out_none" title="Permalink to this definition">¶</a></dt>
-<dd><p>Simple function to remove list items if they are empty.</p>
+<dt class="sig sig-object py" id="tessilator.tessilator.print_time_taken">
+<span class="sig-prename descclassname"><span class="pre">tessilator.tessilator.</span></span><span class="sig-name descname"><span class="pre">print_time_taken</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finish</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/tessilator.html#print_time_taken"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.tessilator.print_time_taken" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the time taken for a process.</p>
+<p>This function takes a start and finish point a calculates the time taken in
+hours, minutes and seconds</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>unfiltered</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable"><strong>Iterable</strong></a></span></dt><dd><p>The input set of values</p>
+<dt><strong>start</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">datetime.datetime</span></code></a></span></dt><dd><p>The start point of the process</p>
+</dd>
+<dt><strong>finish</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">datetime.datetime</span></code></a></span></dt><dd><p>The end point of the process</p>
 </dd>
 </dl>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><dl>
-<dt><strong>filtered</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/tutorial/datastructures.html"><strong>list</strong></a></span></dt><dd><p>The filtered list.</p>
+<dt><strong>time_taken</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>The time taken for the process to complete</p>
 </dd>
-</dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">filter_out_none</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
-<span class="go">    ..</span>
-</pre></div>
-</div>
-<dl class="simple">
-<dt>[1, 4, 6, 9]</dt><dd></dd>
 </dl>
 </dd>
 </dl>
@@ -96,8 +93,8 @@
   <div>
     <h3><a href="../index.html">Table of Contents</a></h3>
     <ul>
-<li><a class="reference internal" href="#">filter_out_none</a><ul>
-<li><a class="reference internal" href="#tessilator.lc_analysis.filter_out_none"><code class="docutils literal notranslate"><span class="pre">filter_out_none()</span></code></a></li>
+<li><a class="reference internal" href="#">print_time_taken</a><ul>
+<li><a class="reference internal" href="#tessilator.tessilator.print_time_taken"><code class="docutils literal notranslate"><span class="pre">print_time_taken()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -117,14 +114,14 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.gauss_fit.html" title="gauss_fit"
+          <a href="tessilator.tessilator.find_xy_cont.html" title="find_xy_cont"
              >next</a> |</li>
         <li class="right" >
-          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
+          <a href="tessilator.tessilator.full_run_lc.html" title="full_run_lc"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../howtouse.html" >How to use</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">filter_out_none</a></li> 
+        <li class="nav-item nav-item-this"><a href="">print_time_taken</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

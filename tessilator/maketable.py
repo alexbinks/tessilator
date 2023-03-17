@@ -15,6 +15,8 @@ import numpy as np
 import warnings
 import logging
 
+__all__ = ['logger', 'table_from_simbad', 'table_from_coords',
+           'table_from_table', 'get_gaia_data']
 logger = logging.getLogger(__name__)
 
 
@@ -25,20 +27,17 @@ logger = logging.getLogger(__name__)
 def table_from_simbad(input_names):
     '''Generate the formatted astropy table from a list of target names.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-
     All characters can be parsed except commas, since the table is in comma
     separated variable (.csv) format.
 
     parameters
     ----------
-    input_names : |astropy.table.Table|_
+    input_names : `astropy.table.Table`
         an input list of target names
 
     returns
     -------
-    gaia_table : |astropy.table.Table|_
+    gaia_table : `astropy.table.Table`
         the output table ready for further analysis
     '''
     # Part 1: Use the SIMBAD database to retrieve the Gaia source identifier
@@ -122,30 +121,23 @@ def table_from_simbad(input_names):
 def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs'):
     '''Generate the formatted astropy table from a list of coordinates.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-
     Each entry needs to be in comma separated variable(.csv) format.
 
     parameters
     ----------
-    coord_table : |astropy.table.Table|_
+    coord_table : `astropy.table.Table`
         a table consisting of right ascension and declination coordinates (in
         degrees) in comma separated variable (.csv) format.
-    ang_max : |float|_, optional, default=10.0
+    ang_max : `float`, optional, default=10.0
         the maximum angular distance in arcseconds from the input coordinates
         provided in the table.
-    type_coord : |str|_, optional, default='icrs'
+    type_coord : `str`, optional, default='icrs'
         The coordinate system of the input positions. These can be 'icrs'
         (default), 'galactic' or 'ecliptic'.
         
     returns
     -------
-    gaia_table : |astropy.table.Table|_
+    gaia_table : `astropy.table.Table`
         The output table ready for further analysis
     '''
     gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'), \
@@ -206,26 +198,19 @@ def table_from_table(input_table, name_is_source_id=0):
     '''Generate the formatted astropy table from a pre-formatted astropy
     table.
 
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _str: https://docs.python.org/3/library/stdtypes.html#str
-    .. |str| replace:: **str**
-    .. _float: https://docs.python.org/3/library/functions.html#float
-    .. |float| replace:: **float**
-
     Each entry needs to be in comma separated variable(.csv) format. This
     is the quickest way to produce the table ready for analysis, but it is
     important the input data is properly formatted.
     
     parameters
     ----------
-    input_table : |astropy.table.Table|_
+    input_table : `astropy.table.Table`
         | The columns of table must be in the following order:
-        * source_id (data type: |str|_)
-        * ra (data type: |float|_)
-        * dec (data type: |float|_)
-        * parallax (data type: |float|_)
-        * Gmag (data type: |float|_)
+        * source_id (data type: `str`)
+        * ra (data type: `float`)
+        * dec (data type: `float`)
+        * parallax (data type: `float`)
+        * Gmag (data type: `float`)
 
         The column headers are not necessary.
 
@@ -258,11 +243,6 @@ def table_from_table(input_table, name_is_source_id=0):
 def get_gaia_data(gaia_table, name_is_source_id=0):
     '''Reads the input table and returns a table in the correct format for
     TESSilator.
-        
-    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table
-    .. |astropy.table.Table| replace:: **astropy.table.Table** 
-    .. _bool: https://docs.python.org/3/library/functions.html#bool
-    .. |bool| replace:: **bool** 
 
     | The table must be in comma-separated variable format, in either of these 3 ways:
     | 1) A table with a single column containing the source identifier
@@ -273,17 +253,17 @@ def get_gaia_data(gaia_table, name_is_source_id=0):
 
     parameters
     ----------
-    gaia_table : |astropy.table.Table|_
+    gaia_table : `astropy.table.Table`
         The input table
 
-    name_is_source_id : |bool|_, optional, default=0
+    name_is_source_id : `bool`, optional, default=0
         If the input table has 5 columns, this provides the choice to set the
         name column equal to "source_id" (=1), or to find a common target
         identifier (=0)
     
     results
     -------
-    tbl : |astropy.table.Table|_
+    tbl : `astropy.table.Table`
         | The table ready for TESSilator analysis, with the columns:
         * name: the preferred choice of source identifier
         * source_id: the Gaia DR3 source identifier

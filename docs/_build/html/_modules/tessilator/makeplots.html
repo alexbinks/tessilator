@@ -59,27 +59,12 @@
 <span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1.inset_locator</span> <span class="kn">import</span> <span class="n">inset_axes</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span>
 
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;make_plot&#39;</span><span class="p">]</span>
+
 <div class="viewcode-block" id="make_plot"><a class="viewcode-back" href="../../api/tessilator.makeplots.make_plot.html#tessilator.makeplots.make_plot">[docs]</a><span class="k">def</span> <span class="nf">make_plot</span><span class="p">(</span><span class="n">im_plot</span><span class="p">,</span> <span class="n">clean</span><span class="p">,</span> <span class="n">orig</span><span class="p">,</span> <span class="n">LS_dict</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">t_table</span><span class="p">,</span> <span class="n">XY_ctr</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span>
               <span class="n">XY_contam</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p_min_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
               <span class="n">SkyRad</span> <span class="o">=</span> <span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;Produce a plot of tessilator results.</span>
-
-<span class="sd">    .. _astropy.nddata.Cutout2D: https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html</span>
-<span class="sd">    .. |astropy.nddata.Cutout2D| replace:: **astropy.nddata.Cutout2D**</span>
-<span class="sd">    .. _dict: https://docs.python.org/3/tutorial/datastructures.html#dictionaries</span>
-<span class="sd">    .. |dict| replace:: **dict**</span>
-<span class="sd">    .. _list: https://docs.python.org/3/tutorial/datastructures.html</span>
-<span class="sd">    .. |list| replace:: **list**</span>
-<span class="sd">    .. _tuple: https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences</span>
-<span class="sd">    .. |tuple| replace:: **tuple**</span>
-<span class="sd">    .. _float: https://docs.python.org/3/library/functions.html#float</span>
-<span class="sd">    .. |float| replace:: **float**</span>
-<span class="sd">    .. _Iterable: https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable</span>
-<span class="sd">    .. |Iterable| replace:: **Iterable** </span>
-<span class="sd">    .. _astropy.table.Table: https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.timeseries.Table</span>
-<span class="sd">    .. |astropy.table.Table| replace:: **astropy.table.Table** </span>
-<span class="sd">    .. _None: https://docs.python.org/3/library/constants.html#None</span>
-<span class="sd">    .. |None| replace:: **None**</span>
 
 <span class="sd">    | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:</span>
 <span class="sd">    | 1) An TESS cut-out image of the target, with aperture and sky annulus.</span>
@@ -89,29 +74,29 @@
 
 <span class="sd">    parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    im_plot : |astropy.nddata.Cutout2D|_</span>
+<span class="sd">    im_plot : `astropy.nddata.Cutout2D`</span>
 <span class="sd">        The cut-out image of the target</span>
-<span class="sd">    clean : |dict|_</span>
+<span class="sd">    clean : `dict`</span>
 <span class="sd">        The modified (cleaned) lightcurve after processing</span>
-<span class="sd">    orig : |dict|_</span>
+<span class="sd">    orig : `dict`</span>
 <span class="sd">        The original normalised lightcurve before processing.</span>
-<span class="sd">    LS_dict : |dict|_</span>
+<span class="sd">    LS_dict : `dict`</span>
 <span class="sd">        The dictionary of parameters calculated by the Lomb-Scargle periodogram</span>
-<span class="sd">    scc : |list|_, size=3</span>
+<span class="sd">    scc : `list`, size=3</span>
 <span class="sd">        List containing the sector number, camera and CCD</span>
-<span class="sd">    t_table : |astropy.table.Table|_</span>
+<span class="sd">    t_table : `astropy.table.Table`</span>
 <span class="sd">        Table containing the input data for the target</span>
-<span class="sd">    XY_ctr : |tuple|_, optional, default=(10,10)</span>
+<span class="sd">    XY_ctr : `tuple`, optional, default=(10,10)</span>
 <span class="sd">        The centroid (in pixels) of the target in the TESS image.</span>
-<span class="sd">    XY_contam : |Iterable|_ or |None|_, optional, default = |None|_</span>
+<span class="sd">    XY_contam : `Iterable` or `None`, optional, default = `None`</span>
 <span class="sd">        The pixel positions of the strongest contaminants</span>
-<span class="sd">    p_min_thresh : |float|_, optional, default=0.1</span>
+<span class="sd">    p_min_thresh : `float`, optional, default=0.1</span>
 <span class="sd">        The shortest period calculated in the Lomb-Scargle periodogram</span>
-<span class="sd">    p_max_thresh : |float|_, optional, default=50.</span>
+<span class="sd">    p_max_thresh : `float`, optional, default=50.</span>
 <span class="sd">        The longest period calculated in the Lomb-Scargle periodogram</span>
-<span class="sd">    Rad : |float|_, optional, default=1.0</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
 <span class="sd">        The aperture radius from the aperture photometry</span>
-<span class="sd">    SkyRad : |Iterable|_, size=2, optional, default=[6.,8.]</span>
+<span class="sd">    SkyRad : `Iterable`, size=2, optional, default=[6.,8.]</span>
 <span class="sd">        The inner and outer background annuli from aperture photometry  </span>
 
 <span class="sd">    returns</span>
