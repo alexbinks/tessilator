@@ -54,8 +54,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     -------
     Nothing returned. The plot produced is saved to file.
     '''
-    
-    
     mpl.rcParams.update({'font.size': 14})
 
     fsize = 22.

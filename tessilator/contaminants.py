@@ -10,7 +10,7 @@ from astropy.table import Table
 
 from .fixedconstants import *
 
-#__all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 'contamination']
+__all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 'contamination']
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +198,7 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
             con1.append(-999)
             con2.append(-999)
             con3.append(0)
+            t_cont = None
 
     t_targets["log_tot_bg"] = con1
     t_targets["log_max_bg"] = con2

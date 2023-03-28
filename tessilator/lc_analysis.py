@@ -25,6 +25,10 @@ or tess_large_sectors.py modules. These are:
 
 # imports
 import logging
+__all__ = ['logger', 'get_xy_pos', 'aper_run', 'clean_lc', 'detrend_lc', 'make_lc', 
+           'get_second_peak', 'gauss_fit', 'sin_fit', 'run_ls', 'is_period_cont']
+
+
 import warnings
 
 # Third party imports
@@ -48,8 +52,6 @@ from scipy.optimize import curve_fit
 from .tess_stars2px import tess_stars2px_function_entry
 from .fixedconstants import *
 
-__all__ = ['logger', 'get_xy_pos', 'aper_run', 'clean_lc', 'detrend_lc', 'make_lc', 
-           'get_second_peak', 'gauss_fit', 'sin_fit', 'run_ls', 'is_period_cont']
 
 # initialize the logger object
 logger = logging.getLogger(__name__)
@@ -117,7 +119,6 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
         fits_files = file_in
     else:
         fits_files = [file_in]
-
     full_phot_table = Table(names=('id', 'xcenter', 'ycenter', 'flux',
                                    'flux_err', 'bkg', 'total_bkg',
                                    'flux_corr', 'mag', 'mag_err', 'time'),
@@ -128,12 +129,19 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
             with fits.open(f_file) as hdul:
                 data = hdul[1].data
                 if data.ndim == 1:
-                    n_steps = data.shape[0]-1
                     head = hdul[0].header
-                    qual_val = data["QUALITY"]
-                    time_val = data["TIME"]
-                    flux_vals = data["FLUX"]
-                    erro_vals = data["FLUX_ERR"]
+                    if "FLUX_ERR" in data.names:
+                        n_steps = data.shape[0]-1
+                        flux_vals = data["FLUX"]
+                        qual_val = data["QUALITY"]
+                        time_val = data["TIME"]
+                        erro_vals = data["FLUX_ERR"]
+                    else:
+                        n_steps = 1
+                        flux_vals = data["FLUX"]
+                        qual_val = [data["QUALITY"][0]]
+                        time_val = [data["TIME"][0]]
+                        erro_vals = 0.001*flux_vals
                     positions = XY_pos
                 elif data.ndim == 2:
                     n_steps = 1
@@ -151,16 +159,20 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                         annulus_aperture = CircularAnnulus(positions,
                                                            SkyRad[0],
                                                            SkyRad[1])
+                        if flux_vals[:][:][n_step].ndim == 1:
+                            flux_ap = flux_vals
+                            erro_ap = erro_vals
+                        else:
+                            flux_ap = flux_vals[:][:][n_step]
+                            erro_ap = erro_vals[:][:][n_step]
+
                         #get the image statistics for the background annulus
-                        aperstats = ApertureStats(flux_vals[:][:][n_step],
-                                                  annulus_aperture)
+                        aperstats = ApertureStats(flux_ap, annulus_aperture)
                         #obtain the raw (source+background) flux
-                        phot_table = aperture_photometry(
-                                     flux_vals[:][:][n_step], aperture,
-                                     error=erro_vals[:][:][n_step])
+                        phot_table = aperture_photometry(flux_ap, aperture,
+                                     error=erro_ap)
                         #calculate the background contribution to the aperture
-                        aperture_area = aperture.area_overlap(
-                                        flux_vals[:][:][n_step])
+                        aperture_area = aperture.area_overlap(flux_ap)
                         #print out the data to "phot_table"
                         phot_table['id'] = targets['source_id']
                         phot_table['id'] = phot_table['id'].astype(str)
@@ -184,7 +196,8 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                                     'mag_err', 'time']
                         phot_table = phot_table[fix_cols]
                         for r in range(len(phot_table)):
-                            full_phot_table.add_row(phot_table[r])
+                            if phot_table[r]["aperture_sum"] > 0:
+                                full_phot_table.add_row(phot_table[r])
         except:
             print(f"There is a problem opening the file {f_file}")
             logger.error(f"There is a problem opening the file {f_file}")
@@ -501,11 +514,11 @@ def sin_fit(x, y0, A, phi):
 
     returns
     -------
-    sine : `list`
-        A list of sine curve values.
+    sin_fit : `list`
+        A list of sin curve values.
     '''
-    sine = y0 + A*np.sin(2.*np.pi*x + phi)
-    return sine
+    sin_fit = y0 + A*np.sin(2.*np.pi*x + phi)
+    return sin_fit
 
 
 def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
@@ -570,7 +583,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     pha_fit, nf_fit, cyc_fit = pha[f], nflux[f], cyc[f].astype(int)
     pha_plt, nf_plt, cyc_plt = pha[p], nflux[p], cyc[p].astype(int)
     try:
-        pops, popsc = curve_fit(sine_fit, pha_fit, nf_fit,
+        pops, popsc = curve_fit(sin_fit, pha_fit, nf_fit,
                                 bounds=(0, [2., 2., 2.*np.pi]))
     except Exception:
         logger.warning(Exception)
@@ -578,7 +591,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
         pass
             
     Ndata = len(cln)
-    yp = sine_fit(pha_fit, *pops)
+    yp = sin_fit(pha_fit, *pops)
     pha_sct = MAD(yp - nflux, scale='normal')
     fdev = 1.*np.sum(np.abs(nflux - yp) > 3.0*pha_sct)/Ndata
     LS_dict['median_MAD_nLC'] = [med_f, MAD_f]
