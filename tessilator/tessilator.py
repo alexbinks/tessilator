@@ -6,13 +6,20 @@ from .lc_analysis import *
 from .contaminants import *
 from .maketable import *
 from .makeplots import *
-
+from .tess_stars2px import tess_stars2px_function_entry
 from datetime import datetime
+import numpy as np
 import pyinputplus as pyip
 import sys, os
 import glob
+import logging
 from astropy.nddata.utils import Cutout2D
 from collections.abc import Iterable
+from astropy.table import Table
+from astropy.io import ascii, fits
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+from astroquery.mast import Tesscut
 
 __all__ = ['start', 'logger',
            'create_table_template', 'setup_input_parameters',
@@ -326,7 +333,7 @@ def read_data(t_filename, name_is_source_id=0):
     t_targets : `astropy.table.Table`
         a formatted astropy table ready for further analysis
     '''
-
+    
     logger.info(f"Starting Time: {start}")
     t_input = ascii.read(t_filename, delimiter=',', format='no_header')
     t_targets = get_gaia_data(t_input, name_is_source_id)
@@ -538,7 +545,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
     * A data entry for the final period file.
     * A plot of the lightcurve (if requested).
     '''
-
     try:
         table_phot_final = aper_run(file_in, t_target, Rad=Rad,
                                     SkyRad=SkyRad, XY_pos=XY_pos)
@@ -552,13 +558,19 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         return None
     phot_targets = table_phot_final.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
-        
         if isinstance(t_target, Table):
             t_targets = t_target[t_target["source_id"] == key[0]]
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
-        if group is not None:
+        np.nan_to_num(group["mag"], copy=True, nan=-999, posinf=0, neginf=0)
+#        has_nan = np.zeros(len(group), dtype=bool)
+#        for col in group.itercols():
+#            if col.info.dtype.kind == 'f':
+#                has_nan |= np.isnan(col)
+#        table_no_nan = group[~has_nan]
+#        print(table_no_nan, type(table_no_nan), len(table_no_nan))
+        if len(group) >= 1:
             clean_norm_lc, original_norm_lc = make_lc(group)
         else:
             logger.error(f"No photometry was recorded for this group.")
@@ -580,9 +592,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                                        '_individiual.ecsv')
                 con_table = con_table[con_table["source_id_target"] == \
                                       t_target["source_id"].astype(str)]
+                print("Test 1")
                 XY_con = find_xy_cont(file_in, con_table, cutout_size)
+                print("Test 2")
                 labels_cont = ''
                 for z in range(len(XY_con)):
+                    print(f"Test {z+3}")
+
                     labels_cont += run_test_for_contaminant(XY_con[z],\
                                                             file_in,\
                                                             con_table[z],\

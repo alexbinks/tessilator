@@ -5,6 +5,9 @@ into correct formatted astropy tables to be used for further analysis
 in the tessilator.
 '''
 
+__all__ = ['logger', 'table_from_simbad', 'table_from_coords',
+           'table_from_table', 'get_gaia_data']
+
 from astropy.table import Table
 from astropy.io import ascii
 from astroquery.simbad import Simbad
@@ -14,9 +17,7 @@ from astropy.coordinates import SkyCoord, ICRS
 import numpy as np
 import warnings
 import logging
-
-__all__ = ['logger', 'table_from_simbad', 'table_from_coords',
-           'table_from_table', 'get_gaia_data']
+           
 logger = logging.getLogger(__name__)
 
 

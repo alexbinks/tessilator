@@ -2,7 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from scipy.stats import median_abs_deviation
-from ..tess_functions2 import gtd
+from ..lc_analysis import clean_lc
 
 start, stop, typical_timestep = 0, 27, 0.007 # in days
 period = 3.5
@@ -11,14 +11,14 @@ times = np.linspace(start=start+typical_timestep, stop=stop, num=int(stop/typica
 
 def test_flat():
     '''TRY A COMPLETELY FLAT LIGHTCURVE'''
-    x, y = gtd(times, np.ones(len(times)))
+    x, y = clean_lc(times, np.ones(len(times)))
     assert(x[0] == 0)
     assert(y[0] == len(times)-1)
 
 
 def test_sine():
     '''TRY A PERFECTLY SINUSOIDAL LIGHTCURVE'''
-    x, y = gtd(times, 1.0 + 0.1*np.sin(2.*math.pi*times/period))
+    x, y = clean_lc(times, 1.0 + 0.1*np.sin(2.*math.pi*times/period))
     assert(x[0] == 0)
     assert(y[0] == len(times)-1)
 
@@ -59,12 +59,8 @@ def test_simulated():
     i3 = i + sum(LCpart == 0)
 
 
-    x, y = gtd(times_fin, flux_fin, MAD_fac=MAD_test, time_fac=10., min_num_per_group=50)
+    x, y = clean_lc(times_fin, flux_fin, MAD_fac=MAD_test, time_fac=10., min_num_per_group=50)
 
-#    plt.scatter(times_fin, flux_fin)
-#    for i, j in zip(x,y):
-#        plt.scatter(times_fin[i:j], flux_fin[i:j], c='r')
-#    plt.show()
     assert(x[0] == i0)
     assert(y[0] == i1)
     assert(x[1] == i2)
