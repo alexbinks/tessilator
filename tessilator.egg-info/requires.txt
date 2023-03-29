@@ -1,0 +1,17 @@
+numpy
+astropy
+astroquery
+photutils
+scipy
+matplotlib
+pyinputplus
+
+[docs]
+sphinx
+sphinx-automodapi
+sphinx-astropy
+numpydoc
+
+[test]
+pytest-astropy
+sphinx-astropy

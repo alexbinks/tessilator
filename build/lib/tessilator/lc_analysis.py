@@ -4,7 +4,8 @@ Alexander Binks & Moritz Guenther, January 2023
 
 Licence: MIT 2023
 
-This module contains functions to perform aperture photmetry and clean lightcurves. These are:
+This module contains functions which are called upon by either the tess_cutouts.py
+or tess_large_sectors.py modules. These are:
 
 1)  aper_run - returns a numpy array containing the times, magnitudes and
     fluxes from aperture photometry.
@@ -644,11 +645,10 @@ def is_period_cont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
     returns
     -------
     output : `str`
-        | Either ``a``, ``b`` or ``c``.
+        | Either `a', `b' or `c'
         | (a) The contaminant is probably the source causing the periodicity
         | (b) The contaminant might be the source causing the periodicity
         | (c) The contaminant is not the source causing the periodicity
-        
     '''
     per_targ = d_target["period_best"]
     per_cont = d_cont["period_best"]
