@@ -9,9 +9,9 @@ from ..lc_analysis import aper_run
 Targ_Table = Table()
 Targ_Table["source_id"] = ["abc"]
 
-dirname = os.path.dirname(__file__)
-ABDor_Table = ascii.read(dirname + "/ABDor_36_4_3_phot_out_fixed.tab")
-files = sorted(glob.glob(dirname + "/ABDor*slice*.fits"))
+#dirname = os.path.dirname(__file__)
+ABDor_Table = ascii.read("ABDor_36_4_3_phot_out_fixed.tab")
+files = sorted(glob.glob("ABDor*slice*.fits"))
 list_ind = []
 
 for file in files:
