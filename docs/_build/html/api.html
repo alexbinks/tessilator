@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>API documentation &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="_static/plot_directive.css" />
+    <script src="_static/jquery.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="create_table_template" href="api/tessilator.tessilator.create_table_template.html" />
+    <link rel="prev" title="Required input parameters" href="input_parameters.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api/tessilator.tessilator.create_table_template.html" title="create_table_template"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="input_parameters.html" title="Required input parameters"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">API documentation</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="api-documentation">
+<h1>API documentation<a class="headerlink" href="#api-documentation" title="Permalink to this heading">¶</a></h1>
+<section id="module-tessilator.tessilator">
+<span id="tessilator-tessilator-module"></span><h2>tessilator.tessilator Module<a class="headerlink" href="#module-tessilator.tessilator" title="Permalink to this heading">¶</a></h2>
+<p>The tessilator, functions.</p>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.create_table_template.html#tessilator.tessilator.create_table_template" title="tessilator.tessilator.create_table_template"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_table_template</span></code></a>()</p></td>
+<td><p>Create a template astropy table to store tessilator results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.setup_input_parameters.html#tessilator.tessilator.setup_input_parameters" title="tessilator.tessilator.setup_input_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_input_parameters</span></code></a>()</p></td>
+<td><p>Retrieve the input parameters to run the tessilator program.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.setup_filenames.html#tessilator.tessilator.setup_filenames" title="tessilator.tessilator.setup_filenames"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_filenames</span></code></a>(file_ref[, scc])</p></td>
+<td><p>Set up the file names to store data</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.test_table_large_sectors.html#tessilator.tessilator.test_table_large_sectors" title="tessilator.tessilator.test_table_large_sectors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_table_large_sectors</span></code></a>(t_filename)</p></td>
+<td><p>Check if the input file needs modifying at all.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.read_data.html#tessilator.tessilator.read_data" title="tessilator.tessilator.read_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_data</span></code></a>(t_filename[, name_is_source_id])</p></td>
+<td><p>Read input data and convert to an astropy table ready for analysis</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.collect_contamination_data.html#tessilator.tessilator.collect_contamination_data" title="tessilator.tessilator.collect_contamination_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">collect_contamination_data</span></code></a>(t_targets, ...)</p></td>
+<td><p>Collect data on contamination sources around selected targets</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.make_datarow.html#tessilator.tessilator.make_datarow" title="tessilator.tessilator.make_datarow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_datarow</span></code></a>(t_target, scc, d_target, ...)</p></td>
+<td><p>Once the tessilator has analysed a target, the results are printed line by line to a table.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.make_failrow.html#tessilator.tessilator.make_failrow" title="tessilator.tessilator.make_failrow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_failrow</span></code></a>(t_target, scc)</p></td>
+<td><p>Print a line with input data if tessilator fails for a given target</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.full_run_lc.html#tessilator.tessilator.full_run_lc" title="tessilator.tessilator.full_run_lc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">full_run_lc</span></code></a>(file_in, t_target, make_plots, ...)</p></td>
+<td><p>Aperture photometry, lightcurve cleaning and periodogram analysis.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.print_time_taken.html#tessilator.tessilator.print_time_taken" title="tessilator.tessilator.print_time_taken"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_time_taken</span></code></a>(start, finish)</p></td>
+<td><p>Calculate the time taken for a process.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.find_xy_cont.html#tessilator.tessilator.find_xy_cont" title="tessilator.tessilator.find_xy_cont"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_xy_cont</span></code></a>(f_file, con_table, cutout_size)</p></td>
+<td><p>Identify the pixel X-Y positions for contaminant sources.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.run_test_for_contaminant.html#tessilator.tessilator.run_test_for_contaminant" title="tessilator.tessilator.run_test_for_contaminant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_test_for_contaminant</span></code></a>(XY_arr, file_in, ...)</p></td>
+<td><p>Run the periodogram analyses for neighbouring contaminants if required.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.get_tess_pixel_xy.html#tessilator.tessilator.get_tess_pixel_xy" title="tessilator.tessilator.get_tess_pixel_xy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_tess_pixel_xy</span></code></a>(t_targets)</p></td>
+<td><p>Get the pixel X-Y positions for all targets in a Sector/Camera/CCD mode.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.get_fits.html#tessilator.tessilator.get_fits" title="tessilator.tessilator.get_fits"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fits</span></code></a>(scc)</p></td>
+<td><p>Function which returns a list of fits files corresponding to a given Sector, Camera and CCD configuration</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.make_2d_cutout.html#tessilator.tessilator.make_2d_cutout" title="tessilator.tessilator.make_2d_cutout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_2d_cutout</span></code></a>(file_in, phot_table[, im_size])</p></td>
+<td><p>Makes a 2D cutout object of a target using the median time-stacked image</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.get_cutouts.html#tessilator.tessilator.get_cutouts" title="tessilator.tessilator.get_cutouts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cutouts</span></code></a>(coord, cutout_size, choose_sec, ...)</p></td>
+<td><p>Download TESS cutouts and store to a list for lightcurve analysis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.one_source_cutout.html#tessilator.tessilator.one_source_cutout" title="tessilator.tessilator.one_source_cutout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">one_source_cutout</span></code></a>(coord, target, LC_con, ...)</p></td>
+<td><p>Download cutouts and run lightcurve/periodogram analysis for one target.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.all_sources_cutout.html#tessilator.tessilator.all_sources_cutout" title="tessilator.tessilator.all_sources_cutout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">all_sources_cutout</span></code></a>(t_targets, period_file, ...)</p></td>
+<td><p>Run the tessilator for all targets.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.tessilator.one_cc.html#tessilator.tessilator.one_cc" title="tessilator.tessilator.one_cc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">one_cc</span></code></a>(t_targets, scc, make_plots, final_table)</p></td>
+<td><p>Run the tessilator for targets in a given Sector/Camera/CCD configuration</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.tessilator.all_sources_sector.html#tessilator.tessilator.all_sources_sector" title="tessilator.tessilator.all_sources_sector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">all_sources_sector</span></code></a>(t_targets, scc, ...)</p></td>
+<td><p>Iterate over all cameras and CCDs for a given sector</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-tessilator.lc_analysis">
+<span id="tessilator-lc-analysis-module"></span><h2>tessilator.lc_analysis Module<a class="headerlink" href="#module-tessilator.lc_analysis" title="Permalink to this heading">¶</a></h2>
+<p>Alexander Binks &amp; Moritz Guenther, January 2023</p>
+<p>Licence: MIT 2023</p>
+<p>This module contains functions which are called upon by either the tess_cutouts.py
+or tess_large_sectors.py modules. These are:</p>
+<ol class="arabic simple">
+<li><p>aper_run - returns a numpy array containing the times, magnitudes and
+fluxes from aperture photometry.</p></li>
+<li><p>clean_lc/detrend_lc/make_lc - these 3 functions are made to remove spurious data
+points, ensure that only “strings” of contiguous data are being processed, and
+each string is detrended using either a linear (1st) or quadratic (2nd) polynomial
+(chosen by Aikake Inference Criterion) using only data contained in each string.
+Finally, the lightcurve is pieced together and make_lc returns a table containing
+the data ready for periodogram analysis.</p></li>
+<li><p>run_LS - function to conduct Lomb-Scargle periodogram analysis. Returns a table
+with period measurements, plus several data quality flags. If required a plot of
+the lightcurve, periodogram and phase-folded lightcurve is provided.</p></li>
+</ol>
+<section id="id1">
+<h3>Functions<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.get_xy_pos.html#tessilator.lc_analysis.get_xy_pos" title="tessilator.lc_analysis.get_xy_pos"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_xy_pos</span></code></a>(targets, head)</p></td>
+<td><p>Locate the X-Y position for targets in a given Sector/CCD/Camera mode</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.aper_run.html#tessilator.lc_analysis.aper_run" title="tessilator.lc_analysis.aper_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">aper_run</span></code></a>(file_in, targets[, Rad, SkyRad, XY_pos])</p></td>
+<td><p>Perform aperture photometry for the image data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.clean_lc.html#tessilator.lc_analysis.clean_lc" title="tessilator.lc_analysis.clean_lc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_lc</span></code></a>(t, f[, MAD_fac, time_fac, ...])</p></td>
+<td><p>Remove data points from the lightcurve that are likely to be spurious.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.detrend_lc.html#tessilator.lc_analysis.detrend_lc" title="tessilator.lc_analysis.detrend_lc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">detrend_lc</span></code></a>(ds, df, t, f, err)</p></td>
+<td><p>Detrend and normalise the lightcurves.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.make_lc.html#tessilator.lc_analysis.make_lc" title="tessilator.lc_analysis.make_lc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_lc</span></code></a>(phot_table)</p></td>
+<td><p>Construct the normalised TESS lightcurve.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.get_second_peak.html#tessilator.lc_analysis.get_second_peak" title="tessilator.lc_analysis.get_second_peak"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_second_peak</span></code></a>(power)</p></td>
+<td><p>An algorithm to identify the second-highest peak in the periodogram</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.gauss_fit.html#tessilator.lc_analysis.gauss_fit" title="tessilator.lc_analysis.gauss_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">gauss_fit</span></code></a>(x, a0, x_mean, sigma)</p></td>
+<td><p>Construct a simple Gaussian.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.sin_fit.html#tessilator.lc_analysis.sin_fit" title="tessilator.lc_analysis.sin_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sin_fit</span></code></a>(x, y0, A, phi)</p></td>
+<td><p>Returns the best parameters (y_offset, amplitude, and phase) to a regular sinusoidal function.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.run_ls.html#tessilator.lc_analysis.run_ls" title="tessilator.lc_analysis.run_ls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_ls</span></code></a>(cln[, p_min_thresh, p_max_thresh, ...])</p></td>
+<td><p>Run Lomb-Scargle periodogram and return a dictionary of results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.lc_analysis.is_period_cont.html#tessilator.lc_analysis.is_period_cont" title="tessilator.lc_analysis.is_period_cont"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_period_cont</span></code></a>(d_target, d_cont, t_cont[, ...])</p></td>
+<td><p>Identify neighbouring contaminants that may cause the periodicity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-tessilator.contaminants">
+<span id="tessilator-contaminants-module"></span><h2>tessilator.contaminants Module<a class="headerlink" href="#module-tessilator.contaminants" title="Permalink to this heading">¶</a></h2>
+<section id="id2">
+<h3>Functions<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.contaminants.run_sql_query_contaminants.html#tessilator.contaminants.run_sql_query_contaminants" title="tessilator.contaminants.run_sql_query_contaminants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_sql_query_contaminants</span></code></a>(t_target[, ...])</p></td>
+<td><p>Perform an SQL Query to identify neighbouring contaminants.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.contaminants.flux_fraction_contaminant.html#tessilator.contaminants.flux_fraction_contaminant" title="tessilator.contaminants.flux_fraction_contaminant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flux_fraction_contaminant</span></code></a>(ang_sep, s[, d_th])</p></td>
+<td><p>Quantify the flux contamination from a neighbouring source.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.contaminants.contamination.html#tessilator.contaminants.contamination" title="tessilator.contaminants.contamination"><code class="xref py py-obj docutils literal notranslate"><span class="pre">contamination</span></code></a>(t_targets, LC_con[, Rad, n_cont])</p></td>
+<td><p>Estimate flux from neighbouring contaminant sources.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-tessilator.makeplots">
+<span id="tessilator-makeplots-module"></span><h2>tessilator.makeplots Module<a class="headerlink" href="#module-tessilator.makeplots" title="Permalink to this heading">¶</a></h2>
+<p>Generate pixel images, light-curves and periodogram plots</p>
+<section id="id3">
+<h3>Functions<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.makeplots.make_plot.html#tessilator.makeplots.make_plot" title="tessilator.makeplots.make_plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_plot</span></code></a>(im_plot, clean, orig, LS_dict, ...)</p></td>
+<td><p>Produce a plot of tessilator results.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-tessilator.maketable">
+<span id="tessilator-maketable-module"></span><h2>tessilator.maketable Module<a class="headerlink" href="#module-tessilator.maketable" title="Permalink to this heading">¶</a></h2>
+<p>Make tabular data for tessilator</p>
+<p>This module contains the functions required to convert the input data
+into correct formatted astropy tables to be used for further analysis
+in the tessilator.</p>
+<section id="id4">
+<h3>Functions<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.maketable.table_from_simbad.html#tessilator.maketable.table_from_simbad" title="tessilator.maketable.table_from_simbad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_from_simbad</span></code></a>(input_names)</p></td>
+<td><p>Generate the formatted astropy table from a list of target names.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.maketable.table_from_coords.html#tessilator.maketable.table_from_coords" title="tessilator.maketable.table_from_coords"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_from_coords</span></code></a>(coord_table[, ang_max, ...])</p></td>
+<td><p>Generate the formatted astropy table from a list of coordinates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/tessilator.maketable.table_from_table.html#tessilator.maketable.table_from_table" title="tessilator.maketable.table_from_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_from_table</span></code></a>(input_table[, ...])</p></td>
+<td><p>Generate the formatted astropy table from a pre-formatted astropy table.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/tessilator.maketable.get_gaia_data.html#tessilator.maketable.get_gaia_data" title="tessilator.maketable.get_gaia_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_gaia_data</span></code></a>(gaia_table[, name_is_source_id])</p></td>
+<td><p>Reads the input table and returns a table in the correct format for TESSilator.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-tessilator.fixedconstants">
+<span id="tessilator-fixedconstants-module"></span><h2>tessilator.fixedconstants Module<a class="headerlink" href="#module-tessilator.fixedconstants" title="Permalink to this heading">¶</a></h2>
+<p>Module containing fixed constants for the tessilator</p>
+<p>These are the pixel size, the typical full-width half maximum of the pixel response function and the TESS zeropoints</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.tessilator">tessilator.tessilator Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.lc_analysis">tessilator.lc_analysis Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.contaminants">tessilator.contaminants Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.makeplots">tessilator.makeplots Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.maketable">tessilator.maketable Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-tessilator.fixedconstants">tessilator.fixedconstants Module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api/tessilator.tessilator.create_table_template.html" title="create_table_template"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="input_parameters.html" title="Required input parameters"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">API documentation</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

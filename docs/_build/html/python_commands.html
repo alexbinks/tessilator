@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Running the tessilator as part of a python script &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="_static/plot_directive.css" />
+    <script src="_static/jquery.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Required input parameters" href="input_parameters.html" />
+    <link rel="prev" title="Running tessilator from the command line" href="command_line.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="input_parameters.html" title="Required input parameters"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="command_line.html" title="Running tessilator from the command line"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running the tessilator as part of a python script</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="running-the-tessilator-as-part-of-a-python-script">
+<span id="python-commands"></span><h1>Running the tessilator as part of a python script<a class="headerlink" href="#running-the-tessilator-as-part-of-a-python-script" title="Permalink to this heading">¶</a></h1>
+<p>The two sets of python commands below provide minimal working examples of how the tessilator functions may be used as part of a python script. These commands can be copied into a python module or passed as separate commands in an interactive python shell.</p>
+<section id="using-the-tessilator-with-tesscut">
+<h2>Using the tessilator with TESScut<a class="headerlink" href="#using-the-tessilator-with-tesscut" title="Permalink to this heading">¶</a></h2>
+<p>Import the tessilator and the logging module</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">tessilator</span> <span class="kn">import</span> <span class="n">tessilator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">logging</span>
+</pre></div>
+</div>
+<p>Provide tessilator with the input parameters and store these as variables to be passed to further tasks.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fluxCon</span><span class="p">,</span> <span class="n">lcCon</span><span class="p">,</span> <span class="n">makePlots</span><span class="p">,</span> <span class="n">fileRef</span><span class="p">,</span> <span class="n">tFile</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">setup_input_parameters</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conFile</span><span class="p">,</span> <span class="n">periodFile</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">setup_filenames</span><span class="p">(</span><span class="n">fileRef</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define the aperture radius and the radii of the annulus for background calculation</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Rad</span><span class="p">,</span> <span class="n">SkyRad</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[</span><span class="mf">6.0</span><span class="p">,</span><span class="mf">8.0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Instantiate a logging script to store all message with a severity level of “warning” or above.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;output.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Read the input data and ensure this is in the correct format.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tTargets</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">tFile</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If required, perform the contamination calculation and append the results to the input table.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tTargets</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">collect_contamination_data</span><span class="p">(</span><span class="n">tTargets</span><span class="p">,</span> <span class="n">fluxCon</span><span class="p">,</span> <span class="n">lcCon</span><span class="p">,</span>
+<span class="gp">... </span>                                                 <span class="n">conFile</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="n">Rad</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Perform the tessilator analysis for all targets provided in the input table.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tessilator</span><span class="o">.</span><span class="n">all_sources_cutout</span><span class="p">(</span><span class="n">tTargets</span><span class="p">,</span> <span class="n">periodFile</span><span class="p">,</span> <span class="n">lcCon</span><span class="p">,</span> <span class="n">fluxCon</span><span class="p">,</span> <span class="n">conFile</span><span class="p">,</span>
+<span class="gp">... </span>                              <span class="n">makePlots</span><span class="p">,</span> <span class="n">choose_sec</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-the-tessilator-with-sectors">
+<h2>Using the tessilator with sectors<a class="headerlink" href="#using-the-tessilator-with-sectors" title="Permalink to this heading">¶</a></h2>
+<p>The following python commands provide a minimal working example of how to use the tessilator
+for a given sector of data using the calibrated full-frame images.</p>
+<p>Import the tessilator and necessary modules</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">tessilator</span> <span class="kn">import</span> <span class="n">tessilator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">join</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">ascii</span>
+</pre></div>
+</div>
+<p>Instantiate a logging script to store all message with a severity level of “warning” or above.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;output.log&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Provide tessilator with the input parameters and store these as variables to be passed to further tasks.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fluxCon</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">makePlots</span><span class="p">,</span> <span class="n">fileRef</span><span class="p">,</span> <span class="n">tFile</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">setup_input_parameters</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conFile</span><span class="p">,</span> <span class="n">periodFile</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">setup_filenames</span><span class="p">(</span><span class="n">fileRef</span><span class="p">,</span> <span class="n">scc</span><span class="o">=</span><span class="n">scc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define the aperture radius and the radii of the annulus for background calculation</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Rad</span><span class="p">,</span> <span class="n">SkyRad</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[</span><span class="mf">6.0</span><span class="p">,</span><span class="mf">8.0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Test whether the input table is already correctly formatted for tessilator analysis</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t_large_sec_check</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">test_table_large_sectors</span><span class="p">(</span><span class="n">tFile</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">if</span> <span class="n">t_large_sec_check</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">tTargets</span> <span class="o">=</span> <span class="n">t_large_sec_check</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">else</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">gaia_data</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">tFile</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">xy_pixel_data</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">get_tess_pixel_xy</span><span class="p">(</span><span class="n">gaia_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">tTargets</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">gaia_data</span><span class="p">,</span> <span class="n">xy_pixel_data</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="s1">&#39;source_id&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">ascii</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tTargets</span><span class="p">,</span> <span class="n">tFile</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;csv&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">tTargets</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tFile</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ascii.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">tTargets</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tFile</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Select the targets from the input file that land in the required sector</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tTargets</span> <span class="o">=</span> <span class="n">tTargets</span><span class="p">[</span><span class="n">tTargets</span><span class="p">[</span><span class="s1">&#39;Sector&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>If required, perform the contamination calculation and append the results to the input table.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tTargets</span> <span class="o">=</span> <span class="n">tessilator</span><span class="o">.</span><span class="n">collect_contamination_data</span><span class="p">(</span><span class="n">tTargets</span><span class="p">,</span> <span class="n">fluxCon</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+<span class="gp">... </span>                                                 <span class="n">conFile</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="n">Rad</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Perform the tessilator analysis for all targets within the required sector.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tessilator</span><span class="o">.</span><span class="n">all_sector</span><span class="p">(</span><span class="n">tTargets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">makePlots</span><span class="p">,</span> <span class="n">periodFile</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running the tessilator as part of a python script</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-tessilator-with-tesscut">Using the tessilator with TESScut</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-tessilator-with-sectors">Using the tessilator with sectors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="input_parameters.html" title="Required input parameters"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="command_line.html" title="Running tessilator from the command line"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running the tessilator as part of a python script</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>
