@@ -1,6 +1,9 @@
 <p align="center">
   <img src="AB_Dor.gif" width="500" title="AB Doradus TESS periods">
 </p>
+
+[![DOI](https://zenodo.org/badge/588218536.svg)](https://zenodo.org/badge/latestdoi/588218536)
+
   
 **WELCOME TO THE TESSILATOR**
 =============================
