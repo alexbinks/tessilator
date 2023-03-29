@@ -564,12 +564,12 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
         np.nan_to_num(group["mag"], copy=True, nan=-999, posinf=0, neginf=0)
-#        has_nan = np.zeros(len(group), dtype=bool)
-#        for col in group.itercols():
-#            if col.info.dtype.kind == 'f':
-#                has_nan |= np.isnan(col)
-#        table_no_nan = group[~has_nan]
-#        print(table_no_nan, type(table_no_nan), len(table_no_nan))
+##        has_nan = np.zeros(len(group), dtype=bool)
+##        for col in group.itercols():
+##            if col.info.dtype.kind == 'f':
+##                has_nan |= np.isnan(col)
+##        table_no_nan = group[~has_nan]
+##        print(table_no_nan, type(table_no_nan), len(table_no_nan))
         if len(group) >= 1:
             clean_norm_lc, original_norm_lc = make_lc(group)
         else:
