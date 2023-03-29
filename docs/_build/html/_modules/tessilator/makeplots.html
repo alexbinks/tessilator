@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tessilator.makeplots &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.makeplots</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tessilator.makeplots</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;Generate pixel images, light-curves and periodogram plots</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.patches</span> <span class="kn">import</span> <span class="n">Circle</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1.inset_locator</span> <span class="kn">import</span> <span class="n">inset_axes</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;make_plot&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="make_plot"><a class="viewcode-back" href="../../api/tessilator.makeplots.make_plot.html#tessilator.makeplots.make_plot">[docs]</a><span class="k">def</span> <span class="nf">make_plot</span><span class="p">(</span><span class="n">im_plot</span><span class="p">,</span> <span class="n">clean</span><span class="p">,</span> <span class="n">orig</span><span class="p">,</span> <span class="n">LS_dict</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">t_table</span><span class="p">,</span> <span class="n">XY_ctr</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span>
+              <span class="n">XY_contam</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p_min_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+              <span class="n">SkyRad</span> <span class="o">=</span> <span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Produce a plot of tessilator results.</span>
+
+<span class="sd">    | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:</span>
+<span class="sd">    | 1) An TESS cut-out image of the target, with aperture and sky annulus.</span>
+<span class="sd">    | 2) A power vs period plot from the Lomb-Scargle periodogram analysis.</span>
+<span class="sd">    | 3) A lightcurve of the normalised flux.</span>
+<span class="sd">    | 4) The phase-folded lightcurve.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    im_plot : `astropy.nddata.Cutout2D`</span>
+<span class="sd">        The cut-out image of the target</span>
+<span class="sd">    clean : `dict`</span>
+<span class="sd">        The modified (cleaned) lightcurve after processing</span>
+<span class="sd">    orig : `dict`</span>
+<span class="sd">        The original normalised lightcurve before processing.</span>
+<span class="sd">    LS_dict : `dict`</span>
+<span class="sd">        The dictionary of parameters calculated by the Lomb-Scargle periodogram</span>
+<span class="sd">    scc : `list`, size=3</span>
+<span class="sd">        List containing the sector number, camera and CCD</span>
+<span class="sd">    t_table : `astropy.table.Table`</span>
+<span class="sd">        Table containing the input data for the target</span>
+<span class="sd">    XY_ctr : `tuple`, optional, default=(10,10)</span>
+<span class="sd">        The centroid (in pixels) of the target in the TESS image.</span>
+<span class="sd">    XY_contam : `Iterable` or `None`, optional, default = `None`</span>
+<span class="sd">        The pixel positions of the strongest contaminants</span>
+<span class="sd">    p_min_thresh : `float`, optional, default=0.1</span>
+<span class="sd">        The shortest period calculated in the Lomb-Scargle periodogram</span>
+<span class="sd">    p_max_thresh : `float`, optional, default=50.</span>
+<span class="sd">        The longest period calculated in the Lomb-Scargle periodogram</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
+<span class="sd">        The aperture radius from the aperture photometry</span>
+<span class="sd">    SkyRad : `Iterable`, size=2, optional, default=[6.,8.]</span>
+<span class="sd">        The inner and outer background annuli from aperture photometry  </span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nothing returned. The plot produced is saved to file.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;font.size&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">})</span>
+
+    <span class="n">fsize</span> <span class="o">=</span> <span class="mf">22.</span>
+    <span class="n">lsize</span> <span class="o">=</span> <span class="mf">0.9</span><span class="o">*</span><span class="n">fsize</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">15</span><span class="p">))</span>
+
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0.55</span><span class="p">,</span><span class="mf">0.40</span><span class="p">,</span><span class="mf">0.40</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">([</span><span class="mf">0.55</span><span class="p">,</span><span class="mf">0.55</span><span class="p">,</span><span class="mf">0.40</span><span class="p">,</span><span class="mf">0.40</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.90</span><span class="p">,</span><span class="mf">0.2</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0.90</span><span class="p">,</span><span class="mf">0.2</span><span class="p">])</span>
+
+    <span class="n">t_orig0</span> <span class="o">=</span> <span class="n">orig</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">-</span><span class="n">orig</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">circ_aper</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="n">XY_ctr</span><span class="p">,</span> <span class="n">Rad</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+    <span class="n">circ_ann1</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="n">XY_ctr</span><span class="p">,</span> <span class="n">SkyRad</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    <span class="n">circ_ann2</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="n">XY_ctr</span><span class="p">,</span> <span class="n">SkyRad</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">im_plot</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">)</span>
+    <span class="n">name_underscore</span> <span class="o">=</span> <span class="n">t_table</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+
+    <span class="n">Gaia_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Gaia DR3 </span><span class="si">{</span><span class="n">t_table</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">targ_name</span> <span class="o">=</span> <span class="n">t_table</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.96</span><span class="p">,</span>
+             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">targ_name</span><span class="si">}</span><span class="s2">, Sector </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">, &quot;</span>
+             <span class="sa">f</span><span class="s2">&quot;Camera </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2">, &quot;</span>
+             <span class="sa">f</span><span class="s2">&quot;CCD </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+             <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="o">*</span><span class="mf">2.0</span><span class="p">,</span>
+             <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;X pixel&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Y pixel&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">circ_aper</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">circ_ann1</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">circ_ann2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">XY_contam</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+        <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">XY_contam</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">XY_contam</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span>
+                         <span class="n">s</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+
+    <span class="n">divider</span> <span class="o">=</span> <span class="n">make_axes_locatable</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">cax</span> <span class="o">=</span> <span class="n">divider</span><span class="o">.</span><span class="n">new_horizontal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="s1">&#39;5%&#39;</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">(</span><span class="n">cax</span><span class="p">)</span>
+    <span class="n">cbar</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">cax</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="s1">&#39;log$_</span><span class="si">{10}</span><span class="s1">$ counts (e$^-$/s)&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">270</span><span class="p">,</span> <span class="n">labelpad</span><span class="o">=+</span><span class="mi">15</span><span class="p">)</span>
+
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="n">p_min_thresh</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Period (days)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Power&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">semilogx</span><span class="p">(</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;period&#39;</span><span class="p">],</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;power&#39;</span><span class="p">])</span>
+    <span class="p">[</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;grey&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span> \
+     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;FAPs&#39;</span><span class="p">]]</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.94</span><span class="p">,</span> <span class="s2">&quot;$P_{</span><span class="se">\\</span><span class="s2">rm rot}^{</span><span class="se">\\</span><span class="s2">rm (max)}$ = &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;period_best&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> days, &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;power = </span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;power_best&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                  <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.82</span><span class="p">,</span> <span class="s2">&quot;$P_{</span><span class="se">\\</span><span class="s2">rm rot}^{</span><span class="se">\\</span><span class="s2">rm (2nd)}$ = &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;period_second&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                  <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.76</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;power ratio = &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;power_best&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;power_second&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span><span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> 
+                  <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_parameters&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">15</span><span class="p">:</span>
+        <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;period_around_peak&#39;</span><span class="p">],</span>
+                      <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_y_values&#39;</span><span class="p">],</span>
+                      <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Best fit&#39;</span><span class="p">)</span>
+        <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.88</span><span class="p">,</span> <span class="s2">&quot;$P_{</span><span class="se">\\</span><span class="s2">rm rot}^{</span><span class="se">\\</span><span class="s2">rm (Gauss)}$ = &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_parameters&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> $</span><span class="se">\\</span><span class="s2">pm$&quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_parameters&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                      <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                      <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>        
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Time (days)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;median_MAD_nLC&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="p">(</span><span class="mf">8.</span><span class="o">*</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;median_MAD_nLC&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;median_MAD_nLC&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="p">(</span><span class="mf">8.</span><span class="o">*</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;median_MAD_nLC&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;normalised flux&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">clean</span><span class="p">[</span><span class="s2">&quot;time0&quot;</span><span class="p">],</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;y_fit_LS&#39;</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;orange&#39;</span><span class="p">,</span>
+                  <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;LS best fit&#39;</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">t_orig0</span><span class="p">,</span> <span class="n">orig</span><span class="p">[</span><span class="s2">&quot;nflux&quot;</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                     <span class="n">label</span><span class="o">=</span><span class="s1">&#39;raw, normalized&#39;</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">clean</span><span class="p">[</span><span class="s2">&quot;time0&quot;</span><span class="p">],</span> <span class="n">clean</span><span class="p">[</span><span class="s2">&quot;oflux&quot;</span><span class="p">],</span><span class="n">s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                     <span class="n">label</span><span class="o">=</span><span class="s1">&#39;cleaned, normalized&#39;</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">clean</span><span class="p">[</span><span class="s2">&quot;time0&quot;</span><span class="p">],</span> <span class="n">clean</span><span class="p">[</span><span class="s2">&quot;nflux&quot;</span><span class="p">],</span><span class="n">s</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+                     <span class="n">label</span><span class="o">=</span><span class="s1">&#39;cleaned, normalized, detrended&#39;</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.90</span><span class="p">,</span> <span class="n">Gaia_name</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span>
+                  <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                  <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.80</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Gmag = </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">t_table</span><span class="p">[</span><span class="s1">&#39;Gmag&#39;</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                  <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.70</span><span class="p">,</span> <span class="s2">&quot;$\log (f_{</span><span class="se">\\</span><span class="s2">rm bg}/f_{*})$ = &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">t_table</span><span class="p">[</span><span class="s1">&#39;log_tot_bg&#39;</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span>
+                  <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>
+    <span class="n">ax2</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">twinx</span><span class="p">()</span>
+    <span class="n">ax2</span><span class="o">.</span><span class="n">set_position</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.90</span><span class="p">,</span><span class="mf">0.2</span><span class="p">])</span>
+    <span class="n">ax2</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+    <span class="n">ax2</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">t_orig0</span><span class="p">,</span> <span class="n">orig</span><span class="p">[</span><span class="s2">&quot;mag&quot;</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+    <span class="n">ax2</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;TESS magnitude&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;phase&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;normalised flux&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;phase_fit_x&#39;</span><span class="p">],</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;phase_fit_y&#39;</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    <span class="n">LS_dict</span><span class="p">[</span><span class="s2">&quot;phase_col&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">N_cyc</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">LS_dict</span><span class="p">[</span><span class="s2">&quot;phase_col&quot;</span><span class="p">]))</span>
+    <span class="n">cmap_use</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s1">&#39;rainbow&#39;</span><span class="p">,</span> <span class="n">N_cyc</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;phase_x&#39;</span><span class="p">],</span> <span class="n">LS_dict</span><span class="p">[</span><span class="s2">&quot;phase_y&quot;</span><span class="p">],</span>
+                         <span class="n">c</span><span class="o">=</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;phase_col&#39;</span><span class="p">],</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap_use</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                         <span class="n">vmax</span><span class="o">=</span><span class="n">N_cyc</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.90</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Amplitude = </span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;pops_vals&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;Scatter = </span><span class="si">{</span><span class="n">LS_dict</span><span class="p">[</span><span class="s1">&#39;phase_scatter&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">lsize</span><span class="p">,</span>
+                  <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+
+    <span class="n">cbaxes</span> <span class="o">=</span> <span class="n">inset_axes</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">width</span><span class="o">=</span><span class="s2">&quot;100%&quot;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s2">&quot;100%&quot;</span><span class="p">,</span>
+                        <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.79</span><span class="p">,</span> <span class="mf">0.92</span><span class="p">,</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">),</span>
+                        <span class="n">bbox_transform</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+    <span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">cbaxes</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;horizontal&#39;</span><span class="p">,</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;cycle number&#39;</span><span class="p">)</span>
+
+    <span class="n">plot_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">name_underscore</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                          <span class="nb">str</span><span class="p">(</span><span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])])</span><span class="o">+</span><span class="s1">&#39;.png&#39;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_name</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.makeplots</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

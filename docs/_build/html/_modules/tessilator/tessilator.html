@@ -1,0 +1,1241 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tessilator.tessilator &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.tessilator</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tessilator.tessilator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">The tessilator, functions.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">.lc_analysis</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.contaminants</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.maketable</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.makeplots</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.tess_stars2px</span> <span class="kn">import</span> <span class="n">tess_stars2px_function_entry</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyinputplus</span> <span class="k">as</span> <span class="nn">pyip</span>
+<span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">astropy.nddata.utils</span> <span class="kn">import</span> <span class="n">Cutout2D</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">ascii</span><span class="p">,</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="kn">import</span> <span class="n">SkyCoord</span>
+<span class="kn">import</span> <span class="nn">astropy.units</span> <span class="k">as</span> <span class="nn">u</span>
+<span class="kn">from</span> <span class="nn">astroquery.mast</span> <span class="kn">import</span> <span class="n">Tesscut</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="s1">&#39;logger&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;create_table_template&#39;</span><span class="p">,</span> <span class="s1">&#39;setup_input_parameters&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;setup_filenames&#39;</span><span class="p">,</span> <span class="s1">&#39;test_table_large_sectors&#39;</span><span class="p">,</span> <span class="s1">&#39;read_data&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;collect_contamination_data&#39;</span><span class="p">,</span> <span class="s1">&#39;make_datarow&#39;</span><span class="p">,</span> <span class="s1">&#39;make_failrow&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;full_run_lc&#39;</span><span class="p">,</span> <span class="s1">&#39;print_time_taken&#39;</span><span class="p">,</span> <span class="s1">&#39;find_xy_cont&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;run_test_for_contaminant&#39;</span><span class="p">,</span> <span class="s1">&#39;get_tess_pixel_xy&#39;</span><span class="p">,</span> <span class="s1">&#39;get_fits&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;make_2d_cutout&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cutouts&#39;</span><span class="p">,</span> <span class="s1">&#39;one_source_cutout&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;all_sources_cutout&#39;</span><span class="p">,</span> <span class="s1">&#39;one_cc&#39;</span><span class="p">,</span> <span class="s1">&#39;all_sources_sector&#39;</span><span class="p">]</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************************************************************&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|******_*********_*********_*********_*********_*********_********&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|*****/*\*******/*\*******/*\*******/*\*******/*\*******/*\*******&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;****`____________________________________________________________****&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************************************************************&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************WELCOME TO THE TESSILATOR***********************&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;********The one-stop shop for measuring TESS rotation periods*********&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************************************************************&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**********************************************************************&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;If this package is useful for research leading to publication we&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;would appreciate the following acknowledgement:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&#39;The data from the Transiting Exoplanet Survey Satellite (TESS) was&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;acquired using the tessilator software package (Binks et al. 2023).&#39;&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start time: &quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%d</span><span class="s2">/%m/%Y %H:%M:%S&quot;</span><span class="p">))</span>
+
+<span class="c1"># Create custom logger</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+
+<div class="viewcode-block" id="create_table_template"><a class="viewcode-back" href="../../api/tessilator.tessilator.create_table_template.html#tessilator.tessilator.create_table_template">[docs]</a><span class="k">def</span> <span class="nf">create_table_template</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Create a template astropy table to store tessilator results.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    final_table : `astropy.table.Table`</span>
+<span class="sd">        A template table to store tessilator results.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">final_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;ra&#39;</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">,</span> <span class="s1">&#39;parallax&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;Gmag&#39;</span><span class="p">,</span> <span class="s1">&#39;Sector&#39;</span><span class="p">,</span> <span class="s1">&#39;Camera&#39;</span><span class="p">,</span> <span class="s1">&#39;CCD&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;log_tot_bg_star&#39;</span><span class="p">,</span> <span class="s1">&#39;log_max_bg_star&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;n_contaminants&#39;</span><span class="p">,</span> <span class="s1">&#39;Period_Max&#39;</span><span class="p">,</span> <span class="s1">&#39;Period_Gauss&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;e_Period&#39;</span><span class="p">,</span> <span class="s1">&#39;Period_2&#39;</span><span class="p">,</span> <span class="s1">&#39;power1&#39;</span><span class="p">,</span> <span class="s1">&#39;power1_power2&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;FAP_001&#39;</span><span class="p">,</span> <span class="s1">&#39;amp&#39;</span><span class="p">,</span> <span class="s1">&#39;scatter&#39;</span><span class="p">,</span> <span class="s1">&#39;fdev&#39;</span><span class="p">,</span> <span class="s1">&#39;Ndata&#39;</span><span class="p">,</span>\
+                           <span class="s1">&#39;cont_flags&#39;</span><span class="p">],</span>\
+                    <span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span>\
+                           <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span>\
+                           <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span>\
+                           <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">final_table</span></div>
+
+
+<div class="viewcode-block" id="setup_input_parameters"><a class="viewcode-back" href="../../api/tessilator.tessilator.setup_input_parameters.html#tessilator.tessilator.setup_input_parameters">[docs]</a><span class="k">def</span> <span class="nf">setup_input_parameters</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Retrieve the input parameters to run the tessilator program.</span>
+
+<span class="sd">    | The input parameters are:</span>
+
+<span class="sd">    | 1) &quot;flux_con&quot;: the toggle for applying the contamination calculation</span>
+<span class="sd">       (yes=1, no=0).</span>
+
+<span class="sd">    | 2) either &quot;LC_con&quot;, if using the cutout functions or &quot;sector_num&quot; if sectors are needed.       </span>
+<span class="sd">    * &quot;LC_con&quot; determines if lightcurve/periodogram analyses should be carried out for neighbouring contaminants (yes=1, no=0).</span>
+<span class="sd">    * &quot;sector_num&quot; prompts the user to enter the sector number needed. If command line arguments are not used, the program will ask if a specific Camera and CCD is needed (1=yes, 0=no). If not required, the whole sector is analysed. If this is a command line argument, if the user enters just the sector number (maximum 2 digits) the whole sector will be analysed, and if the Camera and CCD number are given right after the sector number with no spaces, then a specific Camera and CCD configuration will be used. E.G: if &quot;sector_num = 8&quot;, the entire sector 8 is analysed, whereas if &quot;sector_num = 814&quot; then the program will analyse only Camera 1 and CCD 4 in sector 8.</span>
+
+<span class="sd">    | 3) &quot;make_plots&quot; gives the user the option to make plots (yes=1, no=0)</span>
+
+<span class="sd">    | 4) &quot;file_ref&quot; is a string expression used to reference the files produced.</span>
+
+<span class="sd">    | 5) &quot;t_filename&quot; is the name of the input file required for analysis.</span>
+
+<span class="sd">    | If a program is called from the command line without all five input parameters, a set of prompts are initiated to receive input. If just one target is needed, then the user can simply supply either target name, or the sky coordinates as the final input.</span>
+<span class="sd">    | Otherwise, if the full set of command line parameters are supplied, the function will use these as the inputs, however, if they have the wrong format the program will return a warning message and exit.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Either arguments supplied on the command line, or the function will prompt</span>
+<span class="sd">    the user to provide input.</span>
+<span class="sd">    </span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    flux_con : `bool`</span>
+<span class="sd">        Run lightcurve analysis for contaminant sources</span>
+<span class="sd">    scc : `list`, size=3, only if sector data is used</span>
+<span class="sd">        List containing the sector number, camera and CCD</span>
+<span class="sd">    LC_con : `bool`, only if cutout data is used</span>
+<span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
+<span class="sd">        contaminants. Here, the data required for further analysis are</span>
+<span class="sd">        stored in a table.</span>
+<span class="sd">    make_plots : `bool`</span>
+<span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
+<span class="sd">    file_ref : `str`</span>
+<span class="sd">        A common string to give all output files the same naming convention</span>
+<span class="sd">    t_filename : `str`</span>
+<span class="sd">        The name of the input table containing the targets</span>
+<span class="sd">     &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="n">flux_con</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Do you want to search for contaminants? &quot;</span>
+                   <span class="s2">&quot;1=yes, 0=no : &quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;cutout&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">LC_con</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Do you want to calculate period data for &quot;</span>
+                     <span class="s2">&quot;the contaminants? 1=yes, 0=no : &quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;sector&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">sector_num</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Which sector of data do you require? &quot;</span>
+                         <span class="s2">&quot;(1-55) : &quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">55</span><span class="p">)</span>
+            <span class="n">cc_request</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputBool</span><span class="p">(</span><span class="s2">&quot;Do you want a specific Camera/CCD? &quot;</span>
+                                        <span class="s2">&quot;1=yes, 0=no : &quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cc_request</span><span class="p">:</span>
+                <span class="n">cam_num</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Which Camera? &quot;</span>
+                                        <span class="s2">&quot;(1-4)&quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+                <span class="n">ccd_num</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Which CCD? &quot;</span>
+                                        <span class="s2">&quot;(1-4)&quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+                <span class="n">scc</span> <span class="o">=</span> <span class="p">[</span><span class="n">sector_num</span><span class="p">,</span> <span class="n">cam_num</span><span class="p">,</span> <span class="n">ccd_num</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scc</span> <span class="o">=</span> <span class="p">[</span><span class="n">sector_num</span><span class="p">]</span>
+        <span class="n">make_plots</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputInt</span><span class="p">(</span><span class="s2">&quot;Would you like to make some plots? 1=yes, &quot;</span>
+                     <span class="s2">&quot;0=no : &quot;</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">file_ref</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputStr</span><span class="p">(</span><span class="s2">&quot;Enter the unique name for referencing the &quot;</span>
+                   <span class="s2">&quot;output files : &quot;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">t_filename</span> <span class="o">=</span> <span class="n">pyip</span><span class="o">.</span><span class="n">inputStr</span><span class="p">(</span><span class="s2">&quot;Enter the file name of your input &quot;</span>
+                         <span class="s2">&quot;table or object.</span><span class="se">\n</span><span class="s2">If this is an object please use &quot;</span>
+                         <span class="s2">&quot;double quotations around the target identifier : &quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">t_filename</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">t_filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">):</span>
+                <span class="n">t_name</span> <span class="o">=</span> <span class="n">t_filename</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">t_name_joined</span> <span class="o">=</span> <span class="n">t_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.dat&#39;</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">t_name_joined</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">t_name_joined</span><span class="p">)</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">t_name_joined</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">single_target</span><span class="p">:</span>
+                    <span class="n">single_target</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">t_name</span><span class="p">)</span>
+                <span class="n">t_filename</span> <span class="o">=</span> <span class="n">t_name_joined</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">t_filename</span><span class="p">)</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The file &quot;</span><span class="si">{</span><span class="n">t_filename</span><span class="si">}</span><span class="s1">&quot; does not exist.&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">flux_con</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s1">&#39;cutout&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">LC_con</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="s1">&#39;sector&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">scc_in</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scc_in</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Incorrect format for sector/camera/ccd values&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">scc_in</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">scc</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">scc_in</span><span class="p">)]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">scc_in</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]:</span>
+                <span class="n">sec</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">scc_in</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">cam</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">scc_in</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">ccd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">scc_in</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">scc</span> <span class="o">=</span> <span class="p">[</span><span class="n">sec</span><span class="p">,</span> <span class="n">cam</span><span class="p">,</span> <span class="n">ccd</span><span class="p">]</span>
+        <span class="n">make_plots</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">file_ref</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">t_filename</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+
+        <span class="n">true_vals</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">sec_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">56</span><span class="p">)</span>
+        <span class="n">cam_ccd_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">flux_con</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">true_vals</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;flux_con value </span><span class="si">{</span><span class="n">flux_con</span><span class="si">}</span><span class="s2"> not a valid input. &quot;</span>
+                       <span class="s2">&quot;Exiting program.&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s1">&#39;cutout&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">LC_con</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">true_vals</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;LC_con value </span><span class="si">{</span><span class="n">LC_con</span><span class="si">}</span><span class="s2"> not a valid input. &quot;</span>
+                           <span class="s2">&quot;Exiting program.&quot;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="s1">&#39;sector&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sec_vals</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sector_num value </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> not a valid input. &quot;</span>
+                           <span class="s2">&quot;Exiting program.&quot;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scc</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cam_ccd_vals</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Camera value </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> out of range.&quot;</span><span class="p">)</span>
+                        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cam_ccd_vals</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CCD value </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> out of range.&quot;</span><span class="p">)</span>
+                        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>                        
+            <span class="k">if</span> <span class="n">make_plots</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">true_vals</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;make_plots not a valid input. Exiting program.&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">t_filename</span><span class="p">)</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;File &quot;</span><span class="si">{</span><span class="n">t_filename</span><span class="si">}</span><span class="s1">&quot; does not exist. Exiting program.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="s1">&#39;cutout&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">t_filename</span>
+    <span class="k">elif</span> <span class="s1">&#39;sector&#39;</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">t_filename</span></div>
+
+
+<div class="viewcode-block" id="setup_filenames"><a class="viewcode-back" href="../../api/tessilator.tessilator.setup_filenames.html#tessilator.tessilator.setup_filenames">[docs]</a><span class="k">def</span> <span class="nf">setup_filenames</span><span class="p">(</span><span class="n">file_ref</span><span class="p">,</span> <span class="n">scc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Set up the file names to store data</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_ref : `str`</span>
+<span class="sd">        A common string to give all output files the same naming convention</span>
+<span class="sd">    scc : `list` or `None`, size=3, optional, default = `None` </span>
+<span class="sd">        A list containing the Sector, Camera and CCD.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    con_file : `str`</span>
+<span class="sd">        Name of file to store contamination values.</span>
+<span class="sd">    period_file : `str`</span>
+<span class="sd">        Name of file for recording parameters measured by the periodogram</span>
+<span class="sd">        analysis.</span>
+<span class="sd">    &#39;&#39;&#39;</span>    
+    <span class="k">if</span> <span class="n">scc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">con_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;contamination&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="s1">&#39;tesscut&#39;</span><span class="p">])</span>
+        <span class="n">period_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;periods&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="s1">&#39;tesscut&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sn</span> <span class="o">=</span> <span class="s1">&#39;sector&#39;</span><span class="o">+</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">con_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;contamination&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">sn</span><span class="p">])</span>
+        <span class="n">period_file</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;periods&#39;</span><span class="p">,</span> <span class="n">file_ref</span><span class="p">,</span> <span class="n">sn</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">period_file</span></div>
+
+
+<div class="viewcode-block" id="test_table_large_sectors"><a class="viewcode-back" href="../../api/tessilator.tessilator.test_table_large_sectors.html#tessilator.tessilator.test_table_large_sectors">[docs]</a><span class="k">def</span> <span class="nf">test_table_large_sectors</span><span class="p">(</span><span class="n">t_filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Check if the input file needs modifying at all.</span>
+
+<span class="sd">    |If running the tessilator for a whole sector, read the input file and if the format is ready for analysis, make a couple of adjustments, then simply pass the file.</span>
+<span class="sd">    </span>
+<span class="sd">    | For a straight pass, the columns must be ordered in two ways. Either:</span>
+<span class="sd">    * exactly set out with the following columns:</span>
+<span class="sd">    </span>
+<span class="sd">        #. source_id: name of the Gaia DR3 source identifier</span>
+<span class="sd">        #. ra: right ascension</span>
+<span class="sd">        #. dec: declination</span>
+<span class="sd">        #. parallax: parallax</span>
+<span class="sd">        #. Gmag: Gaia DR3 apparent G-band magnitude</span>
+<span class="sd">        #. Sector: The TESS sector</span>
+<span class="sd">        #. Camera: The TESS camera</span>
+<span class="sd">        #. CCD: The TESS CCD number</span>
+<span class="sd">        #. Xpos: The TESS X-pixel</span>
+<span class="sd">        #. Ypos: The TESS Y-pixel</span>
+<span class="sd">        </span>
+<span class="sd">        </span>
+<span class="sd">    * The same, but with a preceding column entitled &quot;name&quot;, which refers to a target identifier name. This can be any string.</span>
+<span class="sd">    | In any other case, None is returned and other functions are used to get the table into the correct format.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table_in : `astropy.table.Table`</span>
+<span class="sd">        The table input which will be checked for formatting.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    t : `astropy.table.Table` or `None`</span>
+<span class="sd">        either a ready-prepared table or nothing.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;csv&#39;</span><span class="p">)</span>
+    <span class="c1"># The list of column names which must be spelled exactly.</span>
+    <span class="n">cnc</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;ra&#39;</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">,</span> <span class="s1">&#39;parallax&#39;</span><span class="p">,</span> <span class="s1">&#39;Gmag&#39;</span><span class="p">,</span> <span class="s1">&#39;Sector&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;Camera&#39;</span><span class="p">,</span> <span class="s1">&#39;CCD&#39;</span><span class="p">,</span> <span class="s1">&#39;Xpos&#39;</span><span class="p">,</span> <span class="s1">&#39;Ypos&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">cnc</span> <span class="o">==</span> <span class="n">t</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+        <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span>
+        <span class="n">cnc</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">cnc</span><span class="p">]</span>
+        <span class="c1"># Ensure the dtype for &quot;name&quot; and &quot;source_id&quot; are strings.</span>
+        <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">t</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">t</span>
+    <span class="k">elif</span> <span class="n">cnc</span> <span class="o">==</span> <span class="n">t</span><span class="o">.</span><span class="n">colnames</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">colnames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span>
+            <span class="c1"># Ensure the dtype for &quot;name&quot; and &quot;source_id&quot; are strings.</span>
+            <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="n">t</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">t</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># return nothing if neither of the above two conditions are met.</span>
+        <span class="k">return</span> <span class="n">t</span></div>
+
+
+<div class="viewcode-block" id="read_data"><a class="viewcode-back" href="../../api/tessilator.tessilator.read_data.html#tessilator.tessilator.read_data">[docs]</a><span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Read input data and convert to an astropy table ready for analysis</span>
+<span class="sd">    </span>
+<span class="sd">    | The input data must be in the form of a comma-separated variable and may take 3 forms:</span>
+<span class="sd">    | (a) a 1-column table of source identifiers</span>
+<span class="sd">    | (b) a 2-column table of decimal sky coordinates (celestial or galactic)</span>
+<span class="sd">    | (c) a pre-prepared table of 5 columns consisting of source_id, ra, dec, parallax, Gmag (without column headers)</span>
+<span class="sd">    </span>
+<span class="sd">    Note that a single target can be quickly analysed directly from the command line by using option (a) with double-quotation marks around the source identifier.</span>
+<span class="sd">    </span>
+<span class="sd">    E.G. &gt;&gt;&gt; python run_tess_cutouts 0 0 0 files &quot;AB Doradus&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    t_filename : `astropy.table.Table`</span>
+<span class="sd">        name of the file containing the input data</span>
+<span class="sd">    name_is_source_id : `int`, optional, Default=0</span>
+<span class="sd">        when running option (c), this toggle if == 1 will automatically set</span>
+<span class="sd">        the &quot;name&quot; column as the Gaia DR3 identifiers. This avoids long sql</span>
+<span class="sd">        queries for very large input tables.  </span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        a formatted astropy table ready for further analysis</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting Time: </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">t_input</span> <span class="o">=</span> <span class="n">ascii</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">t_filename</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;no_header&#39;</span><span class="p">)</span>
+    <span class="n">t_targets</span> <span class="o">=</span> <span class="n">get_gaia_data</span><span class="p">(</span><span class="n">t_input</span><span class="p">,</span> <span class="n">name_is_source_id</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t_targets</span></div>
+
+
+<div class="viewcode-block" id="collect_contamination_data"><a class="viewcode-back" href="../../api/tessilator.tessilator.collect_contamination_data.html#tessilator.tessilator.collect_contamination_data">[docs]</a><span class="k">def</span> <span class="nf">collect_contamination_data</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>
+                               <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Collect data on contamination sources around selected targets</span>
+
+<span class="sd">    This function takes a target table and, if requested, prints out details of</span>
+<span class="sd">    the total flux contribution from neighbouring contaminating sources for</span>
+<span class="sd">    each target.</span>
+<span class="sd">    It also returns a table (in descending order) of (up to) 5 neighbouring</span>
+<span class="sd">    contaminants that contribute the most flux in the target aperture, if</span>
+<span class="sd">    requested.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        target table with columns &quot;name, source_id, ra, dec, parallax, Gmag&quot;.</span>
+<span class="sd">    flux_con : `bool`</span>
+<span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
+<span class="sd">    LC_con : `bool`</span>
+<span class="sd">        Decides if a lightcurve analysis is to be performed for the n_cont strongest</span>
+<span class="sd">        contaminants, where n_cont is a keyword in the &quot;contamination&quot; function from</span>
+<span class="sd">        contaminants.py.</span>
+<span class="sd">    con_file : `str`</span>
+<span class="sd">        The name of the file to store data from the total flux contribution</span>
+<span class="sd">        from contaminants.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        Input target table with 3 columns added containing details of the</span>
+<span class="sd">        contamination: &quot;log_tot_bg&quot;, &quot;log_max_bg&quot;, &quot;num_tot_bg&quot;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">flux_con</span><span class="p">:</span>
+        <span class="n">t_targets</span><span class="p">,</span> <span class="n">t_con_table</span> <span class="o">=</span> <span class="n">contamination</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span>
+                                                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">t_contam</span> <span class="o">=</span> <span class="n">t_targets</span><span class="p">[[</span><span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;log_tot_bg&#39;</span><span class="p">,</span> <span class="s1">&#39;log_max_bg&#39;</span><span class="p">,</span>\
+                              <span class="s1">&#39;num_tot_bg&#39;</span><span class="p">]]</span>
+        <span class="n">t_contam</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">con_file</span><span class="o">+</span><span class="s1">&#39;.ecsv&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">LC_con</span><span class="p">:</span>
+            <span class="n">t_con_table</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">con_file</span><span class="o">+</span>
+                              <span class="s1">&#39;_individiual.ecsv&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">999.</span>
+        <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">999.</span>
+        <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">999.</span>
+    
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">con_file</span><span class="o">+</span><span class="s1">&#39;.ecsv&#39;</span><span class="p">):</span>
+            <span class="n">t_contam</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">con_file</span><span class="o">+</span><span class="s1">&#39;.ecsv&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t_contam</span><span class="p">)):</span>
+                <span class="n">g</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="o">==</span> \
+                     <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_contam</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">][</span><span class="n">g</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">t_targets</span></div>
+
+
+<div class="viewcode-block" id="make_datarow"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_datarow.html#tessilator.tessilator.make_datarow">[docs]</a><span class="k">def</span> <span class="nf">make_datarow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">labels_cont</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Once the tessilator has analysed a target, the results are printed line</span>
+<span class="sd">    by line to a table.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_target : `astropy.table.Table`</span>
+<span class="sd">        The Gaia and contamination details (see &#39;getGaiaData&#39; and</span>
+<span class="sd">        &#39;contamination&#39; functions in tessilator.tess_functions.)</span>
+
+<span class="sd">    d_target : `dict`</span>
+<span class="sd">        The dictionary containing details of the periodogram analysis, which is</span>
+<span class="sd">        returned by &#39;run_LS&#39; in tessilator.tess_functions.)</span>
+<span class="sd">    </span>
+<span class="sd">    scc : `list`, size=3</span>
+<span class="sd">        A list containing the Sector, Camera and CCD.</span>
+
+<span class="sd">    labels_cont : `str`</span>
+<span class="sd">        A string of labels listing details of any contaminant sources.</span>
+<span class="sd">        </span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dr : `dict`</span>
+<span class="sd">        A dictionary entry for the target star containing tessilator data</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="p">[</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;ra&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;dec&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;parallax&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;Gmag&quot;</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;period_best&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_parameters&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;Gauss_fit_peak_parameters&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;period_second&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;power_best&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;power_best&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;power_second&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;FAPs&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;pops_vals&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;phase_scatter&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;frac_phase_outliers&#39;</span><span class="p">],</span>
+          <span class="n">d_target</span><span class="p">[</span><span class="s1">&#39;Ndata&#39;</span><span class="p">],</span>
+          <span class="n">labels_cont</span>
+          <span class="p">]</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
+
+<div class="viewcode-block" id="make_failrow"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_failrow.html#tessilator.tessilator.make_failrow">[docs]</a><span class="k">def</span> <span class="nf">make_failrow</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Print a line with input data if tessilator fails for a given target</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        | Table of input data for the tessilator, with the following columns:</span>
+<span class="sd">        #. name: name of the target (str)</span>
+<span class="sd">        #. source_id: Gaia DR3 source identifier (str)</span>
+<span class="sd">        #. ra: right ascension</span>
+<span class="sd">        #. dec: declination</span>
+<span class="sd">        #. parallax: parallax</span>
+<span class="sd">        #. Gmag: Gaia DR3 apparent G-band magnitude</span>
+<span class="sd">        #. log_tot_bg_star: log-10 value of the flux ratio between contaminants and target (optional)</span>
+<span class="sd">        #. log_max_bg_star: log-10 value of the flux ratio between the largest contaminant and target (optional)</span>
+<span class="sd">        #. n_contaminants: number of contaminant sources (optional)</span>
+<span class="sd">        </span>
+<span class="sd">        Note that if the contaminantion is not calculated, the final three columns are automatically</span>
+<span class="sd">        filled with -999 values.</span>
+<span class="sd">    scc : `list`, size=3</span>
+<span class="sd">        A list containing the Sector, Camera and CCD.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dr : `dict`</span>
+<span class="sd">        A dictionary entry for the target star containing input data</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="s1">&#39;log_tot_bg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t_target</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_tot_bg&#39;</span><span class="p">)</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_max_bg&#39;</span><span class="p">)</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;n_contaminants&#39;</span><span class="p">)</span>
+
+    <span class="n">dr</span> <span class="o">=</span> <span class="p">[</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;ra&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;dec&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;parallax&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;Gmag&quot;</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+          <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;log_tot_bg&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;log_max_bg&quot;</span><span class="p">],</span>
+          <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;num_tot_bg&quot;</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">dr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
+
+
+<div class="viewcode-block" id="full_run_lc"><a class="viewcode-back" href="../../api/tessilator.tessilator.full_run_lc.html#tessilator.tessilator.full_run_lc">[docs]</a><span class="k">def</span> <span class="nf">full_run_lc</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">t_target</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span>\
+                <span class="n">cutout_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">flux_con</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">LC_con</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">con_file</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>\
+                <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">),</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Aperture photometry, lightcurve cleaning and periodogram analysis.</span>
+
+<span class="sd">    This function calls a set of functions in the lc_analysis.py module to</span>
+<span class="sd">    perform aperture photometry, clean the lightcurves from spurious data and</span>
+<span class="sd">    runs the Lomb-Scargle periodogram to measure rotation periods.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_in : `str`</span>
+<span class="sd">        name of the input TESS fits file</span>
+<span class="sd">    t_target : `astropy.table.Table`</span>
+<span class="sd">        details of the target star</span>
+<span class="sd">    make_plots: `bool`</span>
+<span class="sd">        decides if plots are made </span>
+<span class="sd">    scc : `list`, size=3</span>
+<span class="sd">        sector, camera, ccd</span>
+<span class="sd">    cutout_size : `int`</span>
+<span class="sd">        the pixel length of the downloaded cutout</span>
+<span class="sd">    flux_con : `bool`, optional, default=0</span>
+<span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
+<span class="sd">    LC_con : `bool`, optional, default=0</span>
+<span class="sd">        Decides if a lightcurve analysis is to be performed for the n strongest</span>
+<span class="sd">        contaminants, where n is a keyword in the &quot;contamination&quot; function from</span>
+<span class="sd">        tess_functions2.py.</span>
+<span class="sd">    con_file : `str`</span>
+<span class="sd">        The name of the file to store data from the total flux contribution</span>
+<span class="sd">        from contaminants.</span>
+<span class="sd">    XY_pos : `tuple`, size=2x2, optional, default=(10.,10.)</span>
+<span class="sd">        The centroid of the target in pixels.</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
+<span class="sd">        The aperture radius from the aperture photometry</span>
+<span class="sd">    SkyRad : `Iterable`, optional, default=[6.,8.]</span>
+<span class="sd">        The inner and outer background annuli from aperture photometry  </span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    * A data entry for the final period file.</span>
+<span class="sd">    * A plot of the lightcurve (if requested).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">table_phot_final</span> <span class="o">=</span> <span class="n">aper_run</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">t_target</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="n">Rad</span><span class="p">,</span>
+                                    <span class="n">SkyRad</span><span class="o">=</span><span class="n">SkyRad</span><span class="p">,</span> <span class="n">XY_pos</span><span class="o">=</span><span class="n">XY_pos</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aperture photometry: of </span><span class="si">{</span><span class="n">file_in</span><span class="si">}</span><span class="s2"> failed to run&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table_phot_final</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aperture photometry: failed to produce enough data &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;points for </span><span class="si">{</span><span class="n">t_target</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">t_target</span><span class="p">:</span>
+            <span class="n">final_table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">make_failrow</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">scc</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">phot_targets</span> <span class="o">=</span> <span class="n">table_phot_final</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">phot_targets</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">keys</span><span class="p">,</span> <span class="n">phot_targets</span><span class="o">.</span><span class="n">groups</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t_target</span><span class="p">,</span> <span class="n">Table</span><span class="p">):</span>
+            <span class="n">t_targets</span> <span class="o">=</span> <span class="n">t_target</span><span class="p">[</span><span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t_targets</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">t_target</span><span class="p">)</span>
+            <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_targets</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="s2">&quot;mag&quot;</span><span class="p">],</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nan</span><span class="o">=-</span><span class="mi">999</span><span class="p">,</span> <span class="n">posinf</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">neginf</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1">#        has_nan = np.zeros(len(group), dtype=bool)</span>
+<span class="c1">#        for col in group.itercols():</span>
+<span class="c1">#            if col.info.dtype.kind == &#39;f&#39;:</span>
+<span class="c1">#                has_nan |= np.isnan(col)</span>
+<span class="c1">#        table_no_nan = group[~has_nan]</span>
+<span class="c1">#        print(table_no_nan, type(table_no_nan), len(table_no_nan))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">clean_norm_lc</span><span class="p">,</span> <span class="n">original_norm_lc</span> <span class="o">=</span> <span class="n">make_lc</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No photometry was recorded for this group.&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">clean_norm_lc</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;no datapoints to make lightcurve analysis for &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">t_targets</span><span class="p">:</span>
+                <span class="n">final_table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">make_failrow</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">scc</span><span class="p">))</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">d_target</span> <span class="o">=</span> <span class="n">run_ls</span><span class="p">(</span><span class="n">clean_norm_lc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">LC_con</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">flux_con</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Contaminants not identified! Please toggle LC_con=1&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Continuing program using only the target.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;calculating contaminant lightcurves&#39;</span><span class="p">)</span>
+                <span class="n">con_table</span> <span class="o">=</span> <span class="n">ascii</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">con_file</span><span class="o">+</span>
+                                       <span class="s1">&#39;_individiual.ecsv&#39;</span><span class="p">)</span>
+                <span class="n">con_table</span> <span class="o">=</span> <span class="n">con_table</span><span class="p">[</span><span class="n">con_table</span><span class="p">[</span><span class="s2">&quot;source_id_target&quot;</span><span class="p">]</span> <span class="o">==</span> \
+                                      <span class="n">t_target</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Test 1&quot;</span><span class="p">)</span>
+                <span class="n">XY_con</span> <span class="o">=</span> <span class="n">find_xy_cont</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Test 2&quot;</span><span class="p">)</span>
+                <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">XY_con</span><span class="p">)):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test </span><span class="si">{</span><span class="n">z</span><span class="o">+</span><span class="mi">3</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="n">labels_cont</span> <span class="o">+=</span> <span class="n">run_test_for_contaminant</span><span class="p">(</span><span class="n">XY_con</span><span class="p">[</span><span class="n">z</span><span class="p">],</span>\
+                                                            <span class="n">file_in</span><span class="p">,</span>\
+                                                            <span class="n">con_table</span><span class="p">[</span><span class="n">z</span><span class="p">],</span>\
+                                                            <span class="n">d_target</span><span class="p">,</span>\
+                                                            <span class="n">cutout_size</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">labels_cont</span><span class="p">:</span>
+                    <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;z&#39;</span>
+            <span class="n">XY_con</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">make_plots</span><span class="p">:</span>
+            <span class="n">im_plot</span><span class="p">,</span> <span class="n">XY_ctr</span> <span class="o">=</span> <span class="n">make_2d_cutout</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> \
+                                             <span class="n">im_size</span><span class="o">=</span><span class="p">(</span><span class="n">cutout_size</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>\
+                                                      <span class="n">cutout_size</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">make_plot</span><span class="p">(</span><span class="n">im_plot</span><span class="p">,</span> <span class="n">clean_norm_lc</span><span class="p">,</span> <span class="n">original_norm_lc</span><span class="p">,</span>\
+                         <span class="n">d_target</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">t_targets</span><span class="p">,</span> <span class="n">XY_contam</span><span class="o">=</span><span class="n">XY_con</span><span class="p">,</span>\
+                         <span class="n">p_min_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">p_max_thresh</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>\
+                         <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">])</span>
+        <span class="n">final_table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">make_datarow</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span>\
+                                         <span class="n">labels_cont</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="print_time_taken"><a class="viewcode-back" href="../../api/tessilator.tessilator.print_time_taken.html#tessilator.tessilator.print_time_taken">[docs]</a><span class="k">def</span> <span class="nf">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Calculate the time taken for a process.</span>
+
+<span class="sd">    This function takes a start and finish point a calculates the time taken in</span>
+<span class="sd">    hours, minutes and seconds</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start : `datetime.datetime`</span>
+<span class="sd">        The start point of the process</span>
+<span class="sd">    </span>
+<span class="sd">    finish : `datetime.datetime`</span>
+<span class="sd">        The end point of the process</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    time_taken : `str`</span>
+<span class="sd">        The time taken for the process to complete</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">time_in_secs</span> <span class="o">=</span> <span class="p">(</span><span class="n">finish</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">seconds</span>
+    <span class="n">mins</span><span class="p">,</span> <span class="n">secs</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">time_in_secs</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="n">hrs</span><span class="p">,</span> <span class="n">mins</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="n">time_taken</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">hrs</span><span class="si">}</span><span class="s2"> hours, </span><span class="si">{</span><span class="n">mins</span><span class="si">}</span><span class="s2"> minutes, </span><span class="si">{</span><span class="n">secs</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+    <span class="k">return</span> <span class="n">time_taken</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="find_xy_cont"><a class="viewcode-back" href="../../api/tessilator.tessilator.find_xy_cont.html#tessilator.tessilator.find_xy_cont">[docs]</a><span class="k">def</span> <span class="nf">find_xy_cont</span><span class="p">(</span><span class="n">f_file</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Identify the pixel X-Y positions for contaminant sources.</span>
+
+<span class="sd">    If the user requests a periodogram analysis of neighbouring potential</span>
+<span class="sd">    contaminants (LC_con=1), this function returns their X-Y positions, which are</span>
+<span class="sd">    used as the centroids for aperture photometry.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    f_file : `str`</span>
+<span class="sd">        The name of the fits file.</span>
+<span class="sd">    con_table : `astropy.table.Table`</span>
+<span class="sd">        The table containing Gaia data of the contaminants.</span>
+<span class="sd">    cutout_size : `int`</span>
+<span class="sd">        The length size of the TESS cutout image.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cont_positions : `np.array`</span>
+<span class="sd">        A 2-column array of the X-Y positions of the contaminants.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">XY_ctr</span> <span class="o">=</span> <span class="p">(</span><span class="n">cutout_size</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="n">cutout_size</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">f_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+        <span class="n">RA_ctr</span><span class="p">,</span> <span class="n">DEC_ctr</span> <span class="o">=</span> <span class="n">head</span><span class="p">[</span><span class="s2">&quot;RA_OBJ&quot;</span><span class="p">],</span> <span class="n">head</span><span class="p">[</span><span class="s2">&quot;DEC_OBJ&quot;</span><span class="p">]</span>
+        <span class="n">RA_con</span><span class="p">,</span> <span class="n">DEC_con</span> <span class="o">=</span> <span class="n">con_table</span><span class="p">[</span><span class="s2">&quot;RA&quot;</span><span class="p">],</span> <span class="n">con_table</span><span class="p">[</span><span class="s2">&quot;DEC&quot;</span><span class="p">]</span>
+        <span class="n">X_abs_con</span><span class="p">,</span> <span class="n">Y_abs_con</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Col_ctr</span><span class="p">,</span> <span class="n">Row_ctr</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> \
+            <span class="n">tess_stars2px_function_entry</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">RA_ctr</span><span class="p">,</span> <span class="n">DEC_ctr</span><span class="p">,</span>\
+                                         <span class="n">trySector</span><span class="o">=</span><span class="n">head</span><span class="p">[</span><span class="s2">&quot;SECTOR&quot;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">RA_con</span><span class="p">)):</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Col_con</span><span class="p">,</span> <span class="n">Row_con</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> \
+                <span class="n">tess_stars2px_function_entry</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">RA_con</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">DEC_con</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>\
+                                             <span class="n">trySector</span><span class="o">=</span><span class="n">head</span><span class="p">[</span><span class="s2">&quot;SECTOR&quot;</span><span class="p">])</span>
+            <span class="n">X_abs_con</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Col_con</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">Y_abs_con</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Row_con</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">X_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X_abs_con</span> <span class="o">-</span> <span class="n">Col_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">+</span> <span class="n">XY_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Y_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y_abs_con</span> <span class="o">-</span> <span class="n">Row_ctr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">+</span> <span class="n">XY_ctr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">cont_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">X_con</span><span class="p">,</span> <span class="n">Y_con</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">cont_positions</span></div>
+        
+
+<div class="viewcode-block" id="run_test_for_contaminant"><a class="viewcode-back" href="../../api/tessilator.tessilator.run_test_for_contaminant.html#tessilator.tessilator.run_test_for_contaminant">[docs]</a><span class="k">def</span> <span class="nf">run_test_for_contaminant</span><span class="p">(</span><span class="n">XY_arr</span><span class="p">,</span> <span class="n">file_in</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">d_target</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the periodogram analyses for neighbouring contaminants if required.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    XY_arr : `list`, size=2</span>
+<span class="sd">        The X and Y positions of the contaminant (the output form the &quot;find_XY_cont&quot; function).</span>
+<span class="sd">    file_in : `str`</span>
+<span class="sd">        The name of the fits file containing the contaminant.</span>
+<span class="sd">    con_table : `astropy.table.Table`</span>
+<span class="sd">        A single row from the contamination table which has</span>
+<span class="sd">        details of the flux contribution.</span>
+<span class="sd">    d_target : `dict`</span>
+<span class="sd">        The dictionary returned from the periodogram analysis of</span>
+<span class="sd">        the target star (the output from the &quot;run_LS&quot; function in the lc_analysis.py module)</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels_cont : `str` (a, b, c or d)</span>
+<span class="sd">        A single character which assess if the calculated period for the target</span>
+<span class="sd">        could actually come from the contaminant. </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">XY_con</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">XY_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">XY_arr</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">phot_cont</span> <span class="o">=</span> <span class="n">aper_run</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">con_table</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                         <span class="n">SkyRad</span><span class="o">=</span><span class="p">(</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">),</span> <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">phot_cont</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;d&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">clean_norm_lc_cont</span><span class="p">,</span> <span class="n">original_norm_lc_cont</span> <span class="o">=</span> <span class="n">make_lc</span><span class="p">(</span><span class="n">phot_cont</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">clean_norm_lc_cont</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">d_cont</span> <span class="o">=</span> <span class="n">run_ls</span><span class="p">(</span><span class="n">clean_norm_lc_cont</span><span class="p">)</span>
+            <span class="n">labels_cont</span> <span class="o">=</span> <span class="n">is_period_cont</span><span class="p">(</span><span class="n">d_target</span><span class="p">,</span> <span class="n">d_cont</span><span class="p">,</span> <span class="n">con_table</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">labels_cont</span> <span class="o">=</span> <span class="s1">&#39;d&#39;</span>
+    <span class="k">return</span> <span class="n">labels_cont</span></div>
+
+
+
+
+
+
+
+
+
+
+
+<div class="viewcode-block" id="get_tess_pixel_xy"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_tess_pixel_xy.html#tessilator.tessilator.get_tess_pixel_xy">[docs]</a><span class="k">def</span> <span class="nf">get_tess_pixel_xy</span><span class="p">(</span><span class="n">t_targets</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Get the pixel X-Y positions for all targets in a Sector/Camera/CCD mode.</span>
+
+<span class="sd">    For a given pair of celestial sky coordinates, this function returns table</span>
+<span class="sd">    rows containing the sector, camera, CCD, and X/Y position of the full-frame</span>
+<span class="sd">    image fits file, so that all stars located in a given (large) fits file can</span>
+<span class="sd">    be processed simultaneously. After the table is returned, the</span>
+<span class="sd">    input table is joined to the input table on the source_id, to ensure this</span>
+<span class="sd">    function only needs to be called once.</span>
+
+<span class="sd">    This function is only used if the tessilator program runs over the calibrate</span>
+<span class="sd">    full-frame images - i.e., when the &quot;all_cc&quot; function is called.</span>
+<span class="sd">    </span>
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        The input table created by the function get_gaia_data.py</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xy_table : `astropy.table.Table`</span>
+<span class="sd">        Output table containing the (*x*, *y*) pixel positions for each target.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">outID</span><span class="p">,</span> <span class="n">outEclipLong</span><span class="p">,</span> <span class="n">outEclipLat</span><span class="p">,</span> <span class="n">outSec</span><span class="p">,</span> <span class="n">outCam</span><span class="p">,</span> <span class="n">outCcd</span><span class="p">,</span> \
+           <span class="n">outCPix</span><span class="p">,</span> <span class="n">outRPix</span><span class="p">,</span> <span class="n">scinfo</span> <span class="o">=</span> <span class="n">tess_stars2px_function_entry</span><span class="p">(</span>
+           <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">],</span> <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">])</span>
+    <span class="n">xy_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">([</span><span class="n">outID</span><span class="p">,</span> <span class="n">outSec</span><span class="p">,</span> <span class="n">outCam</span><span class="p">,</span> <span class="n">outCcd</span><span class="p">,</span> <span class="n">outCPix</span><span class="p">,</span> <span class="n">outRPix</span><span class="p">],</span>
+            <span class="n">names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source_id&#39;</span><span class="p">,</span> <span class="s1">&#39;Sector&#39;</span><span class="p">,</span> <span class="s1">&#39;Camera&#39;</span><span class="p">,</span> <span class="s1">&#39;CCD&#39;</span><span class="p">,</span> <span class="s1">&#39;Xpos&#39;</span><span class="p">,</span> <span class="s1">&#39;Ypos&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">xy_table</span></div>
+
+
+<div class="viewcode-block" id="get_fits"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_fits.html#tessilator.tessilator.get_fits">[docs]</a><span class="k">def</span> <span class="nf">get_fits</span><span class="p">(</span><span class="n">scc</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Function which returns a list of fits files corresponding to a</span>
+<span class="sd">    given Sector, Camera and CCD configuration</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sector_num : `int`</span>
+<span class="sd">        Sector number required</span>
+
+<span class="sd">    cc : `list`, size=2</span>
+<span class="sd">        List of [a, b], where a is the Camera number (1-4)</span>
+<span class="sd">        and b is the CCD number (1-4)</span>
+<span class="sd">    </span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fits_files : `list`</span>
+<span class="sd">        A list of the fits files to be used for aperture photometry</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">file_dir</span> <span class="o">=</span> <span class="s2">&quot;/data/submit/abinks/tess_fits_files/&quot;</span>
+    <span class="n">list_fits</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file_dir</span><span class="si">}</span><span class="s2">sector</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">/*.fits&quot;</span><span class="p">))</span>
+<span class="c1">#    list_fits = sorted([os.path.join(f&quot;{file_dir}sector{scc[0]:02d}&quot;, fl) \</span>
+<span class="c1">#                        for fl in os.listdir(f&quot;sector{scc[0]:02d}&quot;) \</span>
+<span class="c1">#                        if fl.endswith(&#39;.fits&#39;)])</span>
+    <span class="n">l_cam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">list_fits</span><span class="p">])</span>
+    <span class="n">l_ccd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">list_fits</span><span class="p">])</span>
+    <span class="n">fits_indices</span> <span class="o">=</span> <span class="p">(</span><span class="n">l_cam</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">l_ccd</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">fits_files</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">list_fits</span><span class="p">)[</span><span class="n">fits_indices</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">fits_files</span></div>
+
+
+<div class="viewcode-block" id="make_2d_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.make_2d_cutout.html#tessilator.tessilator.make_2d_cutout">[docs]</a><span class="k">def</span> <span class="nf">make_2d_cutout</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">phot_table</span><span class="p">,</span> <span class="n">im_size</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Makes a 2D cutout object of a target using the median time-stacked image</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    target : `astropy.table.Table`</span>
+<span class="sd">        The astropy table containing the output from the aperture photometry</span>
+<span class="sd">        for a given target.</span>
+<span class="sd">    fits_files : `list`</span>
+<span class="sd">        The list of fits files used to make the aperture photometry</span>
+<span class="sd">    im_size : `tuple`, optional, default=(21,21)</span>
+<span class="sd">        The required size of the 2D-cutout object</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cutout : `astropy.nddata.Cutout2D`</span>
+<span class="sd">        A 2D-cutout object</span>
+
+<span class="sd">    XY_ctr : `tuple`</span>
+<span class="sd">        A tuple containing the X, Y position of the median time-stacked image.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">image_index</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">phot_table</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">image_fits</span>  <span class="o">=</span> <span class="n">file_in</span><span class="p">[</span><span class="n">image_index</span><span class="p">]</span>
+        <span class="n">table_slice</span> <span class="o">=</span> <span class="n">phot_table</span><span class="p">[</span><span class="n">image_index</span><span class="p">]</span>
+        <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">image_fits</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">head</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">ctr_pt</span> <span class="o">=</span> <span class="p">(</span><span class="n">table_slice</span><span class="p">[</span><span class="s2">&quot;xcenter&quot;</span><span class="p">],</span> <span class="n">table_slice</span><span class="p">[</span><span class="s2">&quot;ycenter&quot;</span><span class="p">])</span>
+        <span class="n">cutout</span> <span class="o">=</span> <span class="n">Cutout2D</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">ctr_pt</span><span class="p">,</span> <span class="n">im_size</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_in</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">data_slice</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;FLUX&quot;</span><span class="p">][:][:][</span><span class="nb">int</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">)]</span>
+        <span class="n">ctr_pt</span> <span class="o">=</span> <span class="p">((</span><span class="n">im_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="p">(</span><span class="n">im_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">cutout</span> <span class="o">=</span> <span class="n">Cutout2D</span><span class="p">(</span><span class="n">data_slice</span><span class="p">,</span> <span class="n">ctr_pt</span><span class="p">,</span> <span class="n">im_size</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Fits file </span><span class="si">{file_in}</span><span class="s2"> has the invalid type: {type(file_in)}&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">cutout</span><span class="p">,</span> <span class="n">ctr_pt</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="get_cutouts"><a class="viewcode-back" href="../../api/tessilator.tessilator.get_cutouts.html#tessilator.tessilator.get_cutouts">[docs]</a><span class="k">def</span> <span class="nf">get_cutouts</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">target_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Download TESS cutouts and store to a list for lightcurve analysis.</span>
+
+<span class="sd">    The TESScut function will save fits files to the working directory.</span>
+<span class="sd">    </span>
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coord : `astropy.astropy.SkyCoord`</span>
+<span class="sd">        A set of coordinates in the SkyCoord format</span>
+<span class="sd">    cutout_size : `float`</span>
+<span class="sd">        The pixel length of the downloaded cutout</span>
+<span class="sd">    choose_sec : `None`, `int` or `Iterable`</span>
+<span class="sd">        | The sector, or sectors required for download.</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
+<span class="sd">    target_name : `str`</span>
+<span class="sd">        Name of the target</span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    manifest : `list`</span>
+<span class="sd">        A list of the fits files for lightcurve analysis.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">choose_sec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dl</span> <span class="o">=</span> <span class="n">Tesscut</span><span class="o">.</span><span class="n">download_cutouts</span><span class="p">(</span><span class="n">coordinates</span><span class="o">=</span><span class="n">coord</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">cutout_size</span><span class="p">,</span>\
+                                      <span class="n">sector</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl</span><span class="p">[</span><span class="s2">&quot;Local Path&quot;</span><span class="p">]:</span>
+            <span class="n">manifest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">choose_sec</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">choose_sec</span> <span class="o">&gt;</span> <span class="mi">70</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">choose_sec</span><span class="si">}</span><span class="s2"> is out of range.&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">choose_sec</span><span class="si">}</span><span class="s2"> is out of range.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">dl</span> <span class="o">=</span> <span class="n">Tesscut</span><span class="o">.</span><span class="n">download_cutouts</span><span class="p">(</span><span class="n">coordinates</span><span class="o">=</span><span class="n">coord</span><span class="p">,</span>\
+                                              <span class="n">size</span><span class="o">=</span><span class="n">cutout_size</span><span class="p">,</span>\
+                                              <span class="n">sector</span><span class="o">=</span><span class="n">choose_sec</span><span class="p">)</span>
+                <span class="n">manifest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dl</span><span class="p">[</span><span class="s2">&quot;Local Path&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">choose_sec</span><span class="si">}</span><span class="s2"> unavailable for </span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">choose_sec</span><span class="si">}</span><span class="s2"> unavailable for &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+        <span class="n">cs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cs</span><span class="p">):</span>
+            <span class="n">cs_g</span> <span class="o">=</span> <span class="n">cs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">cs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">cs</span> <span class="o">&lt;</span> <span class="mi">70</span><span class="p">))[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cs_g</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sectors </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">cs</span><span class="p">,</span><span class="w"> </span><span class="n">cs_g</span><span class="p">)</span><span class="si">}</span><span class="s2"> are out of &quot;</span>
+                               <span class="sa">f</span><span class="s2">&quot;range.&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cs_g</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">dl</span> <span class="o">=</span> <span class="n">Tesscut</span><span class="o">.</span><span class="n">download_cutouts</span><span class="p">(</span><span class="n">coordinates</span><span class="o">=</span><span class="n">coord</span><span class="p">,</span>\
+                                                  <span class="n">size</span><span class="o">=</span><span class="n">cutout_size</span><span class="p">,</span>\
+                                                  <span class="n">sector</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+                    <span class="n">manifest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dl</span><span class="p">[</span><span class="s2">&quot;Local Path&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2"> unavailable for </span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sector </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2"> unavailable for </span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Some sectors not of type `int&#39;. Fix and try again.&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Some sectors not of type `int&#39;. Fix and try again.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The choose_sec parameter has an invalid format type: &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The choose_sec parameter has an invalid format type: &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">choose_sec</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">manifest</span></div>
+
+
+<div class="viewcode-block" id="one_source_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.one_source_cutout.html#tessilator.tessilator.one_source_cutout">[docs]</a><span class="k">def</span> <span class="nf">one_source_cutout</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span>\
+                      <span class="n">final_table</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">cutout_size</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Download cutouts and run lightcurve/periodogram analysis for one target.</span>
+
+<span class="sd">    Called by the function &quot;all_sources&quot;.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coord : `astropy.astropy.SkyCoord`</span>
+<span class="sd">        A set of coordinates in the SkyCoord format</span>
+<span class="sd">    target : `astropy.table.row.Row`</span>
+<span class="sd">        A row of data from the astropy table</span>
+<span class="sd">    LC_con : `bool`</span>
+<span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
+<span class="sd">        contaminants. Here, the data required for further analysis are</span>
+<span class="sd">        stored in a table.</span>
+<span class="sd">    flux_con : `bool`</span>
+<span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
+<span class="sd">    con_file : `str`</span>
+<span class="sd">        The name of the file to store data from the total flux contribution</span>
+<span class="sd">        from contaminants.</span>
+<span class="sd">    make_plots : `bool`</span>
+<span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
+<span class="sd">    final_table : `astropy.table.Table`</span>
+<span class="sd">        The table to store the final tessilator results.</span>
+<span class="sd">    choose_sec : `None`, `int` or `Iterable`</span>
+<span class="sd">        | The sector, or sectors required for download.</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
+<span class="sd">    cutout_size : `float`, Default=20</span>
+<span class="sd">        the pixel length of the downloaded cutout</span>
+<span class="sd">        </span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nothing returned. Results are saved to table and plots are generated (if</span>
+<span class="sd">    specified). </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># Set the contaminant parameters to the default values in case</span>
+    <span class="c1"># they have not been added</span>
+    <span class="k">if</span> <span class="s1">&#39;log_tot_bg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_tot_bg&#39;</span><span class="p">)</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_max_bg&#39;</span><span class="p">)</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;n_contaminants&#39;</span><span class="p">)</span>
+
+    <span class="c1"># use Tesscut to get the cutout fits files for the target star</span>
+    <span class="c1"># there may be more than 1 fits file if the target lands in</span>
+    <span class="c1"># multiple sectors!</span>
+
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">get_cutouts</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">cutout_size</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">,</span> <span class="n">target</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">manifest</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;could not download any data for </span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;Trying next target.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">file_in</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">manifest</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="si">}</span><span class="s2"> sectors&quot;</span><span class="p">)</span>
+    <span class="c1"># rename the fits file to something more legible for users</span>
+                <span class="n">name_underscore</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+                <span class="n">f_sp</span> <span class="o">=</span> <span class="n">file_in</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">file_new</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">name_underscore</span><span class="p">,</span> <span class="n">f_sp</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span> <span class="n">f_sp</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>\
+                                     <span class="n">f_sp</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span><span class="o">+</span><span class="s1">&#39;.fits&#39;</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">file_in</span><span class="p">,</span> <span class="n">file_new</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;target: </span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;source_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># run the lightcurve analysis for the given target/fits file</span>
+                <span class="n">t_sp</span> <span class="o">=</span> <span class="n">file_new</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="c1"># simply extract the sector, ccd and camera numbers from the fits file.</span>
+                <span class="n">scc</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">t_sp</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">][</span><span class="mi">1</span><span class="p">:]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_sp</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_sp</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])]</span>
+                <span class="n">full_run_lc</span><span class="p">(</span><span class="n">file_new</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span>
+                                   <span class="n">flux_con</span><span class="o">=</span><span class="n">flux_con</span><span class="p">,</span> <span class="n">LC_con</span><span class="o">=</span><span class="n">LC_con</span><span class="p">,</span>
+                                   <span class="n">con_file</span><span class="o">=</span><span class="n">con_file</span><span class="p">,</span> <span class="n">XY_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="mf">10.</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error occurred when processing </span><span class="si">{</span><span class="n">file_new</span><span class="si">}</span><span class="s2">. &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;Trying next target.&quot;</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="all_sources_cutout"><a class="viewcode-back" href="../../api/tessilator.tessilator.all_sources_cutout.html#tessilator.tessilator.all_sources_cutout">[docs]</a><span class="k">def</span> <span class="nf">all_sources_cutout</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">period_file</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>\
+                       <span class="n">make_plots</span><span class="p">,</span> <span class="n">choose_sec</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the tessilator for all targets.</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        | Table of input data for the tessilator, with the following columns:</span>
+<span class="sd">        #. name: name of the target (str)</span>
+<span class="sd">        #. source_id: Gaia DR3 source identifier (str)</span>
+<span class="sd">        #. ra: right ascension</span>
+<span class="sd">        #. dec: declination</span>
+<span class="sd">        #. parallax: parallax</span>
+<span class="sd">        #. Gmag: Gaia DR3 apparent G-band magnitude</span>
+<span class="sd">        #. log_tot_bg_star: log-10 value of the flux ratio between contaminants and target (optional)</span>
+<span class="sd">        #. log_max_bg_star: log-10 value of the flux ratio between the largest contaminant and target (optional)</span>
+<span class="sd">        #. n_contaminants: number of contaminant sources (optional)</span>
+<span class="sd">    period_file : `str` </span>
+<span class="sd">        Name of the file to store periodogram results.</span>
+<span class="sd">    LC_con : `bool`</span>
+<span class="sd">        Decides if a lightcurve analysis is to be performed for the 5 strongest</span>
+<span class="sd">        contaminants. Here, the data required for further analysis are</span>
+<span class="sd">        stored in a table.</span>
+<span class="sd">    flux_con : `bool`</span>
+<span class="sd">        Decides if the flux contribution from contaminants is to be calculated.</span>
+<span class="sd">    con_file : `str`</span>
+<span class="sd">        The name of the file to store data from the total flux contribution</span>
+<span class="sd">        from contaminants.</span>
+<span class="sd">    make_plots : `bool`</span>
+<span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
+<span class="sd">    choose_sec : `None`, `int`, or `Iterable`, optional</span>
+<span class="sd">        | The sector, or sectors required for download.</span>
+<span class="sd">        * If `None`, TESScut will download all sectors available for the target.</span>
+<span class="sd">        * If `int`, TESScut will attempt to download this sector number.</span>
+<span class="sd">        * If `Iterable`, TESScut will attempt to download a list of sectors.</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nothing returned. The final table is saved to file and the program</span>
+<span class="sd">    terminates.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">final_table</span> <span class="o">=</span> <span class="n">create_table_template</span><span class="p">()</span>
+    <span class="n">isdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="s1">&#39;fits&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">isdir</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s1">&#39;fits&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;log_tot_bg&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_tot_bg&#39;</span><span class="p">)</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;log_max_bg&#39;</span><span class="p">)</span>
+        <span class="n">t_targets</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;num_tot_bg&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">t_targets</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, star # </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t_targets</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">coo</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s2">&quot;ra&quot;</span><span class="p">],</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;dec&quot;</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;deg&quot;</span><span class="p">)</span>
+        <span class="n">one_source_cutout</span><span class="p">(</span><span class="n">coo</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">LC_con</span><span class="p">,</span> <span class="n">flux_con</span><span class="p">,</span> <span class="n">con_file</span><span class="p">,</span>
+                          <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span> <span class="n">choose_sec</span><span class="p">)</span>
+    <span class="n">finish</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="n">dt_string</span> <span class="o">=</span> <span class="n">finish</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%b-</span><span class="si">%d</span><span class="s2">-%Y_%H:%M:%S&quot;</span><span class="p">)</span>
+    <span class="n">final_table</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">period_file</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">dt_string</span><span class="o">+</span><span class="s1">&#39;.ecsv&#39;</span><span class="p">)</span>
+
+    <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t_targets</span><span class="p">)</span><span class="si">}</span><span class="s2"> targets in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="one_cc"><a class="viewcode-back" href="../../api/tessilator.tessilator.one_cc.html#tessilator.tessilator.one_cc">[docs]</a><span class="k">def</span> <span class="nf">one_cc</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">,</span> <span class="n">Rad</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                      <span class="n">SkyRad</span><span class="o">=</span><span class="p">[</span><span class="mf">6.</span><span class="p">,</span><span class="mf">8.</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Run the tessilator for targets in a given Sector/Camera/CCD configuration</span>
+
+<span class="sd">    This routine finds the full-frame calibrated fits files and targets which</span>
+<span class="sd">    land in a given Sector/Camera/CCD configuration (SCC). Aperture photometry</span>
+<span class="sd">    is carried out simultaneously for all stars in a given SCC for each fits</span>
+<span class="sd">    file in chronological order. This makes the method run much faster than</span>
+<span class="sd">    doing it star-by-star (i.e. vectorisation). The output is a table for each</span>
+<span class="sd">    SCC and plots for each target (if required).</span>
+
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cc : `list` size=2</span>
+<span class="sd">        List of [a, b], where a is the Camera number (1-4)</span>
+<span class="sd">        and b is the CCD number (1-4)</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        Table containing the targets to be analysed</span>
+<span class="sd">    sector_num : `int`</span>
+<span class="sd">        Sector number required</span>
+<span class="sd">    make_plots : `bool`</span>
+<span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
+<span class="sd">    final_table : `astropy.table.Table`</span>
+<span class="sd">        The table to store tessilator results.</span>
+<span class="sd">    Rad : `float`, optional, default=1.0</span>
+<span class="sd">        The pixel radius of the flux collecting area for aperture photometry</span>
+<span class="sd">    SkyRad: `Iterable`, size=2, optional, default=[6.,8.]</span>
+<span class="sd">        The inner and outer background annuli used for aperture photometry</span>
+
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nothing returned, but the final tessilator table is saved to file.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">fits_files</span> <span class="o">=</span> <span class="n">get_fits</span><span class="p">(</span><span class="n">scc</span><span class="p">)</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;Sector&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> \
+          <span class="p">(</span><span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;Camera&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> \
+          <span class="p">(</span><span class="n">t_targets</span><span class="p">[</span><span class="s1">&#39;CCD&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">ind</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">full_run_lc</span><span class="p">(</span><span class="n">fits_files</span><span class="p">,</span> <span class="n">t_targets</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">final_table</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="all_sources_sector"><a class="viewcode-back" href="../../api/tessilator.tessilator.all_sources_sector.html#tessilator.tessilator.all_sources_sector">[docs]</a><span class="k">def</span> <span class="nf">all_sources_sector</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">period_file</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Iterate over all cameras and CCDs for a given sector</span>
+<span class="sd">    </span>
+<span class="sd">    parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t_targets : `astropy.table.Table`</span>
+<span class="sd">        Input data for the targets to be analysed</span>
+<span class="sd">    scc : `list`, size=3</span>
+<span class="sd">        List containing the sector number, camera and CCD</span>
+<span class="sd">    make_plots : `bool`</span>
+<span class="sd">        Decides is plots are made from the lightcurve analysis.</span>
+<span class="sd">    period_file : `str`</span>
+<span class="sd">        Name of file for recording parameters measured by the periodogram</span>
+<span class="sd">        analysis.</span>
+<span class="sd">        </span>
+<span class="sd">    returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Nothing returned. The Tessilator data for each camera/CCD configuration</span>
+<span class="sd">    is saved to file.</span>
+<span class="sd">    &#39;&#39;&#39;</span> 
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scc</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">final_table</span> <span class="o">=</span> <span class="n">create_table_template</span><span class="p">()</span>
+        <span class="n">one_cc</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="n">scc</span><span class="p">,</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">)</span>
+        <span class="n">final_table</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">period_file</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">.ecsv&quot;</span><span class="p">,</span>
+                          <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">finish</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">final_table</span><span class="p">)</span><span class="si">}</span><span class="s2"> targets for Sector </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;Camera </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, CCD </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cam_ccd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)])</span>
+        <span class="k">for</span> <span class="n">cc</span> <span class="ow">in</span> <span class="n">cam_ccd</span><span class="p">:</span>
+            <span class="n">final_table</span> <span class="o">=</span> <span class="n">create_table_template</span><span class="p">()</span>
+            <span class="n">start_ccd</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+            <span class="n">one_cc</span><span class="p">(</span><span class="n">t_targets</span><span class="p">,</span> <span class="p">[</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cc</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">make_plots</span><span class="p">,</span> <span class="n">final_table</span><span class="p">)</span>
+            <span class="n">final_table</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">period_file</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">.ecsv&quot;</span><span class="p">,</span>
+                              <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">finish_ccd</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+            <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start_ccd</span><span class="p">,</span> <span class="n">finish_ccd</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">final_table</span><span class="p">)</span><span class="si">}</span><span class="s2"> targets for Sector </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;Camera </span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, CCD </span><span class="si">{</span><span class="n">cc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">finish</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="n">hrs_mins_secs</span> <span class="o">=</span> <span class="n">print_time_taken</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished the whole of Sector </span><span class="si">{</span><span class="n">scc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">hrs_mins_secs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tessilator.tessilator</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

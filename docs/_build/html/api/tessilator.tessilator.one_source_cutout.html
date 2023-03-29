@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>one_source_cutout &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="all_sources_cutout" href="tessilator.tessilator.all_sources_cutout.html" />
+    <link rel="prev" title="get_cutouts" href="tessilator.tessilator.get_cutouts.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_cutout.html" title="all_sources_cutout"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.get_cutouts.html" title="get_cutouts"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" accesskey="U">API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">one_source_cutout</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="one-source-cutout">
+<h1>one_source_cutout<a class="headerlink" href="#one-source-cutout" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tessilator.tessilator.one_source_cutout">
+<span class="sig-prename descclassname"><span class="pre">tessilator.tessilator.</span></span><span class="sig-name descname"><span class="pre">one_source_cutout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">LC_con</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flux_con</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_plots</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">choose_sec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutout_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/tessilator.html#one_source_cutout"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.tessilator.one_source_cutout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download cutouts and run lightcurve/periodogram analysis for one target.</p>
+<p>Called by the function “all_sources”.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>coord</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.astropy.SkyCoord</span></code></span></dt><dd><p>A set of coordinates in the SkyCoord format</p>
+</dd>
+<dt><strong>target</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Row.html#astropy.table.Row" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.row.Row</span></code></a></span></dt><dd><p>A row of data from the astropy table</p>
+</dd>
+<dt><strong>LC_con</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>Decides if a lightcurve analysis is to be performed for the 5 strongest
+contaminants. Here, the data required for further analysis are
+stored in a table.</p>
+</dd>
+<dt><strong>flux_con</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>Decides if the flux contribution from contaminants is to be calculated.</p>
+</dd>
+<dt><strong>con_file</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>The name of the file to store data from the total flux contribution
+from contaminants.</p>
+</dd>
+<dt><strong>make_plots</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></span></dt><dd><p>Decides is plots are made from the lightcurve analysis.</p>
+</dd>
+<dt><strong>final_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The table to store the final tessilator results.</p>
+</dd>
+<dt><strong>choose_sec</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code></span></dt><dd><div class="line-block">
+<div class="line">The sector, or sectors required for download.</div>
+</div>
+<ul class="simple">
+<li><p>If <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, TESScut will download all sectors available for the target.</p></li>
+<li><p>If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, TESScut will attempt to download this sector number.</p></li>
+<li><p>If <code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterable</span></code>, TESScut will attempt to download a list of sectors.</p></li>
+</ul>
+</dd>
+<dt><strong>cutout_size</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, Default=20</span></dt><dd><p>the pixel length of the downloaded cutout</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>Nothing returned. Results are saved to table and plots are generated (if</dt><dd></dd>
+<dt>specified).</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#module-tessilator.tessilator">tessilator.tessilator Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.lc_analysis">tessilator.lc_analysis Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.contaminants">tessilator.contaminants Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.makeplots">tessilator.makeplots Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.maketable">tessilator.maketable Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.fixedconstants">tessilator.fixedconstants Module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.all_sources_cutout.html" title="all_sources_cutout"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.get_cutouts.html" title="get_cutouts"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" >API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">one_source_cutout</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

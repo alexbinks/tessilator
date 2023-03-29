@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>make_datarow &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="make_failrow" href="tessilator.tessilator.make_failrow.html" />
+    <link rel="prev" title="collect_contamination_data" href="tessilator.tessilator.collect_contamination_data.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.make_failrow.html" title="make_failrow"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.collect_contamination_data.html" title="collect_contamination_data"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" accesskey="U">API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_datarow</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="make-datarow">
+<h1>make_datarow<a class="headerlink" href="#make-datarow" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tessilator.tessilator.make_datarow">
+<span class="sig-prename descclassname"><span class="pre">tessilator.tessilator.</span></span><span class="sig-name descname"><span class="pre">make_datarow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_cont</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/tessilator.html#make_datarow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.tessilator.make_datarow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Once the tessilator has analysed a target, the results are printed line
+by line to a table.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>t_target</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a></span></dt><dd><p>The Gaia and contamination details (see ‘getGaiaData’ and
+‘contamination’ functions in tessilator.tess_functions.)</p>
+</dd>
+<dt><strong>d_target</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>The dictionary containing details of the periodogram analysis, which is
+returned by ‘run_LS’ in tessilator.tess_functions.)</p>
+</dd>
+<dt><strong>scc</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, size=3</span></dt><dd><p>A list containing the Sector, Camera and CCD.</p>
+</dd>
+<dt><strong>labels_cont</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>A string of labels listing details of any contaminant sources.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>dr</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A dictionary entry for the target star containing tessilator data</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#module-tessilator.tessilator">tessilator.tessilator Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.lc_analysis">tessilator.lc_analysis Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.contaminants">tessilator.contaminants Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.makeplots">tessilator.makeplots Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.maketable">tessilator.maketable Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.fixedconstants">tessilator.fixedconstants Module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.make_failrow.html" title="make_failrow"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.tessilator.collect_contamination_data.html" title="collect_contamination_data"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" >API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_datarow</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

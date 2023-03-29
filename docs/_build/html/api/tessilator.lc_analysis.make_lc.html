@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>make_lc &#8212; tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pyramid.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="icon" href="../_static/astropy_logo.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="get_second_peak" href="tessilator.lc_analysis.get_second_peak.html" />
+    <link rel="prev" title="detrend_lc" href="tessilator.lc_analysis.detrend_lc.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.get_second_peak.html" title="get_second_peak"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" accesskey="U">API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_lc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="make-lc">
+<h1>make_lc<a class="headerlink" href="#make-lc" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tessilator.lc_analysis.make_lc">
+<span class="sig-prename descclassname"><span class="pre">tessilator.lc_analysis.</span></span><span class="sig-name descname"><span class="pre">make_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phot_table</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/tessilator/lc_analysis.html#make_lc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tessilator.lc_analysis.make_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the normalised TESS lightcurve.</p>
+<div class="line-block">
+<div class="line">The function runs the following tasks:</div>
+<div class="line">(1) Read the table produced from the aperture photometry</div>
+<div class="line">(2) Normalise the lightcurve using the median flux value.</div>
+<div class="line">(3) Clean the lightcurve from spurious data using “clean_lc”</div>
+<div class="line">(4) Detrend the lightcurve using “detrend_lc”</div>
+<div class="line">(5) Return the original normalised lightcurve and the cleaned lightcurve</div>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>phot_table</strong><span class="classifier"><a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.table.Table.html#astropy.table.Table" title="(in Astropy v5.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.table.Table</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
+<div class="line">The data table containing aperture photometry returned by aper_run.py. Columns must include:</div>
+<div class="line">“time” -&gt; The time coordinate for each image</div>
+<div class="line">“mag” -&gt; The target magnitude</div>
+<div class="line">“flux_corr” -&gt; The total flux subtracted by the background flux</div>
+<div class="line">“flux_err” -&gt; The error on flux_corr</div>
+</div>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>cln</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
+<div class="line">The cleaned, detrended, normalised lightcurve, with the keys:</div>
+<div class="line">“time” -&gt; The time coordinate</div>
+<div class="line">“time0” -&gt; The time coordinate relative to the first data point</div>
+<div class="line">“oflux” -&gt; The original, normalised flux values</div>
+<div class="line">“nflux” -&gt; The detrended, cleaned, normalised flux values</div>
+<div class="line">“enflux” -&gt; The error on “nflux”</div>
+<div class="line">“polyord” -&gt; The polynomial order used for each detrend        </div>
+</div>
+</dd>
+<dt><strong>orig</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><div class="line-block">
+<div class="line">The original, normalised lightcurve, with the keys:</div>
+<div class="line">“time” -&gt; The time coordinate</div>
+<div class="line">“nflux” -&gt; The original, normalised flux values</div>
+<div class="line">“mag” -&gt; The TESS magnitude values</div>
+</div>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../index.html">Table of Contents</a></h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing tessilator software</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../command_line.html">Running tessilator from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python_commands.html">Running the tessilator as part of a python script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_parameters.html">Required input parameters</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.tessilator">tessilator.tessilator Module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#module-tessilator.lc_analysis">tessilator.lc_analysis Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.contaminants">tessilator.contaminants Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.makeplots">tessilator.makeplots Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.maketable">tessilator.maketable Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tessilator.fixedconstants">tessilator.fixedconstants Module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.get_second_peak.html" title="get_second_peak"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tessilator.lc_analysis.detrend_lc.html" title="detrend_lc"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">tessilator 0.0.2.dev0+gf0260c4.d20230329 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../api.html" >API documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">make_lc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Alex Binks &amp; Moritz Guenther.
+      Last updated on 29 Mar 2023.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>
