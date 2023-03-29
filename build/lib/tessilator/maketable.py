@@ -217,7 +217,7 @@ def table_from_table(input_table, name_is_source_id=0):
 
     returns
     -------
-    gaia_table : `astropy.table.Table`
+    gaia_table : |astropy.table.Table|_
         the output table ready for further analysis
     '''
 
@@ -247,9 +247,9 @@ def get_gaia_data(gaia_table, name_is_source_id=0):
 
     | The table must be in comma-separated variable format, in either of these 3 ways:
     | 1) A table with a single column containing the source identifier
-    |     * note that this is the preferred method since the target identified in the Gaia query is unambiguously the same as the input value.
+    |     *note that this is the preferred method since the target identified in the Gaia query is unambiguously the same as the input value.
     | 2) A table with sky-coordinates in either the 'icrs' (default),'galactic', or 'ecliptic' system.
-    |     * note this is slower because of the time required to run the Vizier query.
+    |     *note this is slower because of the time required to run the Vizier query.
     | 3) A table with all 5 columns already made.
 
     parameters
