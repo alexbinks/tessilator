@@ -3,6 +3,8 @@
 </p>
 
 [![DOI](https://zenodo.org/badge/588218536.svg)](https://zenodo.org/badge/latestdoi/588218536)
+[![Documentation Status](https://readthedocs.org/projects/tessilator/badge/?version=latest)](https://tessilator.readthedocs.io/en/latest/?badge=latest)
+
 
   
 **WELCOME TO THE TESSILATOR**
