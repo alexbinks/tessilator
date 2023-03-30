@@ -1,9 +1,101 @@
+# SPECIFIC FILES AND DIRECTORIES
 *.fits
 *.png
-__pycache__
 activation4topcat
 test_for_is_period_cont.txt
 make_gif.py
 personal/*
-build
+
+
+build/lib/tessilator/lc_analysis.py
+build/lib/tessilator/maketable.py
+build/lib/tessilator/tessilator.py
+build/lib/tessilator/tests/test_cutouts.py
+tessilator.egg-info/PKG-INFO
+tessilator.egg-info/SOURCES.txt
+
+
+
+
+# TAKEN FROM ASTROPY
+# Compiled files
+*.py[cod]
+*.a
+*.o
+*.so
+*.pyd
+*.dll
+__pycache__
+
+# Ignore .c files by default to avoid including generated code. If you want to
+# add a non-generated .c extension, put that into the src/ subdirectory of a
+# package or else use `git add -f filename.c`.
+*.c
+
+# Other generated files
+MANIFEST
+
+# Sphinx
+_build
+_generated
+docs/api
+docs/generated
+docs/visualization/ngc6976.jpeg
+docs/visualization/ngc6976-default.jpeg
+
+# Packages/installer info
+*.egg
 *.egg-info
+dist
+build
+eggs
+.eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+distribute-*.tar.gz
+.venv
+venv
+# we are not currently using pipenv directly, but people who
+# install astropy with pipenv will have these files generated
+Pipfile
+Pipfile.lock
+
+
+
+# Other
+.cache
+.tox
+.*.swp
+.*.swo
+*~
+.project
+.pydevproject
+.settings
+.coverage
+cover
+htmlcov
+.hypothesis
+.github_cache
+
+# Mac OSX
+.DS_Store
+
+# PyCharm
+.idea
+
+# Pytest
+v
+.pytest_cache
+
+# VSCode
+.vscode
+
+.tmp
+pip-wheel-metadata
+
+# Files generated if figure tests are run
+results
