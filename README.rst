@@ -1,10 +1,17 @@
-<p align="center">
-  <img src="AB_Dor.gif" width="500" title="AB Doradus TESS periods">
-</p>
+.. image:: AB_Dor.gif
+  :width: 500 px
+  :align: center
+  :alt: "AB Doradus TESS periods"
 
-[![DOI](https://zenodo.org/badge/588218536.svg)](https://zenodo.org/badge/latestdoi/588218536)
-[![Documentation Status](https://readthedocs.org/projects/tessilator/badge/?version=latest)](https://tessilator.readthedocs.io/en/latest/?badge=latest)
+|DOI|
 
+.. |DOI| image:: https://zenodo.org/badge/588218536.svg
+        :target: https://zenodo.org/badge/latestdoi/588218536
+        
+|Documentation Status|
+
+.. |Documentation Status| image:: https://readthedocs.org/projects/tessilator/badge/?version=latest
+                         :target: https://tessilator.readthedocs.io/en/latest/?badge=latest
 
   
 **WELCOME TO THE TESSILATOR**
