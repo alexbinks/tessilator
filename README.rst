@@ -1,7 +1,8 @@
-.. image:: AB_Dor.gif
+.. image:: https://raw.githubusercontent.com/alexbinks/tessilator/AB_Dor.gif
   :width: 500 px
   :align: center
   :alt: "AB Doradus TESS periods"
+
 
 |DOI|
 
