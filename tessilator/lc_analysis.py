@@ -114,6 +114,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     full_phot_table : `astropy.table.Table`
         The formatted table containing results from the aperture photometry.
     '''
+    print("Hi!")
     if isinstance(file_in, np.ndarray):
         fits_files = file_in
     else:
@@ -164,39 +165,36 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                         else:
                             flux_ap = flux_vals[:][:][n_step]
                             erro_ap = erro_vals[:][:][n_step]
-
                         #get the image statistics for the background annulus
                         aperstats = ApertureStats(flux_ap, annulus_aperture)
                         #obtain the raw (source+background) flux
-                        phot_table = aperture_photometry(flux_ap, aperture,
-                                     error=erro_ap)
+                        t = aperture_photometry(flux_ap, aperture,
+                                                error=erro_ap)
                         #calculate the background contribution to the aperture
                         aperture_area = aperture.area_overlap(flux_ap)
-                        #print out the data to "phot_table"
-                        phot_table['id'] = targets['source_id']
-                        phot_table['id'] = phot_table['id'].astype(str)
-                        phot_table['bkg'] = aperstats.median
-                        phot_table['total_bkg'] = \
-                            phot_table['bkg'] * aperture_area
-                        phot_table['aperture_sum_bkgsub'] = \
-                            phot_table['aperture_sum'] - phot_table['total_bkg']
-                        with warnings.catch_warnings():
-                            warnings.simplefilter(action='ignore',
-                                                  category=RuntimeWarning)
-                            phot_table['mag'] = -2.5*np.log10(
-                                phot_table['aperture_sum_bkgsub'])+Zpt
-                            phot_table['mag_err'] = np.abs((-2.5/np.log(10))*\
-                                phot_table['aperture_sum_err']/\
-                                phot_table['aperture_sum'])
-                        phot_table['time'] = time_val[n_step]
+                        #print out the data to "t"
+                        t['id'] = targets['source_id']
+                        t['id'] = t['id'].astype(str)
+                        t['bkg'] = aperstats.median
+                        t['tot_bkg'] = \
+                            t['bkg'] * aperture_area
+                        t['ap_sum_sub'] = \
+                            t['aperture_sum'] - t['tot_bkg']
+                        t['mag'] = -999.
+                        t['mag_err'] = -999.
+                        g = np.where(t['ap_sum_sub'] > 0.)[0]
+                        t['mag'][g] = -2.5*np.log10(t['ap_sum_sub'][g].data)+Zpt
+                        t['mag_err'][g] = np.abs((-2.5/np.log(10))*\
+                            t['aperture_sum_err'][g].data/\
+                            t['aperture_sum'][g].data)
+                        t['time'] = time_val[n_step]
                         fix_cols = ['id', 'xcenter', 'ycenter',
                                     'aperture_sum', 'aperture_sum_err', 'bkg',
-                                    'total_bkg', 'aperture_sum_bkgsub', 'mag',
+                                    'tot_bkg', 'ap_sum_sub', 'mag',
                                     'mag_err', 'time']
-                        phot_table = phot_table[fix_cols]
-                        for r in range(len(phot_table)):
-                            if phot_table[r]["aperture_sum"] > 0:
-                                full_phot_table.add_row(phot_table[r])
+                        t = t[fix_cols]
+                        for r in range(len(t)):
+                            full_phot_table.add_row(t[r])
         except:
             print(f"There is a problem opening the file {f_file}")
             logger.error(f"There is a problem opening the file {f_file}")
@@ -565,7 +563,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
                             bounds=(0, [1., p_max_thresh, p_max_thresh]))
     except Exception:
         logger.warning(Exception)
-        popt = np.array([1, p_max_thresh/2, p_max_thresh/2])
+        popt = np.array([power_best, period_best, .1*period_best])
         pass
 
     ym = gauss_fit(period[a_g], *popt)
@@ -589,7 +587,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
         pops = np.array([1., 0.001, 0.5])
         pass
             
-    Ndata = len(cln)
+    Ndata = len(cln["nflux"])
     yp = sin_fit(pha_fit, *pops)
     pha_sct = MAD(yp - nflux, scale='normal')
     fdev = 1.*np.sum(np.abs(nflux - yp) > 3.0*pha_sct)/Ndata

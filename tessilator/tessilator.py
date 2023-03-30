@@ -546,44 +546,35 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
     * A plot of the lightcurve (if requested).
     '''
     try:
-        table_phot_final = aper_run(file_in, t_target, Rad=Rad,
-                                    SkyRad=SkyRad, XY_pos=XY_pos)
+        tpf = aper_run(file_in, t_target, Rad=Rad,
+                       SkyRad=SkyRad, XY_pos=XY_pos)
     except Exception as e:
         logger.error(f"aperture photometry: of {file_in} failed to run")
-    if len(table_phot_final) < 10:
+    if len(tpf) < 10:
         logger.error(f"aperture photometry: failed to produce enough data "
                      f"points for {t_target['source_id']}")
         for t in t_target:
             final_table.add_row(make_failrow(t, scc))
         return None
-    phot_targets = table_phot_final.group_by('id')
+    phot_targets = tpf.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
+        g_c = group[group["flux"] > 0.0]
         if isinstance(t_target, Table):
             t_targets = t_target[t_target["source_id"] == key[0]]
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
-        np.nan_to_num(group["mag"], copy=True, nan=-999, posinf=-999, neginf=-999)
-##        has_nan = np.zeros(len(group), dtype=bool)
-##        for col in group.itercols():
-##            if col.info.dtype.kind == 'f':
-##                has_nan |= np.isnan(col)
-##        table_no_nan = group[~has_nan]
-##        print(table_no_nan, type(table_no_nan), len(table_no_nan))
-        print(group)
-        print(type(group))
-        print(len(group))
-        if len(group) >= 1:
-            clean_norm_lc, original_norm_lc = make_lc(group)
+        if len(g_c) >= 50:
+            clean_norm_lc, original_norm_lc = make_lc(g_c)
         else:
             logger.error(f"No photometry was recorded for this group.")
-            break
+            final_table.add_row(make_failrow(t_targets, scc))
+            continue
         if len(clean_norm_lc) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
-            for t in t_targets:
-                final_table.add_row(make_failrow(t, scc))
-            return None
+            final_table.add_row(make_failrow(t_targets, scc))
+            continue
         d_target = run_ls(clean_norm_lc)
         if LC_con:
             if flux_con != 1:
@@ -595,13 +586,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                                        '_individiual.ecsv')
                 con_table = con_table[con_table["source_id_target"] == \
                                       t_target["source_id"].astype(str)]
-                print("Test 1")
                 XY_con = find_xy_cont(file_in, con_table, cutout_size)
-                print("Test 2")
                 labels_cont = ''
                 for z in range(len(XY_con)):
-                    print(f"Test {z+3}")
-
                     labels_cont += run_test_for_contaminant(XY_con[z],\
                                                             file_in,\
                                                             con_table[z],\
