@@ -5,3 +5,5 @@ activation4topcat
 test_for_is_period_cont.txt
 make_gif.py
 personal/*
+build
+*.egg-info
