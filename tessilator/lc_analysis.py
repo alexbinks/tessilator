@@ -114,7 +114,6 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     full_phot_table : `astropy.table.Table`
         The formatted table containing results from the aperture photometry.
     '''
-    print("Hi!")
     if isinstance(file_in, np.ndarray):
         fits_files = file_in
     else:
@@ -558,15 +557,26 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
     a_g, a_o = get_second_peak(power)
-    try:
+    pow_range = max(power[a_g])-min(power[a_g])
+    a_g = a_g[power[a_g] > min(power[a_g]) + .05*pow_range]
+    if len(a_g) > 3:
+        max_b_period = period[a_g[-1]]
+        min_b_period = period[a_g[0]]
+        max_b_sigma = period[a_g[-1]]-period[a_g[0]]
         popt, _ = curve_fit(gauss_fit, period[a_g], power[a_g],
-                            bounds=(0, [1., p_max_thresh, p_max_thresh]))
-    except Exception:
-        logger.warning(Exception)
-        popt = np.array([power_best, period_best, .1*period_best])
-        pass
+                            bounds=([0, min_b_period, 0], [1., max_b_period, max_b_sigma]))
+        ym = gauss_fit(period[a_g], *popt)
+    else:
+        print('3 or less points')
+        peak_vals = [p_m-1, p_m, p_m+1]
+        x = period[peak_vals]
+        y = power[peak_vals]
+        xvals = np.linspace(x[0], x[-1], 9)
+        yvals = np.interp(xvals, x, y)
+        popt, _ = curve_fit(gauss_fit, xvals, yvals,
+                            bounds=(0, [1., np.inf, np.inf]))
+        ym = gauss_fit(xvals, *popt)        
 
-    ym = gauss_fit(period[a_g], *popt)
     per_a_o, power_a_o = period[a_o], power[a_o]
     per_2 = per_a_o[np.argmax(power[a_o])]
     pow_2 = power_a_o[np.argmax(power[a_o])]
