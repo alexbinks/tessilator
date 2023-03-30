@@ -1,3 +1,0 @@
-[console_scripts]
-run_tess_cutouts = tessilator.scripts.run_tess_cutouts:main
-run_tess_sectors = tessilator.scripts.run_tess_sectors:main
