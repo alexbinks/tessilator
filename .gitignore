@@ -5,7 +5,7 @@ activation4topcat
 test_for_is_period_cont.txt
 make_gif.py
 personal
-
+TESS_100pc
 
 build/lib/tessilator/lc_analysis.py
 build/lib/tessilator/maketable.py
