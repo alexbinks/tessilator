@@ -517,6 +517,25 @@ def sin_fit(x, y0, A, phi):
     return sin_fit
 
 
+def gauss_fit_peak(period, power):
+    if len(period) > 3:
+        popt, _ = curve_fit(gauss_fit, period, power,
+                            bounds=([0, period[0], 0],
+                                    [1., period[-1], period[-1]-period[0]]))
+        ym = gauss_fit(period, *popt)
+    else:
+        p_m = np.argmax(power)
+        peak_vals = [p_m-1, p_m, p_m+1]
+        x = period[peak_vals]
+        y = power[peak_vals]
+        xvals = np.linspace(x[0], x[-1], 9)
+        yvals = np.interp(xvals, x, y)
+        popt, _ = curve_fit(gauss_fit, xvals, yvals,
+                            bounds=(0, [1., np.inf, np.inf]))
+        ym = gauss_fit(xvals, *popt)        
+    return popt, ym
+
+
 def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
@@ -556,27 +575,18 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     power = power[::-1]
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
+    for i in range(len(power)):
+        print(period[i], power[i])
     a_g, a_o = get_second_peak(power)
-    pow_range = max(power[a_g])-min(power[a_g])
-    a_g = a_g[power[a_g] > min(power[a_g]) + .05*pow_range]
-    if len(a_g) > 3:
-        max_b_period = period[a_g[-1]]
-        min_b_period = period[a_g[0]]
-        max_b_sigma = period[a_g[-1]]-period[a_g[0]]
-        popt, _ = curve_fit(gauss_fit, period[a_g], power[a_g],
-                            bounds=([0, min_b_period, 0], [1., max_b_period, max_b_sigma]))
-        ym = gauss_fit(period[a_g], *popt)
-    else:
-        print('3 or less points')
-        peak_vals = [p_m-1, p_m, p_m+1]
-        x = period[peak_vals]
-        y = power[peak_vals]
-        xvals = np.linspace(x[0], x[-1], 9)
-        yvals = np.interp(xvals, x, y)
-        popt, _ = curve_fit(gauss_fit, xvals, yvals,
-                            bounds=(0, [1., np.inf, np.inf]))
-        ym = gauss_fit(xvals, *popt)        
 
+    print(period[a_g])
+    pow_r = max(power[a_g])-min(power[a_g])
+    a_g_fit = a_g[power[a_g] > min(power[a_g]) + .05*pow_r]
+    
+    popt, ym = gauss_fit_peak(period[a_g_fit], power[a_g_fit])
+    print('popt')
+    print(popt)    
+    
     per_a_o, power_a_o = period[a_o], power[a_o]
     per_2 = per_a_o[np.argmax(power[a_o])]
     pow_2 = power_a_o[np.argmax(power[a_o])]
@@ -610,8 +620,8 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     LS_dict['FAPs'] = FAP_test
     LS_dict['Gauss_fit_peak_parameters'] = popt
     LS_dict['Gauss_fit_peak_y_values'] = ym
-    LS_dict['period_around_peak'] = period[a_g]
-    LS_dict['power_around_peak'] = power[a_g]
+    LS_dict['period_around_peak'] = period[a_g_fit]
+    LS_dict['power_around_peak'] = power[a_g_fit]
     LS_dict['period_not_peak'] = period[a_o] 
     LS_dict['power_not_peak'] = power[a_o] 
     LS_dict['period_second'] = per_2
