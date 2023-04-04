@@ -47,6 +47,8 @@ from astroquery.mast import Tesscut
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
 
+from collections.abc import Iterable
+
 # Local application imports
 from .tess_stars2px import tess_stars2px_function_entry
 from .fixedconstants import *
@@ -391,7 +393,7 @@ def make_lc(phot_table):
     ds, df = clean_lc(time, flux)
 
     if (len(ds) == 0) or (len(df) == 0):
-        return# [], []
+        return [], []
     # 1st: normalise the flux by dividing by the median value
     nflux  = flux/np.median(flux)
     neflux = eflux/flux
@@ -406,7 +408,7 @@ def make_lc(phot_table):
     if len(cln["time"]) > 50:
         return cln, orig
     else:
-        return# [], []
+        return [], []
 
 
 
@@ -575,17 +577,25 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     power = power[::-1]
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
-    for i in range(len(power)):
-        print(period[i], power[i])
     a_g, a_o = get_second_peak(power)
 
-    print(period[a_g])
-    pow_r = max(power[a_g])-min(power[a_g])
-    a_g_fit = a_g[power[a_g] > min(power[a_g]) + .05*pow_r]
-    
-    popt, ym = gauss_fit_peak(period[a_g_fit], power[a_g_fit])
-    print('popt')
-    print(popt)    
+    if isinstance(a_g, Iterable):
+        pow_r = max(power[a_g])-min(power[a_g])
+        a_g_fit = a_g[power[a_g] > min(power[a_g]) + .05*pow_r]
+        popt, ym = gauss_fit_peak(period[a_g_fit], power[a_g_fit])
+    else:
+        if period[a_g] == p_max_thresh:
+            popt = [1.0, p_max_thresh, 50.]
+            a_g_fit = np.arange(a_g-10, a_g)
+            ym = power[a_g_fit]
+        elif period[a_g] == p_min_thresh:
+            popt = [1.0, p_min_thresh, 50.]
+            a_g_fit = np.arange(a_g, a_g+10)
+            ym = power[a_g_fit]
+        else:
+            popt = [-999, -999, -999]
+            a_g_fit = np.arange(a_g-2, a_g+3)
+            ym = power[a_g_fit]
     
     per_a_o, power_a_o = period[a_o], power[a_o]
     per_2 = per_a_o[np.argmax(power[a_o])]

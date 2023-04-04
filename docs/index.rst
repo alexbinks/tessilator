@@ -80,6 +80,7 @@ Alexander Binks and Moritz Guenther, 2023
    command_line.rst
    python_commands.rst
    input_parameters.rst
+   notes.rst
    api.rst
 
 Indices and tables

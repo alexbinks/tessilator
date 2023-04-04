@@ -565,6 +565,8 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
         if len(g_c) >= 50:
+            print(g_c.colnames)
+            print(g_c['flux'])            
             clean_norm_lc, original_norm_lc = make_lc(g_c)
         else:
             logger.error(f"No photometry was recorded for this group.")
