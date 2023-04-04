@@ -15,7 +15,7 @@ __all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 
 logger = logging.getLogger(__name__)
 
 
-def run_sql_query_contaminants(t_target, pix_radius=5.0):
+def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0):
     '''Perform an SQL Query to identify neighbouring contaminants.
 
     If an analysis of flux contribution from neighbouring contaminants is
@@ -46,7 +46,7 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0):
     WHERE 1 = CONTAINS(\
     POINT({t_target['ra']}, {t_target['dec']}),\
     CIRCLE(ra, dec, {pix_radius*pixel_size/3600.})) \
-    AND phot_g_mean_mag < {t_target['Gmag']+3.0} \
+    AND phot_g_mean_mag < {t_target['Gmag']+mag_lim} \
     ORDER BY phot_g_mean_mag ASC"
 
     # Attempt a synchronous SQL job, otherwise try the asyncronous method.
