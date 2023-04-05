@@ -38,7 +38,7 @@ print("****|*****/*\*******/*\*******/*\*******/*\*******/*\*******/*\*******")
 print("****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******")
 print("****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****")
 print("****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****")
-print("****`____________________________________________________________****")
+print("****|_____________________________________________________________****")
 print("**********************************************************************")
 print("**********************WELCOME TO THE TESSILATOR***********************")
 print("********The one-stop shop for measuring TESS rotation periods*********")
@@ -77,8 +77,8 @@ def create_table_template():
                            float, float, float, float, float, float, float,\
                            int, str))
     return final_table
-
-
+    
+    
 def setup_input_parameters():
     '''Retrieve the input parameters to run the tessilator program.
 
@@ -95,9 +95,9 @@ def setup_input_parameters():
 
     | 4) "file_ref" is a string expression used to reference the files produced.
 
-    | 5) "t_filename" is the name of the input file required for analysis.
+    | 5) "t_filename" is the name of the input file (or target) required for analysis.
 
-    | If a program is called from the command line without all five input parameters, a set of prompts are initiated to receive input. If just one target is needed, then the user can simply supply either target name, or the sky coordinates as the final input.
+    | If a program is called from the command line without all five input parameters, a set of prompts are initiated to receive input. If just one target is needed, then the user can simply supply either the target name, as long as it is preceeding by a hash (#) symbol.
     | Otherwise, if the full set of command line parameters are supplied, the function will use these as the inputs, however, if they have the wrong format the program will return a warning message and exit.
 
     parameters
@@ -120,7 +120,7 @@ def setup_input_parameters():
     file_ref : `str`
         A common string to give all output files the same naming convention
     t_filename : `str`
-        The name of the input table containing the targets
+        The name of the input table containing the targets (or a single target)
      '''
     if len(sys.argv) != 6:
         flux_con = pyip.inputInt("Do you want to search for contaminants? "
@@ -130,7 +130,7 @@ def setup_input_parameters():
                      "the contaminants? 1=yes, 0=no : ", min=0, max=1)
         elif 'sector' in sys.argv[0]:
             sector_num = pyip.inputInt("Which sector of data do you require? "
-                         "(1-55) : ", min=1, max=55)
+                         "(1-61) : ", min=1, max=61)
             cc_request = pyip.inputBool("Do you want a specific Camera/CCD? "
                                         "1=yes, 0=no : ", min=0, max=1)
             if cc_request:
@@ -147,11 +147,11 @@ def setup_input_parameters():
                    "output files : ")
         while True:
             t_filename = pyip.inputStr("Enter the file name of your input "
-                         "table or object.\nIf this is an object please use "
-                         "double quotations around the target identifier : ")
-            if t_filename.startswith('"') & t_filename.endswith('"'):
-                t_name = t_filename[1:-1]
-                t_name_joined = t_name.replace(' ', '_')+'.dat'
+                         "table or object.\nIf this is a single target please enter "
+                         "a hash (#) symbol before the identifier : ")
+            if t_filename.startswith('#'):
+                t_name = t_filename[1:]
+                t_name_joined = t_name.replace(' ','_').replace(',', '_')+'.dat'
                 if os.path.exists(t_name_joined):
                     os.remove(t_name_joined)
                 with open(t_name_joined, 'a') as single_target:
@@ -183,37 +183,47 @@ def setup_input_parameters():
         t_filename = sys.argv[5]
 
         true_vals = [0, 1]
-        sec_vals = np.arange(1,56)
+        sec_vals = np.arange(1,62)
         cam_ccd_vals = np.arange(1,5)
-        while True:
-            if flux_con not in true_vals:
-                print(f"flux_con value {flux_con} not a valid input. "
+#        while True:
+        if flux_con not in true_vals:
+            print(f"flux_con value {flux_con} not a valid input. "
+                   "Exiting program.")
+            sys.exit()
+        if 'cutout' in sys.argv[0]:
+            if LC_con not in true_vals:
+                print(f"LC_con value {LC_con} not a valid input. "
                        "Exiting program.")
                 sys.exit()
-            if 'cutout' in sys.argv[0]:
-                if LC_con not in true_vals:
-                    print(f"LC_con value {LC_con} not a valid input. "
-                           "Exiting program.")
-                    sys.exit()
-            elif 'sector' in sys.argv[0]:
-                if scc[0] not in sec_vals:
-                    print(f"sector_num value {scc[0]} not a valid input. "
-                           "Exiting program.")
-                    sys.exit()
-                if len(scc) == 3:
-                    if scc[1] not in cam_ccd_vals:
-                        print(f"Camera value {scc[1]} out of range.")
-                        sys.exit()
-                    if scc[2] not in cam_ccd_vals:
-                        print(f"CCD value {scc[2]} out of range.")
-                        sys.exit()                        
-            if make_plots not in true_vals:
-                print("make_plots not a valid input. Exiting program.")
+        elif 'sector' in sys.argv[0]:
+            if scc[0] not in sec_vals:
+                print(f"sector_num value {scc[0]} not a valid input. "
+                       "Exiting program.")
                 sys.exit()
-            if os.path.exists(t_filename) == False:
-                print(f'File "{t_filename}" does not exist. Exiting program.')
-                sys.exit()
-            break
+            if len(scc) == 3:
+                if scc[1] not in cam_ccd_vals:
+                    print(f"Camera value {scc[1]} out of range.")
+                    sys.exit()
+                if scc[2] not in cam_ccd_vals:
+                    print(f"CCD value {scc[2]} out of range.")
+                    sys.exit()                        
+        if make_plots not in true_vals:
+            print("make_plots not a valid input. Exiting program.")
+            sys.exit()
+
+        if t_filename.startswith('#'):
+            print(t_filename)
+            t_name = t_filename[1:]
+#            t_name_joined = t_name.replace([' ',','], '_')+'.dat'
+            t_name_joined = t_name.replace(' ','_').replace(',', '_')+'.dat'
+            if os.path.exists(t_name_joined):
+                os.remove(t_name_joined)
+            with open(t_name_joined, 'a') as single_target:
+                single_target.write(t_name)
+            t_filename = t_name_joined
+        if os.path.exists(t_filename) == False:
+            print(f'The file "{t_filename}" does not exist.')
+            sys.exit()
     if 'cutout' in sys.argv[0]:
         return flux_con, LC_con, make_plots, file_ref, t_filename
     elif 'sector' in sys.argv[0]:
@@ -375,12 +385,14 @@ def collect_contamination_data(t_targets, flux_con, LC_con, con_file,
     if flux_con:
         t_targets, t_con_table = contamination(t_targets, LC_con,
                                                          **kwargs)
+        print(t_targets, t_con_table)
         t_contam = t_targets[['source_id', 'log_tot_bg', 'log_max_bg',\
                               'num_tot_bg']]
         t_contam.write(con_file+'.ecsv', overwrite=True)
         if LC_con:
-            t_con_table.write(con_file+
-                              '_individiual.ecsv', overwrite=True)
+            if t_con_table is not None:
+                t_con_table.write(con_file+
+                                  '_individiual.ecsv', overwrite=True)
     else:
         t_targets["log_tot_bg"] = -999.
         t_targets["log_max_bg"] = -999.
@@ -584,20 +596,25 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                 print("Continuing program using only the target.")
             else:
                 print('calculating contaminant lightcurves')
-                con_table = ascii.read(con_file+
-                                       '_individiual.ecsv')
-                con_table = con_table[con_table["source_id_target"] == \
-                                      t_target["source_id"].astype(str)]
-                XY_con = find_xy_cont(file_in, con_table, cutout_size)
-                labels_cont = ''
-                for z in range(len(XY_con)):
-                    labels_cont += run_test_for_contaminant(XY_con[z],\
-                                                            file_in,\
-                                                            con_table[z],\
-                                                            d_target,\
-                                                            cutout_size)
-                if not labels_cont:
-                    labels_cont = '0'
+                ind_file = f"./{con_file}_individiual.ecsv"
+                if os.path.isfile(ind_file):
+                    con_table = ascii.read(con_file+
+                                           '_individiual.ecsv')
+                    con_table = con_table[con_table["source_id_target"] == \
+                                          t_target["source_id"].astype(str)]
+                    XY_con = find_xy_cont(file_in, con_table, cutout_size)
+                    labels_cont = ''
+                    for z in range(len(XY_con)):
+                        labels_cont += run_test_for_contaminant(XY_con[z],\
+                                                                file_in,\
+                                                                con_table[z],\
+                                                                d_target,\
+                                                                cutout_size)
+                    if not labels_cont:
+                        labels_cont = 'e'
+                else:
+                    labels_cont = 'o'
+                    XY_con = None
         else:
             labels_cont = 'z'
             XY_con = None
