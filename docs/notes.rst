@@ -1,4 +1,5 @@
-TESSILATOR NOTES
+.. notes:
+tessilator notes
 ================
 
 This page lists provides notes about the assumptions and choices made in the production of the tessilator.

@@ -87,7 +87,7 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     axs[0,0].add_patch(circ_ann2)
     if isinstance(XY_contam, Iterable):
         axs[0,0].scatter(XY_contam[:, 0], XY_contam[:, 1], marker='X',
-                         s=150, color='y')
+                         s=400, color='orange')
 
     divider = make_axes_locatable(axs[0,0])
     cax = divider.new_horizontal(size='5%', pad=0.4)
@@ -131,7 +131,7 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
         LS_dict['median_MAD_nLC'][0]+(8.*LS_dict['median_MAD_nLC'][1])])
     axs[1,0].set_ylabel("normalised flux", c='g', fontsize=fsize)
     axs[1,0].plot(clean["time0"], LS_dict['y_fit_LS'], c='orange',
-                  linewidth=0.5, label='LS best fit')
+                  linewidth=1.5, label='LS best fit')
     axs[1,0].scatter(t_orig0, orig["nflux"], s=0.5, alpha=0.3,
                      label='raw, normalized')
     axs[1,0].scatter(clean["time0"], clean["oflux"],s=0.5, c='r', alpha=0.5,

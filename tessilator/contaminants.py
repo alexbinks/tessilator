@@ -187,6 +187,7 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
                 rx['source_id_target'] = rx['source_id_target'].astype(str)
                 rx['source_id'] = rx['source_id'].astype(str)
                 # store the n_cont highest flux contributors to table
+                print(rx)
                 for rx_row in rx[0:n_cont][:]:
                     t_cont.add_row(rx_row)
             else:
