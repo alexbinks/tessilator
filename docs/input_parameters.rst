@@ -23,7 +23,6 @@ Table input
 If a program is called from the command line without all five input parameters, a set of prompts are initiated to receive input. For example, if the user has a table of targets that are all members of the Hyades, a command line execution might look like this:
 
     >>> python run_tess_cutouts.py
-    
     ... Do you want to search for contaminants? 1=yes, 0=no : 1
     ... Do you want to calculate period data for the contaminants? 1=yes, 0=no : 1
     ... Would you like to make some plots? 1=yes, 0=no : 1

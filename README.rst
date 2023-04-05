@@ -52,13 +52,13 @@ Ways to use the tessilator
 --------------------------
 **Using TESScut to obtain "cutout" images**
 
-In this module, the data is downloaded from [TESSCut (Brasseur et al. 2019)](https://mast.stsci.edu/tesscut/) -- a service which allows the user to acquire a stack of "postage-stamp" image frames ordered in time sequence and centered on the supplied sky coordinate. It uses modules from the [TesscutClass](https://astroquery.readthedocs.io/en/latest/api/astroquery.mast.TesscutClass.html) to download the data, then applies steps 2-6 (above). This software is recommended for users who require a relatively fast extraction for a manageable number of targets. With the correct pre-requisite Python modules and an uninterrupted internet connection, a target with 5 sectors of TESS data takes approximately 1-2 minutes to complete (and approximately 3-4 minutes should the user want to analyse the lightcurves of a few neighbouring contaminants). The user can process a list of targets automatically by calling the ``all_sources_cutout.py`` function
+In this module, the data is downloaded from `TESSCut (Brasseur et al. 2019) <https://mast.stsci.edu/tesscut/>`_ -- a service which allows the user to acquire a stack of "postage-stamp" image frames ordered in time sequence and centered on the supplied sky coordinate. It uses modules from the `TesscutClass <https://astroquery.readthedocs.io/en/latest/api/astroquery.mast.TesscutClass.html>`_ to download the data, then applies steps 2-6 (above). This software is recommended for users who require a relatively fast extraction for a manageable number of targets. With the correct pre-requisite Python modules and an uninterrupted internet connection, a target with 5 sectors of TESS data takes approximately 1-2 minutes to complete (and approximately 3-4 minutes should the user want to analyse the lightcurves of a few neighbouring contaminants). The user can process a list of targets automatically by calling the ``all_sources_cutout.py`` function
 
 **Analysing full-frame calibrated images**
 
 If the user is interested in conducting a much larger survey, it is faster to run
 the tessilator using the calibrated full-frame images. These can be downloaded in
-bulk at the [MAST archive.](https://archive.stsci.edu/tess/bulk_downloads/bulk_downloads_ffi-tp-lc-dv.html)
+bulk at the `MAST archive <https://archive.stsci.edu/tess/bulk_downloads/bulk_downloads_ffi-tp-lc-dv.html>`_.
 This method works much faster than TESS Cutouts because multiple lightcurves can be
 extracted simultaneously due to the vectorisation made possible with numpy/C-style
 methods. The authors have tested this method for a catalogue of ~1 million targets,
