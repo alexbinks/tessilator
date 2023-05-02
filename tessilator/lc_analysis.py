@@ -46,6 +46,7 @@ from astroquery.gaia import Gaia
 from astroquery.mast import Tesscut
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
+import itertools
 
 from collections.abc import Iterable
 
@@ -287,7 +288,7 @@ def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
 
 
 
-def detrend_lc(ds,df,t,f,err):
+def detrend_lc(ds,df,t,f,err, MAD_fac=2.):
     '''Detrend and normalise the lightcurves.
 
     This function operates on each section of data returned from the "clean_lc"
@@ -326,17 +327,32 @@ def detrend_lc(ds,df,t,f,err):
     for i in range(len(ds)):
         rs, rf = ds[i], df[i]+1
         t_orig, f_orig, e_orig = t[rs:rf], f[rs:rf], err[rs:rf]
-        p1, r1, _,_,_ = np.polyfit(t_orig, f_orig, 1, full=True)
-        p2, r2, _,_,_ = np.polyfit(t_orig, f_orig, 2, full=True)
-        chi1 = np.sum((np.polyval(p1, t_orig-f_orig)**2)/(e_orig)**2)
-        chi2 = np.sum((np.polyval(p2, t_orig-f_orig)**2)/(e_orig)**2)
-        AIC1, AIC2 = 2.*(2. - np.log(chi1/2.)), 2.*(3. - np.log(chi2/2.))
-        if AIC1 < AIC2:
-            f_n = f_orig/np.polyval(p2, t_orig)
-            s_fit = 1
-        else:
-            f_n = f_orig/np.polyval(p2, t_orig)
-            s_fit = 2
+        fm = np.median(f_orig)
+        f_MAD  = MAD(f_orig, scale='normal')
+        g = np.abs(f_orig-fm) <= MAD_fac*f_MAD
+        t_orig, f_orig, e_orig = t_orig[g], f_orig[g], e_orig[g]
+#        print(len(t_orig))
+#        while i < 10:
+#            p1, r1, _,_,_ = np.polyfit(t_orig, f_orig, i, full=True)
+#            p2, r2, _,_,_ = np.polyfit(t_orig, f_orig, i+1, full=True)
+#            chi1 = np.sum((np.polyval(p1, t_orig-f_orig)**2)/(e_orig)**2)
+#            chi2 = np.sum((np.polyval(p2, t_orig-f_orig)**2)/(e_orig)**2)
+#            AIC1, AIC2 = abs(2.*((1+i) - np.log(chi1/2.))), abs(2.*((2+i) - np.log(chi2/2.)))
+#            print(AIC1, AIC2)
+#            if AIC1 < AIC2:
+#                f_n = f_orig/np.polyval(p1, t_orig)
+#                s_fit = i
+#                break
+#            else:
+#                i += 1
+#                if i == 10:
+#                    f_n = f_orig/np.polyval(p2, t_orig)
+#                    s_fit = i
+#        print(f'order of poly used: {i}')
+        p1, r1, _,_,_ = np.polyfit(t_orig, f_orig, 10, full=True)
+        f_n = f_orig/np.polyval(p1, t_orig)
+        s_fit = 10
+        
         for i in range(len(t_orig)):
             dict_lc["time"].append(t_orig[i])
             dict_lc["oflux"].append(f_orig[i])
@@ -538,7 +554,7 @@ def gauss_fit_peak(period, power):
     return popt, ym
 
 
-def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
+def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca=10):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
     parameters
@@ -616,7 +632,17 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
         logger.warning(Exception)
         pops = np.array([1., 0.001, 0.5])
         pass
-            
+
+    # order the phase folded lightcurve by phase and split into N even parts.
+    # find the standard deviation in the measurements for each bin and use
+    # the median of the standard deviation values to represent the final scatter
+    # in the phase curve.
+     
+    sca_parts = np.array_split(nf_fit, n_sca)
+    ar = np.array(list(itertools.zip_longest(*sca_parts, fillvalue=np.nan)))
+    sca_stdev = np.nanstd(ar, axis=0)
+    sca_median = np.median(sca_stdev)
+
     Ndata = len(cln["nflux"])
     yp = sin_fit(pha_fit, *pops)
     pha_sct = MAD(yp - nflux, scale='normal')
@@ -643,7 +669,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     LS_dict['phase_col'] = cyc_plt
     LS_dict['pops_vals'] = pops    
     LS_dict['pops_cov'] = popsc
-    LS_dict['phase_scatter'] = pha_sct
+    LS_dict['phase_scatter'] = sca_median
     LS_dict['frac_phase_outliers'] = fdev
     LS_dict['Ndata'] = Ndata
     return LS_dict

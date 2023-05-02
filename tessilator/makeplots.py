@@ -14,7 +14,7 @@ __all__ = ['make_plot']
 
 def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
-              SkyRad = [6.,8.]):
+              SkyRad = [6.,8.], targ_name='G'):
     '''Produce a plot of tessilator results.
 
     | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
@@ -69,8 +69,13 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
     circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
-    f = axs[0,0].imshow(im_plot.data, cmap='binary')
-    name_underscore = t_table['name'][0].replace(" ", "_")
+    f = axs[0,0].imshow(np.log10(im_plot.data), cmap='binary')
+    if targ_name =='G':
+        name_underscore = t_table['source_id'][0].replace(" ", "_")
+    elif targ_name =='T':
+        name_underscore = t_table['name'][0].replace(" ", "_")
+    else:
+        name_underscore = t_table['source_id'][0].replace(" ", "_")
 
     Gaia_name = f"Gaia DR3 {t_table['source_id'][0]}"
     targ_name = t_table['name'][0]
