@@ -385,7 +385,6 @@ def collect_contamination_data(t_targets, flux_con, LC_con, con_file,
     if flux_con:
         t_targets, t_con_table = contamination(t_targets, LC_con,
                                                          **kwargs)
-        print(t_targets, t_con_table)
         t_contam = t_targets[['source_id', 'log_tot_bg', 'log_max_bg',\
                               'num_tot_bg']]
         t_contam.write(con_file+'.ecsv', overwrite=True)
@@ -397,7 +396,6 @@ def collect_contamination_data(t_targets, flux_con, LC_con, con_file,
         t_targets["log_tot_bg"] = -999.
         t_targets["log_max_bg"] = -999.
         t_targets["num_tot_bg"] = -999.
-    
         if os.path.exists(con_file+'.ecsv'):
             t_contam = Table.read(con_file+'.ecsv')
             for i in range(len(t_contam)):
@@ -576,9 +574,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
-        if len(g_c) >= 50:
-            print(g_c.colnames)
-            print(g_c['flux'])            
+        if len(g_c) >= 50: 
             clean_norm_lc, original_norm_lc = make_lc(g_c)
         else:
             logger.error(f"No photometry was recorded for this group.")
@@ -856,7 +852,7 @@ def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
 
 
 
-def get_cutouts(coord, cutout_size, choose_sec, target_name):
+def get_cutouts(coord, cutout_size, choose_sec, target_name, tot_attempts=3):
     '''Download TESS cutouts and store to a list for lightcurve analysis.
 
     The TESScut function will save fits files to the working directory.
@@ -881,10 +877,22 @@ def get_cutouts(coord, cutout_size, choose_sec, target_name):
     '''
     manifest = []
     if choose_sec is None:
-        dl = Tesscut.download_cutouts(coordinates=coord, size=cutout_size,\
-                                      sector=None)
-        for d in dl["Local Path"]:
-            manifest.append(d)
+        num_attempts = 0
+        while num_attempts < tot_attempts:
+            print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
+            try:
+                dl = Tesscut.download_cutouts(coordinates=coord, size=cutout_size,\
+                                          sector=None)
+                if dl is not None:
+                    print(f'...done!')
+                    break
+            except:
+                num_attempts += 1
+        try:
+            for d in dl["Local Path"]:
+                manifest.append(d)
+        except:
+            logger.error(f"Timeout error for {target_name}")
     elif isinstance(choose_sec, int):
         if (choose_sec < 1 or choose_sec > 70):
             print(f"Sector {choose_sec} is out of range.")
@@ -927,7 +935,7 @@ def get_cutouts(coord, cutout_size, choose_sec, target_name):
 
 
 def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
-                      final_table, choose_sec, cutout_size=20):
+                      final_table, choose_sec, cutout_size=20, targ_name='G'):
     '''Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources".
@@ -985,8 +993,14 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
             try:
                 print(f"{m+1} of {len(manifest)} sectors")
     # rename the fits file to something more legible for users
-                name_underscore = str(target['name']).replace(" ", "_")
                 f_sp = file_in.split('-')
+                if targ_name =='G':
+                    name_underscore = target['source_id'].astype(str)
+                elif targ_name =='T':
+                    name_underscore = target['name'][0].replace(" ", "_")
+                else:
+                    name_underscore = target['source_id'].astype(str)
+
                 file_new = '_'.join([name_underscore, f_sp[1][1:], f_sp[2],\
                                      f_sp[3][0]])+'.fits'
                 os.rename(file_in, file_new)
