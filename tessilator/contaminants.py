@@ -1,12 +1,12 @@
 import traceback
 import logging
 import warnings
-
+import sys
 
 # Third party imports
 import numpy as np
 from astroquery.gaia import Gaia
-from astropy.table import Table
+from astropy.table import Table, Row
 
 from .fixedconstants import *
 
@@ -15,7 +15,7 @@ __all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 
 logger = logging.getLogger(__name__)
 
 
-def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0):
+def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0, tot_attempts=3):
     '''Perform an SQL Query to identify neighbouring contaminants.
 
     If an analysis of flux contribution from neighbouring contaminants is
@@ -50,15 +50,27 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0):
     ORDER BY phot_g_mean_mag ASC"
 
     # Attempt a synchronous SQL job, otherwise try the asyncronous method.
+
+#    num_attempts = 0
+#    while num_attempts < tot_attempts:
+#        print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
     try:
         job = Gaia.launch_job(query)
-    except Exception:
+#            break
+    except:
         logger.warning(f"Couldn't run the sync query for "
                        f"{t_target['source_id']}")
         job = Gaia.launch_job_async(query)
+#        finally:
+#            logger.warning(f"Couldn't run the async query for "
+#                           f"{t_target['source_id']}")
+#            num_attempts += 1
+#    if num_attempts < tot_attempts:
     t_gaia = job.get_results()
     return t_gaia
-
+#    else:
+#        print('Most likely there is a server problem. Try again later.')
+#        sys.exit()
 
 def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
     '''Quantify the flux contamination from a neighbouring source.
@@ -157,6 +169,9 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
         t_cont = Table(names=('source_id_target', 'source_id', 'RA',\
                               'DEC', 'Gmag', 'd_as', 'log_flux_frac'),\
                        dtype=(str, str, float, float, float, float, float))
+    else:
+        t_cont = None
+
     for i in range(len(t_targets)):
         r = run_sql_query_contaminants(t_targets[i])
         # convert the angular separation from degrees to arcseconds
@@ -187,11 +202,10 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
                 rx['source_id_target'] = rx['source_id_target'].astype(str)
                 rx['source_id'] = rx['source_id'].astype(str)
                 # store the n_cont highest flux contributors to table
-                print(rx)
                 for rx_row in rx[0:n_cont][:]:
-                    t_cont.add_row(rx_row)
-            else:
-                t_cont = None
+                    if rx_row['log_flux_frac'] > -1.0:
+                        t_cont.add_row(rx_row)
+
             con1.append(np.log10(np.sum(fg_cont)/fg_star))
             con2.append(np.log10(max(fg_cont)/fg_star))
             con3.append(len(fg_cont))
@@ -199,7 +213,6 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
             con1.append(-999)
             con2.append(-999)
             con3.append(0)
-            t_cont = None
 
     t_targets["log_tot_bg"] = con1
     t_targets["log_max_bg"] = con2

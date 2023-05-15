@@ -90,7 +90,6 @@ def table_from_simbad(input_names):
                 NameList.append(input_name)
                 GaiaList.append(m[0].split(' ')[2])
 
-
     # Part 2: Query Gaia database using Gaia identifiers retrieved in part 1.
     ID_string = ""
     for g_i, gaia_name in enumerate(GaiaList):
@@ -99,9 +98,11 @@ def table_from_simbad(input_names):
         else:
             ID_string += gaia_name
     qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag "\
-          "FROM gaiadr3.gaia_source gs "\
-          f"WHERE gs.source_id in ({ID_string});"
+          "FROM gaiadr3.gaia_source "\
+          f"WHERE source_id in ({ID_string});"
+    print(qry)
     job = Gaia.launch_job_async( qry )
+    print(job)
     gaia_table = job.get_results() # Astropy table
     # convert source_id column to str (astroquery returns type np.int64)
     gaia_table["source_id"] = gaia_table["source_id"].astype(str)

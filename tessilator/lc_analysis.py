@@ -11,8 +11,7 @@ This module contains functions to perform aperture photmetry and clean lightcurv
     
 2)  clean_lc/detrend_lc/make_lc - these 3 functions are made to remove spurious data
     points, ensure that only "strings" of contiguous data are being processed, and
-    each string is detrended using either a linear (1st) or quadratic (2nd) polynomial
-    (chosen by Aikake Inference Criterion) using only data contained in each string.
+    each string is detrended using a series of decision processes.
     Finally, the lightcurve is pieced together and make_lc returns a table containing
     the data ready for periodogram analysis.
     
@@ -24,8 +23,10 @@ This module contains functions to perform aperture photmetry and clean lightcurv
 
 # imports
 import logging
-__all__ = ['logger', 'get_xy_pos', 'aper_run', 'clean_lc', 'detrend_lc', 'make_lc', 
-           'get_second_peak', 'gauss_fit', 'sin_fit', 'run_ls', 'is_period_cont']
+__all__ = ['logger', 'get_xy_pos', 'aper_run', 'AIC_selector', 'clean_lc',
+           'remove_sparse_data', 'mean_of_arrays', 'moving_average', 'check_for_jumps',
+           'normalisation_choice', 'detrend_lc', 'make_lc', 'get_second_peak', 
+           'gauss_fit', 'sin_fit', 'gauss_fit_peak', 'run_ls', 'is_period_cont']
 
 
 import warnings
@@ -46,7 +47,8 @@ from astroquery.gaia import Gaia
 from astroquery.mast import Tesscut
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
-import itertools
+import itertools as it
+
 
 from collections.abc import Iterable
 
@@ -121,6 +123,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
         fits_files = file_in
     else:
         fits_files = [file_in]
+
     full_phot_table = Table(names=('id', 'xcenter', 'ycenter', 'flux',
                                    'flux_err', 'bkg', 'total_bkg',
                                    'flux_corr', 'mag', 'mag_err', 'time'),
@@ -172,6 +175,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                         #obtain the raw (source+background) flux
                         t = aperture_photometry(flux_ap, aperture,
                                                 error=erro_ap)
+
                         #calculate the background contribution to the aperture
                         aperture_area = aperture.area_overlap(flux_ap)
                         #print out the data to "t"
@@ -201,12 +205,59 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
             print(f"There is a problem opening the file {f_file}")
             logger.error(f"There is a problem opening the file {f_file}")
             continue
+            
     return full_phot_table
 
 
+def AIC_selector(x, y, err, poly_max=10):
+    '''Chooses the most appropriate polynomial fit, using the Aikaike Information Criterion
+    
+    This function uses the Aikaike Information Criterion to find the most appropriate polynomial order to a set of X, Y data points.
+    
+    parameters
+    ----------
+    x : `Iterable`
+        The x-component of the data
+    y : `Iterable`
+        The y-component of the data
+    err : `Iterable`
+        The error bar on 'y'
+    poly_max : `int`, optional, default=10
+        The maximum polynomial order to test
+
+    returns
+    -------
+    poly_ord : `int`
+        The best polynomial order
+    coeffs : `list`
+        The polynomial coefficients.
+    
+    '''
+
+    q = 0
+    while q < poly_max:
+        p1, r1, _,_,_ = np.polyfit(x, y, q, full=True)
+        p2, r2, _,_,_ = np.polyfit(x, y, q+1, full=True)
+        chi1 = np.sum(((np.polyval(p1, x) - y)**2)/(err)**2)
+        chi2 = np.sum(((np.polyval(p2, x) - y)**2)/(err)**2)
+
+        # AIC = 2(k - ln(L)) + term for AICc
+        # -ln(L) = chi-squared/2
+        # AIC = 2(k + chi-squared/2)
+        # model 1 has q+1 free parameters (constant and q terms)
+        AIC1 = 2.*(q+1) + chi1 + (2.*(q+1)*(q+2)/(len(x)-(q+1)-1))
+        AIC2 = 2.*(q+2) + chi2 + (2.*(q+2)*(q+3)/(len(x)-(q+2)-1))
+        if AIC1 < AIC2:
+            poly_ord, coeffs = q, p1
+            return poly_ord, coeffs
+        else:
+            q += 1
+            if q == poly_max:
+                poly_ord, coeffs = q+1, p2
+                return q+1, p2
 
 
-def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
+def clean_lc(t, f, err, MAD_fac=2.0, time_fac=10., min_num_per_group=50):
     '''Remove data points from the lightcurve that are likely to be spurious.
 
     Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and
@@ -245,6 +296,9 @@ def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
     end_index : `list`
        The end indices for each saved data string.
     '''
+
+    s_fit, coeffs = AIC_selector(t, f, err, poly_max=8)
+    f = f/np.polyval(coeffs, t)
     
     tm, fm = np.median(t), np.median(f)
     f_MAD  = MAD(f, scale='normal')
@@ -288,17 +342,186 @@ def clean_lc(t, f, MAD_fac=2., time_fac=10., min_num_per_group=50):
 
 
 
-def detrend_lc(ds,df,t,f,err, MAD_fac=2.):
+
+def remove_sparse_data(x_start, x_end, std_crit=100):
+    '''Removes very sparse bits of data from the lightcurve when there are 3 or more components.
+    
+    parameters
+    ----------
+    x_start : `Iterable`
+        The starting indices for each data component
+    x_end : `Iterable`
+        The end indices for each data component
+    std_crit: `int`
+        The minimum number of data points in a component
+
+    returns
+    -------
+    y_start : `np.array`
+        The starting indices of the new array
+    y_end : `np.array`
+        The end indices of the new array
+    '''
+
+    y_start, y_end = np.array(x_start), np.array(x_end)
+    n_points = np.array([x_end[i]+1 - x_start[i] for i in range(len(x_start))])
+    if len(x_start) > 2:
+        mean_point, std_point = np.mean(n_points), np.std(n_points)
+        if std_point > std_crit:
+            g = n_points > mean_point - std_point
+            y_start, y_end = x_start[g], x_end[g]
+            return y_start, y_end
+    return y_start, y_end
+
+
+def mean_of_arrays(arr, num):
+    '''Calculate the mean and standard deviation of an array which is split into N components.
+    
+    parameters
+    ----------
+    arr : `Iterable`
+        The input array
+    num : `int`
+        The number of arrays to split the data (equally) into
+
+    returns
+    -------
+    mean_out : `float`
+        The mean of the list of arrays.
+    std_out : `float`
+        The standard deviation of the list of arrays.
+    '''
+    x = np.array_split(arr, num)
+    ar = np.array(list(it.zip_longest(*x, fillvalue=np.nan)))
+    return np.nanmean(ar, axis=0), np.nanstd(ar, axis=0)
+    
+
+def moving_average(x, w):
+    '''Calculate the moving average of an array.
+    
+    parameters
+    ----------
+    x : `Iterable`
+        The input data to be analysed.
+    w : `int`
+        The number of data points that the moving average will convolve.
+
+    returns
+    -------
+    z : `np.array`
+        An array of the moving averages
+    '''
+    
+    z = np.convolve(x, np.ones(w), 'valid') / w
+    return z
+    
+
+
+def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.0):
+    '''Identify if the lightcurve has jumps.
+    
+    A jumpy lightcurve is one that has small contiguous data points that change in flux significantly compared to the amplitude of the lightcurve. These could be due to some instrumental noise or response to a non-astrophysical effect. They may also be indicative of a stellar flare or active event.
+    
+    This function takes a running average of the differences in flux, and flags lightcurves if the absolute value exceeds a threshold. These will be flagged as "jumpy" lightcurves.
+
+    parameters
+    ----------
+    time : `Iterable`
+        The time coordinate
+    flux : `Iterable`
+        The original, normalised flux values
+    eflux : `Iterable`
+        The error on "flux"
+    lc_part : `Iterable`
+        The running index for each contiguous data section in the lightcurve
+    n_avg : `int`, optional, default=10
+        The number of data points to calculate the running average
+    thresh_diff : `float`, optional, default=10.0
+        The threshold value, which, if exceeded, will yield a "jumpy" lightcurve
+
+    returns
+    -------
+    jump_flag : `Boolean`
+        This will be True if a jumpy lightcurve is identified, otherwise False.
+    '''
+    
+    jump_flag = False
+    
+    for i in range(len(np.unique(lc_part))):
+        g = np.array(lc_part == i)
+        f_mean = moving_average(flux[g], n_avg)
+        t_mean = moving_average(time[g], n_avg)
+        
+        f_shifts = np.abs(np.diff(f_mean))
+
+        median_f_shifts = np.median(f_shifts)
+        max_f_shifts = np.max(f_shifts)
+        if max_f_shifts/median_f_shifts > thresh_diff:
+            jump_flag = True
+            return jump_flag
+
+    return jump_flag
+
+
+def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0):
+    '''Choose how to detrend the lightcurve, either as one component or in parts.
+    
+    There are always at least two data components in a TESS sector because of the finite time needed for data retrieval. This can sometimes lead to discontinuities between components because of TESS systematics and the temperature gradients across the photometer. These discontinuities can cause the phase of the sinusoidal fit to change, leading to low power output in the periodograms. Alternatively, if the data are all detrended individually, but the data is relatively continuous, this can lead to shorter period measurements.
+    
+    The idea with this function is that a polynomial fit is made to each component (chosen using the Aikaike Information Criterion). The extrapolated flux value from component 1 is calculated at the point where component 2 starts. If the difference between this value and the actual normalised flux at this point is greater than a given threshold, the data should be detrended separately. Otherwise the full lightcurve can be detrended as a whole.
+    
+    parameters
+    ----------
+    t_orig : `Iterable`
+        The time coordinate
+    f_orig : `Iterable`
+        The original, normalised flux values
+    e_orig : `Iterable`
+        The error on "f_orig"
+    lc_part : `Iterable`
+        The running index for each contiguous data section in the lightcurve
+    MAD_fac : `float`, optional, default = 2.0
+        The factor to multiply the median absolute deviation by.    
+
+    returns
+    -------
+    norm_comp : `Boolean`
+        Determines whether the data should be detrended as one whole component (False) or in parts (True)
+    '''
+
+    norm_comp = False
+    Ncomp = len(np.unique(lc_part))
+    if Ncomp > 1:
+        i = 0
+        while i < Ncomp-1:
+            g1 = np.array(lc_part == i)
+            g2 = np.array(lc_part == i+1)
+            s_fit1, coeff1 = AIC_selector(t_orig[g1], f_orig[g1], e_orig[g1], poly_max=1)
+            s_fit2, coeff2 = AIC_selector(t_orig[g2], f_orig[g2], e_orig[g2], poly_max=1)
+
+            f1_at_f2_0 = np.polyval(coeff1, t_orig[g2][0])
+            f2_at_f2_0 = np.polyval(coeff2, t_orig[g2][0])
+            f1_n = f_orig[g1]/np.polyval(coeff1, t_orig[g1])
+            f2_n = f_orig[g2]/np.polyval(coeff2, t_orig[g2])
+            f1_MAD = MAD(f1_n, scale='normal')
+            f2_MAD = MAD(f2_n, scale='normal')
+            if abs(f1_at_f2_0 - f2_at_f2_0) > MAD_fac*((f1_MAD+f2_MAD)/2.) and \
+               max(len(g1), len(g2))/min(len(g1), len(g2)) < 3.0:
+                norm_comp = True
+                return norm_comp
+            else: i += 1
+    return norm_comp
+
+
+def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
     '''Detrend and normalise the lightcurves.
 
-    This function operates on each section of data returned from the "clean_lc"
-    function and performs a detrending routine so that data from separate
-    sections can be connected. Five lists are outputted which form the
-    normalized, detrended lightcurve.
-    
-    The choice of polynomial fit for the detrending function is linear or
-    quadratic, and depends on which component best satisfies the Aikake
-    Information Criterion.
+    | This function runs several operations to detrend the lightcurve, as follows:
+    | 1. Remove any sparse components of the lightcurve that will not benefit the lightcurve analysis.
+    | 2. Remove data points that are clearly outliers.
+    | 3. Choose the best detrending polynomial using the Aikaike Information Criterion, and detrend the full lightcurve.
+    | 4. Decide whether to use the detrended lightcurve from part 3, or to separate the lightcurve into individual components and detrend each one separately.
+    | 5. Place the results into a dictionary.
 
     parameters
     ----------
@@ -308,59 +531,85 @@ def detrend_lc(ds,df,t,f,err, MAD_fac=2.):
         the end indices for the lightcurve.
     t : `Iterable`
         The list of time coordinates.
+    m : `Iterable`
+        The list of magnitude coordinates.
     f : `Iterable`
         The list of flux coordinates.
     err : `Iterable`
         The list of flux error coordinates.
+    MAD_fac : `float`, optional, default = 2.0
+        The factor to multiply the median absolute deviation by.
+    poly_max : `int`, optional, default=8
+        The maximum order of the polynomial fit.
 
     returns
     -------
     dict_lc : `dict`
         | A dictionary containing the following keys:
         | "time" -> The time coordinate
+        | "mag" -> The magnitude coordinate
         | "oflux" -> The original, normalised flux values
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The error on "nflux"
         | "polyord" -> The polynomial order used for each detrend        
     '''
-    dict_lc = {"time":[], "oflux":[], "nflux":[], "enflux":[], "polyord":[]}
-    for i in range(len(ds)):
-        rs, rf = ds[i], df[i]+1
-        t_orig, f_orig, e_orig = t[rs:rf], f[rs:rf], err[rs:rf]
-        fm = np.median(f_orig)
-        f_MAD  = MAD(f_orig, scale='normal')
-        g = np.abs(f_orig-fm) <= MAD_fac*f_MAD
-        t_orig, f_orig, e_orig = t_orig[g], f_orig[g], e_orig[g]
-#        print(len(t_orig))
-#        while i < 10:
-#            p1, r1, _,_,_ = np.polyfit(t_orig, f_orig, i, full=True)
-#            p2, r2, _,_,_ = np.polyfit(t_orig, f_orig, i+1, full=True)
-#            chi1 = np.sum((np.polyval(p1, t_orig-f_orig)**2)/(e_orig)**2)
-#            chi2 = np.sum((np.polyval(p2, t_orig-f_orig)**2)/(e_orig)**2)
-#            AIC1, AIC2 = abs(2.*((1+i) - np.log(chi1/2.))), abs(2.*((2+i) - np.log(chi2/2.)))
-#            print(AIC1, AIC2)
-#            if AIC1 < AIC2:
-#                f_n = f_orig/np.polyval(p1, t_orig)
-#                s_fit = i
-#                break
-#            else:
-#                i += 1
-#                if i == 10:
-#                    f_n = f_orig/np.polyval(p2, t_orig)
-#                    s_fit = i
-#        print(f'order of poly used: {i}')
-        p1, r1, _,_,_ = np.polyfit(t_orig, f_orig, 10, full=True)
-        f_n = f_orig/np.polyval(p1, t_orig)
-        s_fit = 10
-        
-        for i in range(len(t_orig)):
-            dict_lc["time"].append(t_orig[i])
-            dict_lc["oflux"].append(f_orig[i])
-            dict_lc["nflux"].append(f_n[i])
-            dict_lc["enflux"].append(e_orig[i])
-            dict_lc["polyord"].append(s_fit)
-    return dict_lc
 
+    dict_lc = {"time":[], "mag":[], "oflux":[], "nflux":[], "enflux":[], "lc_part":[]}
+    t_orig, f_orig, e_orig = np.array([]), np.array([]), np.array([])
+    m_orig, lc_part = np.array([]), np.array([])
+
+
+    # 1. Remove sparse data
+    std_crit_val = int(np.sum(np.array([df[i]+1 - ds[i] for i in range(len(ds))]))/10.)
+    ds, df = remove_sparse_data(ds, df, std_crit=std_crit_val)
+        
+    # 2. Include only data that are within a given number of median absolute deviation values.
+    for i in range(len(ds)):
+        # determine the start and end points for each data string
+        rs, rf = ds[i], df[i]+1
+
+        fm = np.median(f[rs:rf])
+        f_MAD  = MAD(f[rs:rf], scale='normal')
+        g = np.abs(f[rs:rf]-fm) <= MAD_fac*f_MAD
+        
+        t_orig = np.append(t_orig, t[rs:rf][g])
+        m_orig = np.append(m_orig, m[rs:rf][g])
+        f_orig = np.append(f_orig, f[rs:rf][g])
+        e_orig = np.append(e_orig, err[rs:rf][g])
+        lc_part = np.append(lc_part, np.full(np.sum(g), i))
+
+    # 3. Choose the best detrending polynomial using the Aikaike Information Criterion, and
+    #    detrend the lightcurve
+    s_fit, coeffs = AIC_selector(t_orig, f_orig, e_orig, poly_max=8)
+    f_norm = f_orig/np.polyval(coeffs, t_orig)
+
+    # 4. Decide whether to use the detrended lightcurve from part 3, or to separate the
+    #    lightcurve into individual components and detrend each one separately
+    norm_comp = normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0)
+
+    if norm_comp:
+        f_detrend = np.array([])
+        for i in range(len(ds)):
+            g = np.array(lc_part == i)
+            s_fit, coeffs = AIC_selector(t_orig[g], f_orig[g], e_orig[g], poly_max=8)
+            f_n = f_orig[g]/np.polyval(coeffs, t_orig[g])
+            f_detrend = np.append(f_detrend, f_n)
+        f_norm = f_detrend
+    else:
+        f_norm = f_norm
+
+    # 5. Place the results into a dictionary.
+    for i in range(len(t_orig)):
+        dict_lc["time"].append(t_orig[i])
+        dict_lc["mag"].append(m_orig[i])
+        dict_lc["oflux"].append(f_orig[i])
+        dict_lc["nflux"].append(f_norm[i])
+        dict_lc["enflux"].append(e_orig[i])
+        dict_lc["lc_part"].append(lc_part[i])
+
+    return dict_lc
+    
+    
 
 def make_lc(phot_table):
     '''Construct the normalised TESS lightcurve.
@@ -391,7 +640,7 @@ def make_lc(phot_table):
         | "oflux" -> The original, normalised flux values
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The error on "nflux"
-        | "polyord" -> The polynomial order used for each detrend        
+        | "lc_part" -> The running index for each contiguous data section in the lightcurve
 
     orig : `dict`
         | The original, normalised lightcurve, with the keys:
@@ -399,6 +648,7 @@ def make_lc(phot_table):
         | "nflux" -> The original, normalised flux values
         | "mag" -> The TESS magnitude values
     '''
+    
     m_diff = phot_table["flux_corr"][:] - np.median(phot_table["flux_corr"][:])
     m_thr = 20.0*MAD(phot_table["flux_corr"][:], scale='normal')
     g = np.abs(m_diff < m_thr)
@@ -406,7 +656,8 @@ def make_lc(phot_table):
     mag = np.array(phot_table["mag"][:][g])
     flux = np.array(phot_table["flux_corr"][:][g])
     eflux = np.array(phot_table["flux_err"][:][g])
-    ds, df = clean_lc(time, flux)
+
+    ds, df = clean_lc(time, flux, eflux)
 
     if (len(ds) == 0) or (len(df) == 0):
         return [], []
@@ -415,7 +666,7 @@ def make_lc(phot_table):
     neflux = eflux/flux
     # 2nd: detrend each lightcurve sections by either a straight-line fit or a
     # parabola. The choice is selected using AIC.
-    cln = detrend_lc(ds, df, time, nflux, neflux)
+    cln = detrend_lc(ds, df, time, mag, nflux, neflux)
     cln["time0"] = [cln["time"][i]-time[0] for i in range(len(cln["time"]))]
     orig = dict()
     orig["time"] = np.array(time)
@@ -536,6 +787,27 @@ def sin_fit(x, y0, A, phi):
 
 
 def gauss_fit_peak(period, power):
+    '''
+    Applies the Gaussian fit to the periodogram. If there are more than 3 data
+    points (i.e., more data points than fixed parameters), the "gauss_fit"
+    module is used to return the fit parameters. If there are 3 or less points,
+    the maximum peak is located and 9 data points are interpolated between the
+    2 neighbouring data points of the maximum peak, and the "gauss_fit" module
+    is applied.
+    
+    parameters
+    ----------
+    period : `Iterable`
+        The period values around the peak.
+    power : `Iterable`
+        The power values around the peak.
+        
+    returns
+    -------
+    popt : `list`
+        The best-fit Gaussian parameters: A, B and C where A is the amplitude,
+        B is the mean and C is the uncertainty.
+    '''
     if len(period) > 3:
         popt, _ = curve_fit(gauss_fit, period, power,
                             bounds=([0, period[0], 0],
@@ -553,8 +825,10 @@ def gauss_fit_peak(period, power):
         ym = gauss_fit(xvals, *popt)        
     return popt, ym
 
+ 
+ 
 
-def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca=10):
+def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
     parameters
@@ -563,6 +837,8 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
         A dictionary containing the lightcurve data. The keys must include
         | "time0" -> The time coordinate relative to the first data point
         | "nflux" -> The detrended, cleaned, normalised flux values
+        | "enflux" -> The uncertainty for each value of nflux
+        | "lc_part" -> An running index describing the various contiguous sections
     p_min_thresh : `float`, optional, default=0.05
         The minimum period (in days) to be calculated.
     p_max_thresh : `float`, optional, default=100.
@@ -573,11 +849,49 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
     returns
     -------
     LS_dict : `dict`
-        A dictionary of parameters calculated from the periodogram analysis
+        A dictionary of parameters calculated from the periodogram analysis. These are:
+        | "median_MAD_nLC" : The median and median absolute deviation of the normalised lightcurve.
+        | "jump_flag" : A flag determining if the lightcurve has sharp jumps in flux.
+        | "period" : A list of period values from the periodogram analysis.
+        | "power" :  A list of power values from the periodogram analysis.
+        | "period_best" : The period corrseponding to the highest power output.
+        | "power_best" : The highest power output.
+        | "time" : The time coordinate corresponding to the normalised lightcurve.
+        | "y_fit_LS" : The best fit sinusoidal function.
+        | "AIC_sine" : The Aikaike Information Criterion value of the best-fit sinusoid
+        | "AIC_line" : The Aikaike Information Criterion value of the best-fit linear function.
+        | "FAPs" : The power output for the false alarm probability values of 0.1, 1 and 10%
+        | "Gauss_fit_peak_parameters" : Parameters for the Gaussian fit to the highest power peak
+        | "Gauss_fit_peak_y_values" : The corresponding y-values for the Gaussian fit
+        | "period_around_peak" : The period values covered by the Gaussian fit
+        | "power_around_peak" : The power values across the period range covered by the Gaussian fit
+        | "period_not_peak" : The period values not covered by the Gaussian fit
+        | "power_not_peak" : The power values across the period range not covered by the Gaussian fit
+        | "period_second" : The period of the second highest peak.
+        | "power_second" : The power of the second highest peak.
+        | "phase_fit_x" : The time co-ordinates from the best-fit sinusoid to the phase-folded lightcurve.
+        | "phase_fit_y" : The normalised flux co-ordinates from the best-fit sinusoid to the phase-folded lightcurve.
+        | "phase_x" : The time co-ordinates from the phase-folded lightcurve.
+        | "phase_y" : The normalised flux co-ordinates from the phase-folded lightcurve.
+        | "phase_chisq" : The chi-square fit between the phase-folded lightcurve and the sinusoidal fit.
+        | "phase_col" : The cycle number for each data point.
+        | "pops_vals" : The best-fit parameters from the sinusoidal fit to the phase-folded lightcurve.
+        | "pops_cov" : The corresponding co-variance matrix from the "pops_val" parameters.
+        | "phase_scatter" : The typical scatter in flux around the best-fit.
+        | "frac_phase_outliers" : The fraction of data points that are more than 3 median absolute deviation values from the best-fit.
+        | "Ndata" : The number of data points used in the periodogram analysis.
     '''
     LS_dict = dict()
-    med_f, MAD_f = np.median(cln["nflux"]), MAD(cln["nflux"], scale='normal')
-    ls = LombScargle(cln["time0"], cln["nflux"])
+    
+    time = np.array(cln["time0"])
+    nflux = np.array(cln["nflux"])
+    enflux = np.array(cln["enflux"])
+    lc_part = np.array(cln["lc_part"])
+    
+    jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
+#    jump_flag = 0
+    med_f, MAD_f = np.median(nflux), MAD(nflux, scale='normal')
+    ls = LombScargle(time, nflux, dy=enflux)
     frequency, power = ls.autopower(minimum_frequency=1./p_max_thresh,
                                     maximum_frequency=1./p_min_thresh,
                                     samples_per_peak=samples_per_peak)
@@ -585,10 +899,20 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
     probabilities = [0.1, 0.05, 0.01]
     FAP_test = ls.false_alarm_level(probabilities)
     p_m = np.argmax(power)
-    y_fit = ls.model(cln["time0"], frequency[p_m])
+    
+    y_fit_sine = ls.model(time, frequency[p_m])
+    y_fit_sine_param = ls.model_parameters(frequency[p_m])
+    chisq_model_sine = np.sum((y_fit_sine-nflux)**2/enflux**2)/(len(nflux)-3-1)
+    line_fit, _,_,_,_ = np.polyfit(time, nflux, 1, full=True)
+    y_fit_line = np.polyval(line_fit, time)
+    chisq_model_line = np.sum((y_fit_line-nflux)**2/enflux**2)/(len(nflux)-len(line_fit)-1)
+
+    AIC_sine, AIC_line = 2.*3. + chisq_model_sine, 2.*2. + chisq_model_line
+
+    print(f'(chisq, AIC) sine = {chisq_model_sine}, {AIC_sine}')
+    print(f'(chisq, AIC) line = {chisq_model_line}, {AIC_line}')
     period_best = 1.0/frequency[p_m]
     power_best = power[p_m]
-
     period = 1./frequency[::-1]
     power = power[::-1]
     # a_g: array of datapoints that form the Gaussian around the highest power
@@ -617,20 +941,20 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
     per_2 = per_a_o[np.argmax(power[a_o])]
     pow_2 = power_a_o[np.argmax(power[a_o])]
     pow_pow2 = 1.0*power_best/pow_2
-    tdiff = np.array(cln["time0"]-min(cln["time0"]))
-    nflux = np.array(cln["nflux"])
+    tdiff = np.array(time-min(time))
+    nflux = np.array(nflux)
     pha, cyc = np.modf(tdiff/period_best)
     pha, cyc = np.array(pha), np.array(cyc)
     f = np.argsort(pha)
     p = np.argsort(tdiff/period_best)
-    pha_fit, nf_fit, cyc_fit = pha[f], nflux[f], cyc[f].astype(int)
-    pha_plt, nf_plt, cyc_plt = pha[p], nflux[p], cyc[p].astype(int)
+    pha_fit, nf_fit, ef_fit, cyc_fit = pha[f], nflux[f], enflux[f], cyc[f].astype(int)
+    pha_plt, nf_plt, ef_plt, cyc_plt = pha[p], nflux[p], enflux[p], cyc[p].astype(int)
     try:
         pops, popsc = curve_fit(sin_fit, pha_fit, nf_fit,
-                                bounds=(0, [2., 2., 2.*np.pi]))
+                                bounds=(0, [2., 2., 1000.]))#, 2.*np.pi]))
     except Exception:
         logger.warning(Exception)
-        pops = np.array([1., 0.001, 0.5])
+        pops, popsc = np.array([1., 0.001, 0.5]), 0
         pass
 
     # order the phase folded lightcurve by phase and split into N even parts.
@@ -638,21 +962,26 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
     # the median of the standard deviation values to represent the final scatter
     # in the phase curve.
      
-    sca_parts = np.array_split(nf_fit, n_sca)
-    ar = np.array(list(itertools.zip_longest(*sca_parts, fillvalue=np.nan)))
-    sca_stdev = np.nanstd(ar, axis=0)
+    sca_mean, sca_stdev = mean_of_arrays(nf_fit, n_sca)
     sca_median = np.median(sca_stdev)
 
-    Ndata = len(cln["nflux"])
+    Ndata = len(nflux)
     yp = sin_fit(pha_fit, *pops)
+    chi_sq = np.sum(((yp-pha_fit)/ef_fit)**2)/(len(pha_fit)-len(pops)-1)
+    chi_sq = np.sum((yp-pha_fit)**2)/(len(pha_fit)-len(pops)-1)
+    
     pha_sct = MAD(yp - nflux, scale='normal')
     fdev = 1.*np.sum(np.abs(nflux - yp) > 3.0*pha_sct)/Ndata
     LS_dict['median_MAD_nLC'] = [med_f, MAD_f]
+    LS_dict['jump_flag'] = jump_flag
     LS_dict['period'] = period
     LS_dict['power'] = power
     LS_dict['period_best'] = period_best
-    LS_dict['power_best'] = power_best 
-    LS_dict['y_fit_LS'] = y_fit 
+    LS_dict['power_best'] = power_best
+    LS_dict['time'] = time 
+    LS_dict['y_fit_LS'] = y_fit_sine
+    LS_dict['AIC_sine'] = AIC_sine
+    LS_dict['AIC_line'] = AIC_line
     LS_dict['FAPs'] = FAP_test
     LS_dict['Gauss_fit_peak_parameters'] = popt
     LS_dict['Gauss_fit_peak_y_values'] = ym
@@ -666,6 +995,7 @@ def run_ls(cln, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_sca
     LS_dict['phase_fit_y'] = yp
     LS_dict['phase_x'] = pha_plt
     LS_dict['phase_y'] = nf_plt
+    LS_dict['phase_chisq'] = chi_sq
     LS_dict['phase_col'] = cyc_plt
     LS_dict['pops_vals'] = pops    
     LS_dict['pops_cov'] = popsc
@@ -720,5 +1050,3 @@ def is_period_cont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
     else:
         output = 'c'
     return output
-
-

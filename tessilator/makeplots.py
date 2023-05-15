@@ -49,12 +49,22 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
         The aperture radius from the aperture photometry
     SkyRad : `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
+    targ_name : `G` or `T`, optional, default=G
+        The prefix in the names of the image files are changed to either the Gaia source
+        identifier if targ_name = G, or the target name if targ_name = T.
 
     returns
     -------
     Nothing returned. The plot produced is saved to file.
     '''
     mpl.rcParams.update({'font.size': 14})
+
+    print('line', LS_dict["AIC_line"])
+    print('sine', LS_dict["AIC_sine"])
+    if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
+        best_fit_type = 'linear'
+    else:
+        best_fit_type = 'sine'
 
     fsize = 22.
     lsize = 0.9*fsize
@@ -107,6 +117,9 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     axs[0,1].semilogx(LS_dict['period'], LS_dict['power'])
     [axs[0,1].axhline(y=i, linestyle='--', color='grey', alpha=0.8) \
      for i in LS_dict['FAPs']]
+    axs[0,1].text(0.01,0.94, f"Best fit: {best_fit_type}",
+                  fontsize=lsize,horizontalalignment='left', 
+                  transform=axs[0,1].transAxes)
     axs[0,1].text(0.99,0.94, "$P_{\\rm rot}^{\\rm (max)}$ = "
                   f"{LS_dict['period_best']:.3f} days, "
                   f"power = {LS_dict['power_best']:.3f}",
@@ -129,13 +142,14 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
                       f"{LS_dict['Gauss_fit_peak_parameters'][2]:.3f}",
                       fontsize=lsize, horizontalalignment='right',
                       transform=axs[0,1].transAxes)        
+                      
     axs[1,0].set_xlim([0, 30])
     axs[1,0].set_xlabel("Time (days)", fontsize=fsize)
     axs[1,0].set_ylim(
         [LS_dict['median_MAD_nLC'][0]-(8.*LS_dict['median_MAD_nLC'][1]),
         LS_dict['median_MAD_nLC'][0]+(8.*LS_dict['median_MAD_nLC'][1])])
     axs[1,0].set_ylabel("normalised flux", c='g', fontsize=fsize)
-    axs[1,0].plot(clean["time0"], LS_dict['y_fit_LS'], c='orange',
+    axs[1,0].plot(LS_dict["time"], LS_dict['y_fit_LS'], c='orange',
                   linewidth=1.5, label='LS best fit')
     axs[1,0].scatter(t_orig0, orig["nflux"], s=0.5, alpha=0.3,
                      label='raw, normalized')
@@ -143,6 +157,11 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
                      label='cleaned, normalized')
     axs[1,0].scatter(clean["time0"], clean["nflux"],s=1.2, c='g', alpha=0.7,
                      label='cleaned, normalized, detrended')
+    if LS_dict['jump_flag']:
+        print('jumpy!')
+        axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
+                      horizontalalignment='left',
+                      transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.90, Gaia_name, fontsize=lsize,
                   horizontalalignment='right',
                   transform=axs[1,0].transAxes)
@@ -158,7 +177,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     ax2.invert_yaxis()
     ax2.scatter(t_orig0, orig["mag"], s=0.3, alpha=0.3, color="b", marker="x")
     ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
-
     axs[1,1].set_xlim([0,1])
     axs[1,1].set_xlabel("phase", fontsize=fsize)
     axs[1,1].set_ylabel("normalised flux", fontsize=fsize)
@@ -170,7 +188,9 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
                          c=LS_dict['phase_col'], cmap=cmap_use, vmin=0.5,
                          vmax=N_cyc+0.5)
     axs[1,1].text(0.01, 0.90, f"Amplitude = {LS_dict['pops_vals'][1]:.3f}, "
-                  f"Scatter = {LS_dict['phase_scatter']:.3f}", fontsize=lsize,
+                  f"Scatter = {LS_dict['phase_scatter']:.3f}, "
+                  f"$\chi^{2}$ = {LS_dict['phase_chisq']:.3f}, "
+                  "$f_{\\rm dev}$"+ f"= {LS_dict['frac_phase_outliers']:.3f}", fontsize=lsize,
                   horizontalalignment='left', transform=axs[1,1].transAxes)
 
     cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
@@ -183,4 +203,3 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
                           str(scc[1]), str(scc[2])])+'.png'
     plt.savefig(plot_name, bbox_inches='tight')
     plt.close('all')
-
