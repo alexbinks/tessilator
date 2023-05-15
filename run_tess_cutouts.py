@@ -21,4 +21,4 @@ print("Done calculating the contamination.")
 
 print("...now iterating over each source.")
 tessilator.all_sources_cutout(tTargets, periodFile, lcCon, fluxCon, conFile,
-                              makePlots, choose_sec=None)
+                              makePlots, choose_sec=None, tot_attempts=2, cap_files=8)
