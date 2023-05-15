@@ -70,12 +70,12 @@ def create_table_template():
                            'log_tot_bg_star', 'log_max_bg_star',\
                            'n_contaminants', 'Period_Max', 'Period_Gauss',\
                            'e_Period', 'Period_2', 'power1', 'power1_power2',\
-                           'FAP_001', 'amp', 'scatter', 'fdev', 'Ndata',\
-                           'cont_flags'],\
-                    dtype=(str, str, float, float, float, float, int, int,\
-                           int, float, float, int, float, float, float,\
-                           float, float, float, float, float, float, float,\
-                           int, str))
+                           'FAP_001', 'AIC_line', 'AIC_sine', 'amp', 'scatter',\
+                           'chisq_phase', 'fdev', 'Ndata','jump_flag','cont_flags'],\
+                        dtype=(str, str, float, float, float, float, int, int,\
+                               int, float, float, int, float, float, float,\
+                               float, float, float, float, float, float, float, float,\
+                               float, float, int, int, str))
     return final_table
     
     
@@ -433,6 +433,7 @@ def make_datarow(t_target, scc, d_target, labels_cont):
     dr : `dict`
         A dictionary entry for the target star containing tessilator data
     '''
+    print(d_target['jump_flag'])
     dr = [
           t_target["name"],
           t_target["source_id"],
@@ -453,10 +454,14 @@ def make_datarow(t_target, scc, d_target, labels_cont):
           d_target['power_best'],
           d_target['power_best']/d_target['power_second'],
           d_target['FAPs'][2],
+          d_target['AIC_line'],          
+          d_target['AIC_sine'],
           d_target['pops_vals'][1],
           d_target['phase_scatter'],
+          d_target['phase_chisq'],
           d_target['frac_phase_outliers'],
           d_target['Ndata'],
+          d_target['jump_flag'],
           labels_cont
           ]
     return dr
@@ -506,8 +511,9 @@ def make_failrow(t_target, scc):
           t_target["log_tot_bg"],
           t_target["log_max_bg"],
           t_target["num_tot_bg"]]
-    for i in range(10):
+    for i in range(13):
         dr.append(np.nan)
+    dr.append(0)
     dr.append(0)
     dr.append('z')
     return dr
@@ -574,6 +580,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
+
         if len(g_c) >= 50: 
             clean_norm_lc, original_norm_lc = make_lc(g_c)
         else:
@@ -604,8 +611,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                         labels_cont += run_test_for_contaminant(XY_con[z],\
                                                                 file_in,\
                                                                 con_table[z],\
-                                                                d_target,\
-                                                                cutout_size)
+                                                                d_target)
                     if not labels_cont:
                         labels_cont = 'e'
                 else:
@@ -624,6 +630,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                          SkyRad=[6.,8.])
         final_table.add_row(make_datarow(t_targets, scc, d_target,\
                                          labels_cont))
+
 
 def print_time_taken(start, finish):
     '''Calculate the time taken for a process.
@@ -696,7 +703,7 @@ def find_xy_cont(f_file, con_table, cutout_size):
         return cont_positions
         
 
-def run_test_for_contaminant(XY_arr, file_in, con_table, d_target, cutout_size):
+def run_test_for_contaminant(XY_arr, file_in, con_table, d_target):
     '''Run the periodogram analyses for neighbouring contaminants if required.
 
     parameters
@@ -731,11 +738,8 @@ def run_test_for_contaminant(XY_arr, file_in, con_table, d_target, cutout_size):
             labels_cont = is_period_cont(d_target, d_cont, con_table)
         else:
             labels_cont = 'd'
+    print(f"label for this contaminant: {labels_cont}")
     return labels_cont
-
-
-
-
 
 
 
@@ -852,7 +856,7 @@ def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
 
 
 
-def get_cutouts(coord, cutout_size, choose_sec, target_name, tot_attempts=3):
+def get_cutouts(coord, cutout_size, target_name, choose_sec=None, tot_attempts=3, cap_files=None):
     '''Download TESS cutouts and store to a list for lightcurve analysis.
 
     The TESScut function will save fits files to the working directory.
@@ -870,6 +874,17 @@ def get_cutouts(coord, cutout_size, choose_sec, target_name, tot_attempts=3):
         * If `Iterable`, TESScut will attempt to download a list of sectors.
     target_name : `str`
         Name of the target
+    choose_sec : `None`, `int` or `Iterable`, optional, default=None
+        | The sector, or sectors required for download.
+        * If `None`, TESScut will download all sectors available for the target.
+        * If `int`, TESScut will attempt to download this sector number.
+        * If `Iterable`, TESScut will attempt to download a list of sectors.
+    tot_attempts : `int`, optional, default=3
+        The number of attempts to download the fits files in case of request or
+        server errors
+    cap_files : `None`, `int`, optional, default=None
+        The maximum number of sectors for each target.
+
     returns
     -------
     manifest : `list`
@@ -931,11 +946,16 @@ def get_cutouts(coord, cutout_size, choose_sec, target_name, tot_attempts=3):
               f"{type(choose_sec)}")
         logger.error(f"The choose_sec parameter has an invalid format type: "
                      f"{type(choose_sec)}")
-    return manifest
+    print(manifest)
+    if cap_files is not None:
+        return manifest[:cap_files]
+    else:
+        return manifest
 
 
 def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
-                      final_table, choose_sec, cutout_size=20, targ_name='G'):
+                      final_table, choose_sec=None, cutout_size=20, \
+                      tot_attempts=3, cap_files=None, targ_name='G'):
     '''Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources".
@@ -959,14 +979,22 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
         Decides is plots are made from the lightcurve analysis.
     final_table : `astropy.table.Table`
         The table to store the final tessilator results.
-    choose_sec : `None`, `int` or `Iterable`
+    choose_sec : `None`, `int` or `Iterable`, optional, default=None
         | The sector, or sectors required for download.
         * If `None`, TESScut will download all sectors available for the target.
         * If `int`, TESScut will attempt to download this sector number.
         * If `Iterable`, TESScut will attempt to download a list of sectors.
-    cutout_size : `float`, Default=20
+    cutout_size : `float`, optional, default=20
         the pixel length of the downloaded cutout
-        
+    tot_attempts : `int`, optional, default=3
+        The number of attempts to download the fits files in case of request or
+        server errors
+    cap_files : `None`, `int`, optional, default=None
+        The maximum number of sectors for each target.
+    targ_name : `G` or `T`, optional, default=G
+        The prefix in the names of the fits files are changed to either the Gaia source
+        identifier if targ_name = G, or the target name if targ_name = T.
+
     returns
     -------
     Nothing returned. Results are saved to table and plots are generated (if
@@ -983,7 +1011,7 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
     # there may be more than 1 fits file if the target lands in
     # multiple sectors!
 
-    manifest = get_cutouts(coord, cutout_size, choose_sec, target['name'])
+    manifest = get_cutouts(coord, cutout_size, target['name'], tot_attempts=tot_attempts, choose_sec=choose_sec, cap_files=cap_files)
 
     if manifest is None:
         logger.error(f"could not download any data for {target['name']}. "
@@ -991,7 +1019,6 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
     else:
         for m, file_in in enumerate(manifest):
             try:
-                print(f"{m+1} of {len(manifest)} sectors")
     # rename the fits file to something more legible for users
                 f_sp = file_in.split('-')
                 if targ_name =='G':
@@ -1000,7 +1027,7 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
                     name_underscore = target['name'][0].replace(" ", "_")
                 else:
                     name_underscore = target['source_id'].astype(str)
-
+                print(f"sector {f_sp[1][1:]}, {m+1} of {len(manifest)}")
                 file_new = '_'.join([name_underscore, f_sp[1][1:], f_sp[2],\
                                      f_sp[3][0]])+'.fits'
                 os.rename(file_in, file_new)
@@ -1019,7 +1046,7 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
 
         
 def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
-                       make_plots, choose_sec=None):
+                       make_plots, choose_sec=None, tot_attempts=3, cap_files=None):
     '''Run the tessilator for all targets.
 
     parameters
@@ -1048,11 +1075,16 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         from contaminants.
     make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
-    choose_sec : `None`, `int`, or `Iterable`, optional
+    choose_sec : `None`, `int`, or `Iterable`, optional, default=None
         | The sector, or sectors required for download.
         * If `None`, TESScut will download all sectors available for the target.
         * If `int`, TESScut will attempt to download this sector number.
         * If `Iterable`, TESScut will attempt to download a list of sectors.
+    tot_attempts : `int`, optional, default=3
+        The number of attempts to download the fits files in case of request or
+        server errors
+    cap_files : `None`, `int`, optional, default=None
+        The maximum number of sectors for each target.
 
     returns
     -------
@@ -1068,10 +1100,11 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         t_targets.add_column(-999, name='log_max_bg')
         t_targets.add_column(0,    name='num_tot_bg')
     for i, target in enumerate(t_targets):
-        print(f"{target['name']}, star # {i+1} of {len(t_targets)}")
+        print(f"{target['name']} (Gaia DR3 {target['source_id']}), star # {i+1} of {len(t_targets)}")
         coo = SkyCoord(target["ra"], target["dec"], unit="deg")
         one_source_cutout(coo, target, LC_con, flux_con, con_file,
-                          make_plots, final_table, choose_sec)
+                          make_plots, final_table, choose_sec=choose_sec,
+                          tot_attempts=3, cap_files=cap_files)
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
     final_table.write(period_file+'_'+dt_string+'.ecsv')
