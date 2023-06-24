@@ -1,6 +1,7 @@
 '''Generate pixel images, light-curves and periodogram plots
 
 '''
+import os
 from astropy.table import Table
 import numpy as np
 import matplotlib as mpl
@@ -12,9 +13,10 @@ from collections.abc import Iterable
 
 __all__ = ['make_plot']
 
-def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
+
+def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
-              SkyRad = [6.,8.], targ_name='G'):
+              SkyRad = [6.,8.], im_dir='plots'):
     '''Produce a plot of tessilator results.
 
     | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
@@ -58,9 +60,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     Nothing returned. The plot produced is saved to file.
     '''
     mpl.rcParams.update({'font.size': 14})
-
-    print('line', LS_dict["AIC_line"])
-    print('sine', LS_dict["AIC_sine"])
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
         best_fit_type = 'linear'
     else:
@@ -80,19 +79,20 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
     f = axs[0,0].imshow(np.log10(im_plot.data), cmap='binary')
-    if targ_name =='G':
-        name_underscore = t_table['source_id'][0].replace(" ", "_")
-    elif targ_name =='T':
-        name_underscore = t_table['name'][0].replace(" ", "_")
-    else:
-        name_underscore = t_table['source_id'][0].replace(" ", "_")
+#    name_underscore = get_name_underscore(t_table, targ_name)
+#    if targ_name =='G':
+#        name_underscore = t_table['source_id'][0].replace(" ", "_")
+#    elif targ_name =='T':
+#        name_underscore = t_table['name'][0].replace(" ", "_")
+#    else:
+#        name_underscore = t_table['source_id'][0].replace(" ", "_")
 
     Gaia_name = f"Gaia DR3 {t_table['source_id'][0]}"
     targ_name = t_table['name'][0]
     fig.text(0.5,0.96,
-             f"{targ_name}, Sector {str(scc[0])}, "
-             f"Camera {str(scc[1])}, "
-             f"CCD {str(scc[2])}",
+             f"{targ_name}, Sector {scc[0]}, "
+             f"Camera {scc[1]}, "
+             f"CCD {scc[2]}",
              fontsize=lsize*2.0,
              horizontalalignment='center')
     axs[0,0].set_xlabel("X pixel", fontsize=fsize)
@@ -158,7 +158,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     axs[1,0].scatter(clean["time0"], clean["nflux"],s=1.2, c='g', alpha=0.7,
                      label='cleaned, normalized, detrended')
     if LS_dict['jump_flag']:
-        print('jumpy!')
         axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
                       horizontalalignment='left',
                       transform=axs[1,0].transAxes)
@@ -199,7 +198,10 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, XY_ctr=(10,10),
     cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
                         label='cycle number')
 
-    plot_name = '_'.join([name_underscore, f"{scc[0]:04d}",
+    plot_name = '_'.join([name_target, f"{scc[0]:04d}",
                           str(scc[1]), str(scc[2])])+'.png'
-    plt.savefig(plot_name, bbox_inches='tight')
+    path_exist = os.path.exists(f'./{im_dir}')
+    if not path_exist:
+        os.mkdir(f'./{im_dir}')
+    plt.savefig(f'./{im_dir}/{plot_name}', bbox_inches='tight')
     plt.close('all')
