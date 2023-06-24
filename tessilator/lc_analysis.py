@@ -33,6 +33,7 @@ import warnings
 
 # Third party imports
 import numpy as np
+import os
 
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
@@ -600,7 +601,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
 
     # 5. Place the results into a dictionary.
     for i in range(len(t_orig)):
-        dict_lc["time"].append(t_orig[i])
+        dict_lc["time_o"].append(t_orig[i])
         dict_lc["mag"].append(m_orig[i])
         dict_lc["oflux"].append(f_orig[i])
         dict_lc["nflux"].append(f_norm[i])
@@ -611,7 +612,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
     
     
 
-def make_lc(phot_table):
+def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
     '''Construct the normalised TESS lightcurve.
 
     | The function runs the following tasks:
@@ -635,8 +636,8 @@ def make_lc(phot_table):
     -------
     cln : `dict`
         | The cleaned, detrended, normalised lightcurve, with the keys:
-        | "time" -> The time coordinate
-        | "time0" -> The time coordinate relative to the first data point
+        | "time_o" -> The absolute time coordinate
+        | "time" -> The time coordinate relative to the first data point
         | "oflux" -> The original, normalised flux values
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The error on "nflux"
@@ -648,7 +649,6 @@ def make_lc(phot_table):
         | "nflux" -> The original, normalised flux values
         | "mag" -> The TESS magnitude values
     '''
-    
     m_diff = phot_table["flux_corr"][:] - np.median(phot_table["flux_corr"][:])
     m_thr = 20.0*MAD(phot_table["flux_corr"][:], scale='normal')
     g = np.abs(m_diff < m_thr)
@@ -667,12 +667,18 @@ def make_lc(phot_table):
     # 2nd: detrend each lightcurve sections by either a straight-line fit or a
     # parabola. The choice is selected using AIC.
     cln = detrend_lc(ds, df, time, mag, nflux, neflux)
-    cln["time0"] = [cln["time"][i]-time[0] for i in range(len(cln["time"]))]
+    cln["time"] = [cln["time_o"][i]-time[0] for i in range(len(cln["time_o"]))]
     orig = dict()
     orig["time"] = np.array(time)
     orig["nflux"] = np.array(nflux)
     orig["mag"] = np.array(mag)
     if len(cln["time"]) > 50:
+        if store_lc:
+            tab_out = Table(cln)
+            path_exist = os.path.exists(f'./{lc_dir}')
+            if not path_exist:
+                os.makedirs(f'./{lc_dir}')
+            tab_out.write(f'./{lc_dir}/{name_lc}', format='csv', overwrite=True)
         return cln, orig
     else:
         return [], []
@@ -809,10 +815,24 @@ def gauss_fit_peak(period, power):
         B is the mean and C is the uncertainty.
     '''
     if len(period) > 3:
-        popt, _ = curve_fit(gauss_fit, period, power,
-                            bounds=([0, period[0], 0],
-                                    [1., period[-1], period[-1]-period[0]]))
-        ym = gauss_fit(period, *popt)
+        try:
+            popt, _ = curve_fit(gauss_fit, period, power,
+                                bounds=([0, period[0], 0],
+                                        [1., period[-1], period[-1]-period[0]]))
+            ym = gauss_fit(period, *popt)
+        except:
+            print(f"Couldn't find the optimal parameters for the Gaussian fit!")
+            logger.error(f"Couldn't find the optimal parameters for the Gaussian fit!")
+            p_m = np.argmax(power)
+            peak_vals = [p_m-1, p_m, p_m+1]
+            x = period[peak_vals]
+            y = power[peak_vals]
+            xvals = np.linspace(x[0], x[-1], 9)
+            yvals = np.interp(xvals, x, y)
+            popt, _ = curve_fit(gauss_fit, xvals, yvals,
+                                bounds=(0, [1., np.inf, np.inf]))
+            ym = gauss_fit(xvals, *popt)     
+
     else:
         p_m = np.argmax(power)
         peak_vals = [p_m-1, p_m, p_m+1]
@@ -828,14 +848,14 @@ def gauss_fit_peak(period, power):
  
  
 
-def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10):
+def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, check_jump=False):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
     parameters
     ----------
     cln : `dict`
         A dictionary containing the lightcurve data. The keys must include
-        | "time0" -> The time coordinate relative to the first data point
+        | "time" -> The time coordinate relative to the first data point
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The uncertainty for each value of nflux
         | "lc_part" -> An running index describing the various contiguous sections
@@ -883,13 +903,13 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
     '''
     LS_dict = dict()
     
-    time = np.array(cln["time0"])
+    time = np.array(cln["time"])
     nflux = np.array(cln["nflux"])
     enflux = np.array(cln["enflux"])
-    lc_part = np.array(cln["lc_part"])
-    
-    jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
-#    jump_flag = 0
+    if check_jump:
+        lc_part = np.array(cln["lc_part"])
+        jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
+
     med_f, MAD_f = np.median(nflux), MAD(nflux, scale='normal')
     ls = LombScargle(time, nflux, dy=enflux)
     frequency, power = ls.autopower(minimum_frequency=1./p_max_thresh,
@@ -909,16 +929,47 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
 
     AIC_sine, AIC_line = 2.*3. + chisq_model_sine, 2.*2. + chisq_model_line
 
-    print(f'(chisq, AIC) sine = {chisq_model_sine}, {AIC_sine}')
-    print(f'(chisq, AIC) line = {chisq_model_line}, {AIC_line}')
     period_best = 1.0/frequency[p_m]
     power_best = power[p_m]
     period = 1./frequency[::-1]
     power = power[::-1]
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
-    a_g, a_o = get_second_peak(power)
+    
+    if len(power) == 0:
+        LS_dict['median_MAD_nLC'] = -999
+        LS_dict['jump_flag'] = -999
+        LS_dict['period'] = -999
+        LS_dict['power'] = -999
+        LS_dict['period_best'] = -999
+        LS_dict['power_best'] = -999
+        LS_dict['time'] = -999
+        LS_dict['y_fit_LS'] = -999
+        LS_dict['AIC_sine'] = -999
+        LS_dict['AIC_line'] = -999
+        LS_dict['FAPs'] = -999
+        LS_dict['Gauss_fit_peak_parameters'] = -999
+        LS_dict['Gauss_fit_peak_y_values'] = -999
+        LS_dict['period_around_peak'] = -999
+        LS_dict['power_around_peak'] = -999
+        LS_dict['period_not_peak'] = -999 
+        LS_dict['power_not_peak'] = -999 
+        LS_dict['period_second'] = -999
+        LS_dict['power_second'] = -999
+        LS_dict['phase_fit_x'] = -999
+        LS_dict['phase_fit_y'] = -999
+        LS_dict['phase_x'] = -999
+        LS_dict['phase_y'] = -999
+        LS_dict['phase_chisq'] = -999
+        LS_dict['phase_col'] = -999
+        LS_dict['pops_vals'] = -999    
+        LS_dict['pops_cov'] = -999
+        LS_dict['phase_scatter'] = -999
+        LS_dict['frac_phase_outliers'] = -999
+        LS_dict['Ndata'] = -999
+        return LS_dict
 
+    a_g, a_o = get_second_peak(power)
     if isinstance(a_g, Iterable):
         pow_r = max(power[a_g])-min(power[a_g])
         a_g_fit = a_g[power[a_g] > min(power[a_g]) + .05*pow_r]
@@ -973,7 +1024,10 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
     pha_sct = MAD(yp - nflux, scale='normal')
     fdev = 1.*np.sum(np.abs(nflux - yp) > 3.0*pha_sct)/Ndata
     LS_dict['median_MAD_nLC'] = [med_f, MAD_f]
-    LS_dict['jump_flag'] = jump_flag
+    if check_jump:
+        LS_dict['jump_flag'] = jump_flag
+    else:
+        LS_dict['jump_flag'] = -999
     LS_dict['period'] = period
     LS_dict['power'] = power
     LS_dict['period_best'] = period_best

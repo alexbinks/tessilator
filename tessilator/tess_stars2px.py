@@ -1137,11 +1137,12 @@ def tess_stars2px_function_entry(starIDs, starRas, starDecs, trySector=None, scI
     print(datetime.datetime.now())
     for i, curTarg in enumerate(starList):
         if i % 100 == 0:
-            print(i, " stars out of ", len(starList))
+            print(f'{i+1} stars out of {len(starList)}')
         for curSec in scinfo.sectors:
             starRas = np.array([curTarg.ra])
             starDecs =  np.array([curTarg.dec])
             idxSec = np.where(scinfo.sectors == curSec)[0][0]
+
             # Apply an approximate aberration correction
             if aberrate:
                 useTime = Time(scinfo.midtimes[idxSec], format='jd')
@@ -1156,7 +1157,6 @@ def tess_stars2px_function_entry(starIDs, starRas, starDecs, trySector=None, scI
                 cgcrs = ccat.transform_to('gcrs')
                 starRas = np.array(cgcrs.ra.degree)
                 starDecs = np.array(cgcrs.dec.degree)
-
             starInCam, starCcdNum, starFitsXs, starFitsYs, starCcdXs, starCcdYs = scinfo.fpgObjs[idxSec].radec2pix(\
                        starRas, starDecs)
             for jj, cam in enumerate(starInCam):
@@ -1376,6 +1376,7 @@ if __name__ == '__main__':
                     cgcrs = ccat.transform_to('gcrs')
                     starRas = np.array(cgcrs.ra.degree)
                     starDecs = np.array(cgcrs.dec.degree)
+                print(scinfo.fpgObjs[idxSec])
                 starInCam, starCcdNum, starFitsXs, starFitsYs, starCcdXs, starCcdYs = scinfo.fpgObjs[idxSec].radec2pix(\
                            starRas, starDecs)
                 for jj, cam in enumerate(starInCam):

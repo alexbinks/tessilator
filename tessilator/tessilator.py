@@ -6,6 +6,7 @@ from .lc_analysis import *
 from .contaminants import *
 from .maketable import *
 from .makeplots import *
+from .get_name import *
 from .tess_stars2px import tess_stars2px_function_entry
 from datetime import datetime
 import numpy as np
@@ -131,7 +132,7 @@ def setup_input_parameters():
         elif 'sector' in sys.argv[0]:
             sector_num = pyip.inputInt("Which sector of data do you require? "
                          "(1-61) : ", min=1, max=61)
-            cc_request = pyip.inputBool("Do you want a specific Camera/CCD? "
+            cc_request = pyip.inputInt("Do you want a specific Camera/CCD? "
                                         "1=yes, 0=no : ", min=0, max=1)
             if cc_request:
                 cam_num = pyip.inputInt("Which Camera? "
@@ -214,7 +215,6 @@ def setup_input_parameters():
         if t_filename.startswith('#'):
             print(t_filename)
             t_name = t_filename[1:]
-#            t_name_joined = t_name.replace([' ',','], '_')+'.dat'
             t_name_joined = t_name.replace(' ','_').replace(',', '_')+'.dat'
             if os.path.exists(t_name_joined):
                 os.remove(t_name_joined)
@@ -345,8 +345,12 @@ def read_data(t_filename, name_is_source_id=0):
     '''
     
     logger.info(f"Starting Time: {start}")
-    t_input = ascii.read(t_filename, delimiter=',', format='no_header')
-    t_targets = get_gaia_data(t_input, name_is_source_id)
+    if isinstance(t_filename, str):
+        t_input = ascii.read(t_filename, delimiter=',', format='no_header')
+    elif isinstance(t_filename, Table):
+        t_input = t_filename
+
+    t_targets = get_gaia_data(t_input, name_is_source_id=name_is_source_id)
 
     return t_targets
 
@@ -433,7 +437,6 @@ def make_datarow(t_target, scc, d_target, labels_cont):
     dr : `dict`
         A dictionary entry for the target star containing tessilator data
     '''
-    print(d_target['jump_flag'])
     dr = [
           t_target["name"],
           t_target["source_id"],
@@ -519,9 +522,9 @@ def make_failrow(t_target, scc):
     return dr
 
 
-def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
-                cutout_size=20, flux_con=0, LC_con=0, con_file=0,\
-                XY_pos=(10.,10.), Rad=1.0, SkyRad=[6.,8.]):
+def full_run_lc(file_in, t_target, make_plots, scc, final_table, \
+                cutout_size=20, store_lc=False, flux_con=0, LC_con=0, con_file=0,\
+                XY_pos=(10.,10.), Rad=1.0, SkyRad=[6.,8.], lc_dir='lc'):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
     This function calls a set of functions in the lc_analysis.py module to
@@ -580,9 +583,10 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
         else:
             t_targets = Table(t_target)
             t_targets["source_id"] = t_targets["source_id"].astype(str)
-
-        if len(g_c) >= 50: 
-            clean_norm_lc, original_norm_lc = make_lc(g_c)
+        name_target = get_name_target(t_targets["name"][0])
+        if len(g_c) >= 50:
+            name_lc = f'lc_{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}.csv'
+            clean_norm_lc, original_norm_lc = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
         else:
             logger.error(f"No photometry was recorded for this group.")
             final_table.add_row(make_failrow(t_targets, scc))
@@ -592,7 +596,15 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                          f"{t_targets['source_id']}")
             final_table.add_row(make_failrow(t_targets, scc))
             continue
-        d_target = run_ls(clean_norm_lc)
+
+
+        d_target = run_ls(clean_norm_lc, check_jump=True)
+        if d_target['period_best'] == -999:
+            logger.error(f"the periodogram did not return any results for "
+                         f"{t_targets['source_id']}")
+            final_table.add_row(make_failrow(t_targets, scc))
+            continue
+        
         if LC_con:
             if flux_con != 1:
                 print("Contaminants not identified! Please toggle LC_con=1")
@@ -625,11 +637,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table,\
                                              im_size=(cutout_size+1,\
                                                       cutout_size+1))
             make_plot(im_plot, clean_norm_lc, original_norm_lc,\
-                         d_target, scc, t_targets, XY_contam=XY_con,\
+                         d_target, scc, t_targets, name_target, XY_contam=XY_con,\
                          p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,\
                          SkyRad=[6.,8.])
         final_table.add_row(make_datarow(t_targets, scc, d_target,\
                                          labels_cont))
+
+
 
 
 def print_time_taken(start, finish):
@@ -856,7 +870,8 @@ def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
 
 
 
-def get_cutouts(coord, cutout_size, target_name, choose_sec=None, tot_attempts=3, cap_files=None):
+
+def get_cutouts(coord, cutout_size, name_target, choose_sec=None, tot_attempts=3, cap_files=None, fits_dir='fits'):
     '''Download TESS cutouts and store to a list for lightcurve analysis.
 
     The TESScut function will save fits files to the working directory.
@@ -890,38 +905,53 @@ def get_cutouts(coord, cutout_size, target_name, choose_sec=None, tot_attempts=3
     manifest : `list`
         A list of the fits files for lightcurve analysis.
     '''
+    name_target = get_name_target(name_target)
     manifest = []
     if choose_sec is None:
         num_attempts = 0
         while num_attempts < tot_attempts:
             print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
             try:
-                dl = Tesscut.download_cutouts(coordinates=coord, size=cutout_size,\
-                                          sector=None)
-                if dl is not None:
+                sectors = Tesscut.get_sectors(coordinates=coord)['sector'].data
+                if cap_files:
+                    sectors=sectors[:cap_files]
+                for n_s, sec in enumerate(sectors):
+                    print(f'getting sector {sec}, {n_s+1} of {len(sectors)}')
+                    s = f'{sec:04d}'
+                    fits_file = glob.glob(f'./{fits_dir}/{name_target}_{s}*')
+                    if fits_file:
+                        manifest.append(fits_file[0])
+                    else:
+                        dl = Tesscut.download_cutouts(coordinates=coord,\
+                                                      size=cutout_size,\
+                                                      sector=s,\
+                                                      path=fits_dir)
+                        manifest.append(dl['Local Path'][0])
+                if manifest:
                     print(f'...done!')
                     break
             except:
                 num_attempts += 1
-        try:
-            for d in dl["Local Path"]:
-                manifest.append(d)
-        except:
-            logger.error(f"Timeout error for {target_name}")
+        logger.error(f"Timeout error for {name_target}")
     elif isinstance(choose_sec, int):
         if (choose_sec < 1 or choose_sec > 70):
             print(f"Sector {choose_sec} is out of range.")
             logger.error(f"Sector {choose_sec} is out of range.")
         else:
             try:
-                dl = Tesscut.download_cutouts(coordinates=coord,\
-                                              size=cutout_size,\
-                                              sector=choose_sec)
-                manifest.append(dl["Local Path"][0])
+                fits_file = glob.glob(f'./{fits_dir}/{name_target}_{choose_sec:04d}*')
+                if fits_file:
+                     manifest.append(fits_file[0])
+                else:
+                    dl = Tesscut.download_cutouts(coordinates=coord,\
+                                                  size=cutout_size,\
+                                                  sector=choose_sec,\
+                                                  path=fits_dir)
+                    manifest.append(dl["Local Path"][0])
             except:
-                print(f"Sector {choose_sec} unavailable for {target_name}")
+                print(f"Sector {choose_sec} unavailable for {name_target}")
                 logger.error(f"Sector {choose_sec} unavailable for "
-                             f"{target_name}")
+                             f"{name_target}")
     elif isinstance(choose_sec, Iterable):
         cs = np.array(list(set(choose_sec)))
         if all(isinstance(x, np.int64) for x in cs):
@@ -929,15 +959,22 @@ def get_cutouts(coord, cutout_size, target_name, choose_sec=None, tot_attempts=3
             if len(cs) != len(cs_g):
                 logger.warning(f"Sectors {np.setdiff1d(cs, cs_g)} are out of "
                                f"range.")
+            if cap_files:
+                cs_g = cs_g[:cap_files]
             for c in cs_g:
                 try:
-                    dl = Tesscut.download_cutouts(coordinates=coord,\
-                                                  size=cutout_size,\
-                                                  sector=c)
-                    manifest.append(dl["Local Path"][0])
+                    fits_file = glob.glob(f'./{fits_dir}/{name_target}_{c}*')[0]
+                    if os.exists(fits_file):
+                         manifest.append(fits_file)
+                    else:
+                        dl = Tesscut.download_cutouts(coordinates=coord,\
+                                                      size=cutout_size,\
+                                                      sector=c,\
+                                                      path=fits_dir)
+                        manifest.append(dl["Local Path"][0])
                 except:
-                    print(f"Sector {c} unavailable for {target_name}")
-                    logger.error(f"Sector {c} unavailable for {target_name}")
+                    print(f"Sector {c} unavailable for {name_target}")
+                    logger.error(f"Sector {c} unavailable for {name_target}")
         else:
             print("Some sectors not of type `int'. Fix and try again.")
             logger.error("Some sectors not of type `int'. Fix and try again.")
@@ -946,16 +983,11 @@ def get_cutouts(coord, cutout_size, target_name, choose_sec=None, tot_attempts=3
               f"{type(choose_sec)}")
         logger.error(f"The choose_sec parameter has an invalid format type: "
                      f"{type(choose_sec)}")
-    print(manifest)
-    if cap_files is not None:
-        return manifest[:cap_files]
-    else:
-        return manifest
-
+    return manifest
 
 def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
-                      final_table, choose_sec=None, cutout_size=20, \
-                      tot_attempts=3, cap_files=None, targ_name='G'):
+                      final_table, choose_sec=None, store_lc=False, cutout_size=20, \
+                      tot_attempts=3, cap_files=None, fits_dir='fits', lc_dir='lc'):
     '''Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources".
@@ -1006,47 +1038,46 @@ def one_source_cutout(coord, target, LC_con, flux_con, con_file, make_plots,\
         target.add_column(-999, name='log_tot_bg')
         target.add_column(-999, name='log_max_bg')
         target.add_column(0,    name='n_contaminants')
-
+    name_target = target['name'].replace(" ", "_")
+    name_spl = name_target.split("_")
+    if name_spl[0] == 'Gaia':
+        name_target = name_spl[-1]
+    
     # use Tesscut to get the cutout fits files for the target star
     # there may be more than 1 fits file if the target lands in
     # multiple sectors!
-
-    manifest = get_cutouts(coord, cutout_size, target['name'], tot_attempts=tot_attempts, choose_sec=choose_sec, cap_files=cap_files)
-
-    if manifest is None:
+    fits_files = get_cutouts(coord, cutout_size, name_target, tot_attempts=tot_attempts, choose_sec=choose_sec, cap_files=cap_files, fits_dir='fits')
+    if fits_files is None:
         logger.error(f"could not download any data for {target['name']}. "
                      f"Trying next target.")
     else:
-        for m, file_in in enumerate(manifest):
+        for m, file_in in enumerate(fits_files):
+            print(f'working on {file_in}, #{m+1} of {len(fits_files)}')
             try:
     # rename the fits file to something more legible for users
-                f_sp = file_in.split('-')
-                if targ_name =='G':
-                    name_underscore = target['source_id'].astype(str)
-                elif targ_name =='T':
-                    name_underscore = target['name'][0].replace(" ", "_")
-                else:
-                    name_underscore = target['source_id'].astype(str)
-                print(f"sector {f_sp[1][1:]}, {m+1} of {len(manifest)}")
-                file_new = '_'.join([name_underscore, f_sp[1][1:], f_sp[2],\
-                                     f_sp[3][0]])+'.fits'
-                os.rename(file_in, file_new)
-                logger.info(f"target: {target['source_id']}, "
-                            f"{m+1}/{len(manifest)}")
+                f_sp = file_in.split('/')[-1].split('-')
+                if (len(f_sp) >=3) & (f_sp[0] == 'tess'):
+                    f_new = f'./{fits_dir}/'+'_'.join([name_target, f_sp[1][1:], f_sp[2],\
+                                                       f_sp[3][0]])+'.fits'
+                    os.rename(f'./{file_in}', f_new)
+                    logger.info(f"target: {target['source_id']}, "
+                                f"{m+1}/{len(fits_files)}")
     # run the lightcurve analysis for the given target/fits file
-                t_sp = file_new.split('_')
+                else:
+                    f_new = f'./{fits_dir}/{f_sp[0]}'
+                t_sp = f_new.split('_')
     # simply extract the sector, ccd and camera numbers from the fits file.
                 scc = [int(t_sp[-3][1:]), int(t_sp[-2]), int(t_sp[-1][0])]
-                full_run_lc(file_new, target, make_plots, scc, final_table,
-                                   flux_con=flux_con, LC_con=LC_con,
-                                   con_file=con_file, XY_pos=(10.,10.))
+                full_run_lc(f_new, target, make_plots, scc, final_table, 
+                                   flux_con=flux_con, store_lc=store_lc, LC_con=LC_con,
+                                   con_file=con_file, XY_pos=(10.,10.), lc_dir=lc_dir)
             except Exception as e:
-                logger.error(f"Error occurred when processing {file_new}. "
+                logger.error(f"Error occurred when processing {f_sp}. "
                              f"Trying next target.")
 
         
 def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
-                       make_plots, choose_sec=None, tot_attempts=3, cap_files=None):
+                       make_plots, choose_sec=None, store_lc=False, tot_attempts=3, cap_files=None, res_dir='results', lc_dir='lc'):
     '''Run the tessilator for all targets.
 
     parameters
@@ -1092,10 +1123,7 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
     terminates.
     '''
     final_table = create_table_template()
-    isdir = os.path.isdir('fits')
-    if not isdir:
-        os.mkdir('fits')
-    if t_targets['log_tot_bg'] is None:
+    if 'log_tot_bg' not in t_targets.colnames:
         t_targets.add_column(-999, name='log_tot_bg')
         t_targets.add_column(-999, name='log_max_bg')
         t_targets.add_column(0,    name='num_tot_bg')
@@ -1103,11 +1131,14 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         print(f"{target['name']} (Gaia DR3 {target['source_id']}), star # {i+1} of {len(t_targets)}")
         coo = SkyCoord(target["ra"], target["dec"], unit="deg")
         one_source_cutout(coo, target, LC_con, flux_con, con_file,
-                          make_plots, final_table, choose_sec=choose_sec,
-                          tot_attempts=3, cap_files=cap_files)
+                          make_plots, final_table, store_lc=store_lc, choose_sec=choose_sec,
+                          tot_attempts=3, cap_files=cap_files, lc_dir=lc_dir)
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
-    final_table.write(period_file+'_'+dt_string+'.ecsv')
+    path_exist = os.path.exists(f'./{res_dir}')
+    if not path_exist:
+        os.makedirs(f'./{res_dir}')
+    final_table.write(f'./{res_dir}/{period_file}_{dt_string}.ecsv')
 
     hrs_mins_secs = print_time_taken(start, finish)
     print(f"Finished {len(t_targets)} targets in {hrs_mins_secs}")

@@ -100,10 +100,9 @@ def table_from_simbad(input_names):
     qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag "\
           "FROM gaiadr3.gaia_source "\
           f"WHERE source_id in ({ID_string});"
-    print(qry)
     job = Gaia.launch_job_async( qry )
-    print(job)
     gaia_table = job.get_results() # Astropy table
+    print('query completed!')
     # convert source_id column to str (astroquery returns type np.int64)
     gaia_table["source_id"] = gaia_table["source_id"].astype(str)
     list_ind = []
