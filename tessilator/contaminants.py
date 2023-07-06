@@ -15,7 +15,7 @@ __all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 
 logger = logging.getLogger(__name__)
 
 
-def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0, tot_attempts=3):
+def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempts=3):
     '''Perform an SQL Query to identify neighbouring contaminants.
 
     If an analysis of flux contribution from neighbouring contaminants is
@@ -28,9 +28,15 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0, tot_attemp
     ----------
     t_target : `astropy.table.Table`
         The input table
-
-    pix_radius : `float`, optional, default=5.0
+    pix_radius : `float`, optional, default=10.
         The maximum angular distance (in arcsecs) to search for contaminants
+    mag_lim : `float`, optional, default=3.
+        The faint magnitude limit to search for contaminants, where this value
+        is relative to the target. E.G., a value of 3. is 3. magnitudes
+        fainter than the target.
+    tot_attempts : `int`, optional, default=3
+        The total number of SQL query attempts to be made, in case of http
+        response issues.
 
     returns
     -------
@@ -51,28 +57,31 @@ def run_sql_query_contaminants(t_target, pix_radius=5.0, mag_lim=3.0, tot_attemp
 
     # Attempt a synchronous SQL job, otherwise try the asyncronous method.
 
-#    num_attempts = 0
-#    while num_attempts < tot_attempts:
-#        print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
-    try:
-        job = Gaia.launch_job(query)
-#            break
-    except:
-        logger.warning(f"Couldn't run the sync query for "
-                       f"{t_target['source_id']}")
-        job = Gaia.launch_job_async(query)
-#        finally:
-#            logger.warning(f"Couldn't run the async query for "
-#                           f"{t_target['source_id']}")
-#            num_attempts += 1
-#    if num_attempts < tot_attempts:
-    t_gaia = job.get_results()
-    return t_gaia
-#    else:
-#        print('Most likely there is a server problem. Try again later.')
-#        sys.exit()
+    num_attempts = 0
+    while num_attempts < tot_attempts:
+        print(f'attempting sql query for identifying contaminants: attempt {num_attempts+1} of {tot_attempts}...')
+        try:
+            job = Gaia.launch_job(query)
+            break
+        except:
+            logger.warning(f"Couldn't run the sync query for "
+                           f"{t_target['source_id']}, attempt {num_attempts+1}")
+            try:
+                job = Gaia.launch_job_async(query)
+                break
+            except:
+                logger.warning(f"Couldn't run the async query for "
+                               f"{t_target['source_id']}, attempt {num_attempts+1}")
+                num_attempts += 1
+    if num_attempts < tot_attempts:
+        t_gaia = job.get_results()
+        print(f"Super! We have contamination data for {t_target['source_id']}!")
+        return t_gaia
+    else:
+        print('Most likely there is a server problem. Try again later.')
+        sys.exit()
 
-def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
+def flux_fraction_contaminant(ang_sep, s, d_thr=5.e-6):
     '''Quantify the flux contamination from a neighbouring source.
 
     Calculates the fraction of flux from a neighbouring contaminating source
@@ -91,10 +100,12 @@ def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
     ang_sep : `float`
         The angular distance (in arcseconds) between a contaminant and the
         aperture centre. 
-
     s : `float`
         For a given aperture size, Rad (in pixels)
         and an FWHM of the TESS PSF, exprf (set at 0.65 pixels), :math:`s = {\\rm Rad}^2/(2.0*{\\rm exprf}^2)`
+    d_th : `float`, optional, default=5.e-6
+        The threshold value to stop the summations. When the next component contributes a value which is
+        less than d_th, the summation ends. 
 
     returns
     -------
@@ -108,27 +119,27 @@ def flux_fraction_contaminant(ang_sep, s, d_th=0.000005):
         sx = 1.0 - (np.exp(-s)*sk)
         n_0 = ((t**n)/np.math.factorial(n))*sx
         n_z += n_0
-        if np.abs(n_0) > d_th:
+        if np.abs(n_0) > d_thr:
             n = n+1
-        if np.abs(n_0) < d_th:
+        if np.abs(n_0) < d_thr:
             break
     frac_flux_in_aperture = n_z*np.exp(-t)
     return frac_flux_in_aperture
 
 
 
-def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
+def contamination(t_targets, Rad=1.0, n_cont=10):
     '''Estimate flux from neighbouring contaminant sources.
 
     The purpose of this function is to estimate the amount of flux incident in
     the TESS aperture that originates from neighbouring, contaminating sources.
     Given that the passbands from TESS (T-band, 600-1000nm) are similar to Gaia
-    G magnitude, and that Gaia is sensitive to G~21, the Gaia DR3 catalogue is
-    used to quantify contamination.
+    G magnitude, and that Gaia can observe targets down to G~21, the Gaia DR3
+    catalogue is used to quantify contamination.
     
-    For each target in the input file, the function "runSQLQueryContaminants"
+    For each target in the input file, the function "run_sql_query_contaminants"
     returns a catalogue of Gaia DR3 objects of all neighbouring sources that
-    are within a chosen pixel radius and are brighter than $G_{source} + 3$.
+    are within a chosen pixel radius and are brighter than $G_{source} + d_{thr}$.
     
     The Rayleigh formula is used to calculate the fraction of flux incident in
     the aperture from the target, and the function "flux_fraction_contaminant"
@@ -140,37 +151,24 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
     ----------
     t_targets : `astropy.table.Table`
         The input table for all the targets.
-    
-    LC_con : `bool`
-        If true, a table of Gaia DR3 information on the contaminants is
-        returned, else None.
-    
     Rad : `float`, optional, default=1.0
         The size of the radius aperture (in pixels)
-
     n_cont : `int`, optional, default=5
-        The maximum number of neighbouring contaminants to store to table if
-        LC_con is True.
+        The maximum number of neighbouring contaminants to store to table.
 
     returns
     -------
     t_targets : `astropy.table.Table`
         The input table for all the targets with 3 extra columns to quantify
         the flux contamination.
-
-    t_cont : `astropy.table.Table` or `None`
-        If LC_con is true, a table of Gaia DR3 information on the contaminants
-        is returned, else None.
+    t_cont : `astropy.table.Table`
+        A table of Gaia DR3 data for the contaminants.
     '''
-
     con1, con2, con3 = [], [], []
     # Create empty table to fill with results from the contamination analysis.
-    if LC_con:
-        t_cont = Table(names=('source_id_target', 'source_id', 'RA',\
-                              'DEC', 'Gmag', 'd_as', 'log_flux_frac'),\
-                       dtype=(str, str, float, float, float, float, float))
-    else:
-        t_cont = None
+    t_cont = Table(names=('source_id_target', 'source_id', 'RA',\
+                          'DEC', 'Gmag', 'd_as', 'log_flux_frac'),\
+                   dtype=(str, str, float, float, float, float, float))
 
     for i in range(len(t_targets)):
         r = run_sql_query_contaminants(t_targets[i])
@@ -192,19 +190,17 @@ def contamination(t_targets, LC_con, Rad=1.0, n_cont=5):
                 f_frac = flux_fraction_contaminant(ang_sep, s)
                 fg_cont.append(f_frac*10**(-0.4*G_cont))
 
-            if LC_con:
-                rx['log_flux_frac'] = np.log10(fg_cont/fg_star)
-                rx['source_id_target'] = t_targets["source_id"][i]
-                new_order = ['source_id_target', 'source_id', 'ra', 'dec', \
-                             'phot_g_mean_mag', 'ang_sep', 'log_flux_frac']
-                rx.sort(['log_flux_frac'], reverse=True)
-                rx = rx[new_order]
-                rx['source_id_target'] = rx['source_id_target'].astype(str)
-                rx['source_id'] = rx['source_id'].astype(str)
-                # store the n_cont highest flux contributors to table
-                for rx_row in rx[0:n_cont][:]:
-                    if rx_row['log_flux_frac'] > -1.0:
-                        t_cont.add_row(rx_row)
+            rx['log_flux_frac'] = np.log10(fg_cont/fg_star)
+            rx['source_id_target'] = t_targets["source_id"][i]
+            new_order = ['source_id_target', 'source_id', 'ra', 'dec', \
+                         'phot_g_mean_mag', 'ang_sep', 'log_flux_frac']
+            rx.sort(['log_flux_frac'], reverse=True)
+            rx = rx[new_order]
+            rx['source_id_target'] = rx['source_id_target'].astype(str)
+            rx['source_id'] = rx['source_id'].astype(str)
+            # store the n_cont highest flux contributors to table
+            for rx_row in rx[0:n_cont][:]:
+                t_cont.add_row(rx_row)
 
             con1.append(np.log10(np.sum(fg_cont)/fg_star))
             con2.append(np.log10(max(fg_cont)/fg_star))

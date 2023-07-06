@@ -52,6 +52,7 @@ import itertools as it
 
 
 from collections.abc import Iterable
+from collections import defaultdict
 
 # Local application imports
 from .tess_stars2px import tess_stars2px_function_entry
@@ -130,7 +131,8 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                                    'flux_corr', 'mag', 'mag_err', 'time'),
                             dtype=(str, float, float, float, float, float,
                                    float, float, float, float, float))
-    for f_num, f_file in enumerate(fits_files):
+    for f_num, f_file in enumerate(fits_files[:100]):
+        print(f_num, f_file)
         try:
             with fits.open(f_file) as hdul:
                 data = hdul[1].data
@@ -174,8 +176,9 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                         #get the image statistics for the background annulus
                         aperstats = ApertureStats(flux_ap, annulus_aperture)
                         #obtain the raw (source+background) flux
-                        t = aperture_photometry(flux_ap, aperture,
-                                                error=erro_ap)
+                        with np.errstate(invalid='ignore'):
+                            t = aperture_photometry(flux_ap, aperture,
+                                                    error=erro_ap)
 
                         #calculate the background contribution to the aperture
                         aperture_area = aperture.area_overlap(flux_ap)
@@ -239,8 +242,9 @@ def AIC_selector(x, y, err, poly_max=10):
     while q < poly_max:
         p1, r1, _,_,_ = np.polyfit(x, y, q, full=True)
         p2, r2, _,_,_ = np.polyfit(x, y, q+1, full=True)
-        chi1 = np.sum(((np.polyval(p1, x) - y)**2)/(err)**2)
-        chi2 = np.sum(((np.polyval(p2, x) - y)**2)/(err)**2)
+        with np.errstate(invalid='ignore'):
+            chi1 = np.sum(((np.polyval(p1, x) - y)**2)/(err)**2)
+            chi2 = np.sum(((np.polyval(p2, x) - y)**2)/(err)**2)
 
         # AIC = 2(k - ln(L)) + term for AICc
         # -ln(L) = chi-squared/2
@@ -255,7 +259,7 @@ def AIC_selector(x, y, err, poly_max=10):
             q += 1
             if q == poly_max:
                 poly_ord, coeffs = q+1, p2
-                return q+1, p2
+                return poly_ord, coeffs
 
 
 def clean_lc(t, f, err, MAD_fac=2.0, time_fac=10., min_num_per_group=50):
@@ -283,6 +287,8 @@ def clean_lc(t, f, err, MAD_fac=2.0, time_fac=10., min_num_per_group=50):
         The set of time coordinates (in days)
     f : `Iterable`
         The set of normalised flux coordinates
+    err : `Iterable`
+        The set of normalised flux errors
     MAD_fac : `float`, optional, default=2.
         The threshold number of MAD values to allow. 
     time_fac : `float`, optional, default=10.
@@ -327,7 +333,7 @@ def clean_lc(t, f, err, MAD_fac=2.0, time_fac=10., min_num_per_group=50):
                 while A0[j] == 0:
                     j = j-1
                 gf.append(j)
-                i = k + 1
+                i = k+1
         else:
             i = i+1
     if l == 1:
@@ -394,7 +400,8 @@ def mean_of_arrays(arr, num):
     '''
     x = np.array_split(arr, num)
     ar = np.array(list(it.zip_longest(*x, fillvalue=np.nan)))
-    return np.nanmean(ar, axis=0), np.nanstd(ar, axis=0)
+    mean_out, std_out = np.nanmean(ar, axis=0), np.nanstd(ar, axis=0) 
+    return mean_out, std_out
     
 
 def moving_average(x, w):
@@ -418,7 +425,7 @@ def moving_average(x, w):
     
 
 
-def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.0):
+def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.):
     '''Identify if the lightcurve has jumps.
     
     A jumpy lightcurve is one that has small contiguous data points that change in flux significantly compared to the amplitude of the lightcurve. These could be due to some instrumental noise or response to a non-astrophysical effect. They may also be indicative of a stellar flare or active event.
@@ -437,7 +444,7 @@ def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.0):
         The running index for each contiguous data section in the lightcurve
     n_avg : `int`, optional, default=10
         The number of data points to calculate the running average
-    thresh_diff : `float`, optional, default=10.0
+    thresh_diff : `float`, optional, default=10.
         The threshold value, which, if exceeded, will yield a "jumpy" lightcurve
 
     returns
@@ -464,7 +471,7 @@ def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.0):
     return jump_flag
 
 
-def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0):
+def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.):
     '''Choose how to detrend the lightcurve, either as one component or in parts.
     
     There are always at least two data components in a TESS sector because of the finite time needed for data retrieval. This can sometimes lead to discontinuities between components because of TESS systematics and the temperature gradients across the photometer. These discontinuities can cause the phase of the sinusoidal fit to change, leading to low power output in the periodograms. Alternatively, if the data are all detrended individually, but the data is relatively continuous, this can lead to shorter period measurements.
@@ -481,12 +488,12 @@ def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0):
         The error on "f_orig"
     lc_part : `Iterable`
         The running index for each contiguous data section in the lightcurve
-    MAD_fac : `float`, optional, default = 2.0
+    MAD_fac : `float`, optional, default = 2.
         The factor to multiply the median absolute deviation by.    
 
     returns
     -------
-    norm_comp : `Boolean`
+    norm_comp : `bool`
         Determines whether the data should be detrended as one whole component (False) or in parts (True)
     '''
 
@@ -514,7 +521,7 @@ def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0):
     return norm_comp
 
 
-def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
+def detrend_lc(ds,df,t,m,f,err, MAD_fac=2., poly_max=8):
     '''Detrend and normalise the lightcurves.
 
     | This function runs several operations to detrend the lightcurve, as follows:
@@ -538,7 +545,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
         The list of flux coordinates.
     err : `Iterable`
         The list of flux error coordinates.
-    MAD_fac : `float`, optional, default = 2.0
+    MAD_fac : `float`, optional, default = 2.
         The factor to multiply the median absolute deviation by.
     poly_max : `int`, optional, default=8
         The maximum order of the polynomial fit.
@@ -547,7 +554,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
     -------
     dict_lc : `dict`
         | A dictionary containing the following keys:
-        | "time" -> The time coordinate
+        | "time_o" -> The time coordinate
         | "mag" -> The magnitude coordinate
         | "oflux" -> The original, normalised flux values
         | "nflux" -> The detrended, cleaned, normalised flux values
@@ -555,7 +562,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
         | "polyord" -> The polynomial order used for each detrend        
     '''
 
-    dict_lc = {"time":[], "mag":[], "oflux":[], "nflux":[], "enflux":[], "lc_part":[]}
+    dict_lc = defaultdict(list)
     t_orig, f_orig, e_orig = np.array([]), np.array([]), np.array([])
     m_orig, lc_part = np.array([]), np.array([])
 
@@ -586,7 +593,7 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
 
     # 4. Decide whether to use the detrended lightcurve from part 3, or to separate the
     #    lightcurve into individual components and detrend each one separately
-    norm_comp = normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.0)
+    norm_comp = normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.)
 
     if norm_comp:
         f_detrend = np.array([])
@@ -598,7 +605,6 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
         f_norm = f_detrend
     else:
         f_norm = f_norm
-
     # 5. Place the results into a dictionary.
     for i in range(len(t_orig)):
         dict_lc["time_o"].append(t_orig[i])
@@ -607,7 +613,6 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2.0, poly_max=8):
         dict_lc["nflux"].append(f_norm[i])
         dict_lc["enflux"].append(e_orig[i])
         dict_lc["lc_part"].append(lc_part[i])
-
     return dict_lc
     
     
@@ -630,7 +635,12 @@ def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
         | "mag" -> The target magnitude
         | "flux_corr" -> The total flux subtracted by the background flux
         | "flux_err" -> The error on flux_corr
-        
+    name_lc : `str`
+        The target name
+    store_lc : `bool`, optional, default=False
+        Choose to save the cleaned lightcurve to file
+    lc_dir : `str`, optional, default='lc'
+        The directory used to store the lightcurve files if lc_dir==True
 
     returns
     -------
@@ -658,12 +668,13 @@ def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
     eflux = np.array(phot_table["flux_err"][:][g])
 
     ds, df = clean_lc(time, flux, eflux)
-
+    print('cleaned lc!')
     if (len(ds) == 0) or (len(df) == 0):
         return [], []
     # 1st: normalise the flux by dividing by the median value
     nflux  = flux/np.median(flux)
-    neflux = eflux/flux
+    with np.errstate(invalid='ignore'):
+        neflux = eflux/flux
     # 2nd: detrend each lightcurve sections by either a straight-line fit or a
     # parabola. The choice is selected using AIC.
     cln = detrend_lc(ds, df, time, mag, nflux, neflux)
@@ -813,6 +824,8 @@ def gauss_fit_peak(period, power):
     popt : `list`
         The best-fit Gaussian parameters: A, B and C where A is the amplitude,
         B is the mean and C is the uncertainty.
+    ym : `list`
+        The y values calculated from the Gaussian fit.
     '''
     if len(period) > 3:
         try:
@@ -865,6 +878,9 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
         The maximum period (in days) to be calculated.
     samples_per_peak : `int`, optional, default=10
         The number of samples to measure in each periodogram peak.
+    check_jump : `bool`, optional, default=False
+        Choose to check the lightcurve for jumpy data, using the "check_for_jumps"
+        function.
 
     returns
     -------
@@ -902,14 +918,15 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
     LS_dict = dict()
-    
     time = np.array(cln["time"])
-    nflux = np.array(cln["nflux"])
+    if "nflux_corr" in cln.keys():
+        nflux = np.array(cln["nflux_corr"])
+    else:
+        nflux = np.array(cln["nflux"])
     enflux = np.array(cln["enflux"])
     if check_jump:
         lc_part = np.array(cln["lc_part"])
         jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
-
     med_f, MAD_f = np.median(nflux), MAD(nflux, scale='normal')
     ls = LombScargle(time, nflux, dy=enflux)
     frequency, power = ls.autopower(minimum_frequency=1./p_max_thresh,
@@ -1002,7 +1019,7 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
     pha_plt, nf_plt, ef_plt, cyc_plt = pha[p], nflux[p], enflux[p], cyc[p].astype(int)
     try:
         pops, popsc = curve_fit(sin_fit, pha_fit, nf_fit,
-                                bounds=(0, [2., 2., 1000.]))#, 2.*np.pi]))
+                                bounds=(0, [2., 2., 1000.]))
     except Exception:
         logger.warning(Exception)
         pops, popsc = np.array([1., 0.001, 0.5]), 0
