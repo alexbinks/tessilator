@@ -16,7 +16,7 @@ __all__ = ['make_plot']
 
 def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
-              SkyRad = [6.,8.], im_dir='plots'):
+              SkyRad = [6.,8.], im_dir='plots', nc='nc'):
     '''Produce a plot of tessilator results.
 
     | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
@@ -39,6 +39,8 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
         List containing the sector number, camera and CCD
     t_table : `astropy.table.Table`
         Table containing the input data for the target
+    name_target : `str`
+        The name of the target
     XY_ctr : `tuple`, optional, default=(10,10)
         The centroid (in pixels) of the target in the TESS image.
     XY_contam : `Iterable` or `None`, optional, default = `None`
@@ -51,10 +53,10 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
         The aperture radius from the aperture photometry
     SkyRad : `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
-    targ_name : `G` or `T`, optional, default=G
-        The prefix in the names of the image files are changed to either the Gaia source
-        identifier if targ_name = G, or the target name if targ_name = T.
-
+    im_dir : `str`, optional, default='plots'
+        The name of the directory where the plots will be saved.
+    nc : `str`, optional, default='nc'
+        A string to describe the type of noise correction applied to the lightcurve.
     returns
     -------
     Nothing returned. The plot produced is saved to file.
@@ -65,6 +67,8 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     else:
         best_fit_type = 'sine'
 
+    if "nflux_corr" in clean.keys():
+        clean["nflux"] = clean["nflux_corr"]
     fsize = 22.
     lsize = 0.9*fsize
     fig, axs = plt.subplots(2,2, figsize=(20,15))
@@ -78,15 +82,10 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
     circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
-    f = axs[0,0].imshow(np.log10(im_plot.data), cmap='binary')
-#    name_underscore = get_name_underscore(t_table, targ_name)
-#    if targ_name =='G':
-#        name_underscore = t_table['source_id'][0].replace(" ", "_")
-#    elif targ_name =='T':
-#        name_underscore = t_table['name'][0].replace(" ", "_")
-#    else:
-#        name_underscore = t_table['source_id'][0].replace(" ", "_")
-
+    with np.errstate(all='ignore'):
+        log_im_plot = np.log10(im_plot.data)
+        image_plot = np.ma.array(log_im_plot, mask=np.isnan(log_im_plot))
+    im_fig = axs[0,0].imshow(image_plot, cmap='binary')
     Gaia_name = f"Gaia DR3 {t_table['source_id'][0]}"
     targ_name = t_table['name'][0]
     fig.text(0.5,0.96,
@@ -107,7 +106,7 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     divider = make_axes_locatable(axs[0,0])
     cax = divider.new_horizontal(size='5%', pad=0.4)
     fig.add_axes(cax)
-    cbar = fig.colorbar(f, cax=cax)
+    cbar = fig.colorbar(im_fig, cax=cax)
     cbar.set_label('log$_{10}$ counts (e$^-$/s)', rotation=270, labelpad=+15)
 
     axs[0,1].set_xlim([p_min_thresh, p_max_thresh])
@@ -153,9 +152,9 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
                   linewidth=1.5, label='LS best fit')
     axs[1,0].scatter(t_orig0, orig["nflux"], s=0.5, alpha=0.3,
                      label='raw, normalized')
-    axs[1,0].scatter(clean["time0"], clean["oflux"],s=0.5, c='r', alpha=0.5,
+    axs[1,0].scatter(clean["time"], clean["oflux"],s=0.5, c='r', alpha=0.5,
                      label='cleaned, normalized')
-    axs[1,0].scatter(clean["time0"], clean["nflux"],s=1.2, c='g', alpha=0.7,
+    axs[1,0].scatter(clean["time"], clean["nflux"],s=1.2, c='g', alpha=0.7,
                      label='cleaned, normalized, detrended')
     if LS_dict['jump_flag']:
         axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
@@ -197,9 +196,8 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
                         bbox_transform=axs[1,1].transAxes)
     cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
                         label='cycle number')
-
     plot_name = '_'.join([name_target, f"{scc[0]:04d}",
-                          str(scc[1]), str(scc[2])])+'.png'
+                          f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
     path_exist = os.path.exists(f'./{im_dir}')
     if not path_exist:
         os.mkdir(f'./{im_dir}')
