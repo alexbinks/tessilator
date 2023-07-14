@@ -131,7 +131,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                                    'flux_corr', 'mag', 'mag_err', 'time'),
                             dtype=(str, float, float, float, float, float,
                                    float, float, float, float, float))
-    for f_num, f_file in enumerate(fits_files[:100]):
+    for f_num, f_file in enumerate(fits_files):
         print(f_num, f_file)
         try:
             with fits.open(f_file) as hdul:

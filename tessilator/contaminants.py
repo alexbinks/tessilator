@@ -44,7 +44,7 @@ def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempt
         The Gaia results table from the SQL query.    
     '''
     # Generate an SQL query for each target.
-    query = f"SELECT source_id, ra, dec, phot_g_mean_mag,\
+    query = f"SELECT source_id, ra, dec, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag, \
     DISTANCE(\
     POINT({t_target['ra']}, {t_target['dec']}),\
     POINT(ra, dec)) AS ang_sep\
@@ -52,7 +52,7 @@ def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempt
     WHERE 1 = CONTAINS(\
     POINT({t_target['ra']}, {t_target['dec']}),\
     CIRCLE(ra, dec, {pix_radius*pixel_size/3600.})) \
-    AND phot_g_mean_mag < {t_target['Gmag']+mag_lim} \
+    AND phot_g_mean_mag < {t_target['RPmag']+mag_lim} \
     ORDER BY phot_g_mean_mag ASC"
 
     # Attempt a synchronous SQL job, otherwise try the asyncronous method.
@@ -134,12 +134,12 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
     The purpose of this function is to estimate the amount of flux incident in
     the TESS aperture that originates from neighbouring, contaminating sources.
     Given that the passbands from TESS (T-band, 600-1000nm) are similar to Gaia
-    G magnitude, and that Gaia can observe targets down to G~21, the Gaia DR3
+    RP magnitude, and that Gaia can observe targets down to G~21, the Gaia DR3
     catalogue is used to quantify contamination.
     
     For each target in the input file, the function "run_sql_query_contaminants"
     returns a catalogue of Gaia DR3 objects of all neighbouring sources that
-    are within a chosen pixel radius and are brighter than $G_{source} + d_{thr}$.
+    are within a chosen pixel radius and are brighter than $RP_{source} + d_{thr}$.
     
     The Rayleigh formula is used to calculate the fraction of flux incident in
     the aperture from the target, and the function "flux_fraction_contaminant"
@@ -167,8 +167,8 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
     con1, con2, con3 = [], [], []
     # Create empty table to fill with results from the contamination analysis.
     t_cont = Table(names=('source_id_target', 'source_id', 'RA',\
-                          'DEC', 'Gmag', 'd_as', 'log_flux_frac'),\
-                   dtype=(str, str, float, float, float, float, float))
+                          'DEC', 'Gmag', 'BPmag', 'RPmag', 'd_as', 'log_flux_frac'),\
+                   dtype=(str, str, float, float, float, float, float, float, float))
 
     for i in range(len(t_targets)):
         r = run_sql_query_contaminants(t_targets[i])
@@ -178,22 +178,25 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
             # make a table of all objects from the SQL except the target itself
             rx = Table(r[r["source_id"].astype(str) != \
                          t_targets["source_id"][i].astype(str)])
-
             # calculate the fraction of flux from the source object that falls
             # into the aperture using the Rayleigh formula
             s = Rad**(2)/(2.0*exprf**(2)) # measured in pixels
-            fg_star = (1.0-np.exp(-s))*10**(-0.4*t_targets["Gmag"][i])
-            fg_cont = []
+            frp_star = (1.0-np.exp(-s))*10**(-0.4*t_targets["RPmag"][i])
+            frp_cont = []
             # calculate the fractional flux incident in the aperture from
             # each contaminant.
-            for G_cont, ang_sep in zip(rx["phot_g_mean_mag"], rx["ang_sep"]):
+            for G_cont, RP_cont, ang_sep in zip(rx["phot_g_mean_mag"], rx["phot_rp_mean_mag"], rx["ang_sep"]):
+                if type(RP_cont) == np.ma.core.MaskedConstant:
+                    RP_cont = G_cont + 0.756
+                    RP_cont = RP_cont.astype(np.float32)
+                
                 f_frac = flux_fraction_contaminant(ang_sep, s)
-                fg_cont.append(f_frac*10**(-0.4*G_cont))
+                frp_cont.append(f_frac*10**(-0.4*RP_cont))
 
-            rx['log_flux_frac'] = np.log10(fg_cont/fg_star)
+            rx['log_flux_frac'] = np.log10(frp_cont/frp_star)
             rx['source_id_target'] = t_targets["source_id"][i]
             new_order = ['source_id_target', 'source_id', 'ra', 'dec', \
-                         'phot_g_mean_mag', 'ang_sep', 'log_flux_frac']
+                         'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'ang_sep', 'log_flux_frac']
             rx.sort(['log_flux_frac'], reverse=True)
             rx = rx[new_order]
             rx['source_id_target'] = rx['source_id_target'].astype(str)
@@ -202,9 +205,9 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
             for rx_row in rx[0:n_cont][:]:
                 t_cont.add_row(rx_row)
 
-            con1.append(np.log10(np.sum(fg_cont)/fg_star))
-            con2.append(np.log10(max(fg_cont)/fg_star))
-            con3.append(len(fg_cont))
+            con1.append(np.log10(np.sum(frp_cont)/frp_star))
+            con2.append(np.log10(max(frp_cont)/frp_star))
+            con3.append(len(frp_cont))
         else:
             con1.append(-999)
             con2.append(-999)

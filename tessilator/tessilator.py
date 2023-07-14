@@ -76,13 +76,13 @@ def create_table_template():
         A template table to store tessilator results.
     '''
     final_table = Table(names=['name', 'source_id', 'ra', 'dec', 'parallax',\
-                           'Gmag', 'Sector', 'Camera', 'CCD',\
+                           'Gmag', 'BPmag', 'RPmag', 'Sector', 'Camera', 'CCD',\
                            'log_tot_bg_star', 'log_max_bg_star',\
                            'n_contaminants', 'Period_Max', 'Period_Gauss',\
                            'e_Period', 'Period_2', 'power1', 'power1_power2',\
                            'FAP_001', 'AIC_line', 'AIC_sine', 'amp', 'scatter',\
                            'chisq_phase', 'fdev', 'Ndata','jump_flag','cont_flags'],\
-                        dtype=(str, str, float, float, float, float, int, int,\
+                        dtype=(str, str, float, float, float, float, float, float, int, int,\
                                int, float, float, int, float, float, float,\
                                float, float, float, float, float, float, float, float,\
                                float, float, int, int, str))
@@ -287,6 +287,8 @@ def test_table_large_sectors(t_filename):
         #. dec: declination
         #. parallax: parallax
         #. Gmag: Gaia DR3 apparent G-band magnitude
+        #. BPmag: Gaia DR3 apparent BP-band magnitude
+        #. RPmag: Gaia DR3 apparent RP-band magnitude
         #. Sector: The TESS sector
         #. Camera: The TESS camera
         #. CCD: The TESS CCD number
@@ -310,7 +312,7 @@ def test_table_large_sectors(t_filename):
 
     t = Table.read(t_filename, format='csv')
     # The list of column names which must be spelled exactly.
-    cnc = ['source_id', 'ra', 'dec', 'parallax', 'Gmag', 'Sector',
+    cnc = ['source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag', 'Sector',
                        'Camera', 'CCD', 'Xpos', 'Ypos']
     if cnc == t.colnames:
         t["name"] = t["source_id"]
@@ -338,7 +340,7 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs', gaia_sys=T
     | The input data must be in the form of a comma-separated variable and may take 3 forms:
     | (a) a 1-column table of source identifiers
     | (b) a 2-column table of decimal sky coordinates (celestial or galactic)
-    | (c) a pre-prepared table of 5 columns consisting of source_id, ra, dec, parallax, Gmag (without column headers)
+    | (c) a pre-prepared table of 7 columns consisting of source_id, ra, dec, parallax, Gmag, BPmag, RPmag (without column headers)
     
     Note that a single target can be quickly analysed directly from the command line by using option (a) with double-quotation marks around the source identifier.
     
@@ -371,7 +373,7 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs', gaia_sys=T
         t_input = ascii.read(t_filename, delimiter=',', format='no_header')
     elif isinstance(t_filename, Table):
         t_input = t_filename
-
+    print(t_input)
     t_targets = get_gaia_data(t_input, name_is_source_id=name_is_source_id, type_coord=type_coord, gaia_sys=gaia_sys)
 
     return t_targets
@@ -390,7 +392,7 @@ def collect_contamination_data(t_targets, flux_con, con_file, Rad=1., gaia_sys=T
     Parameters
     ----------
     t_targets : `astropy.table.Table`
-        target table with columns "name, source_id, ra, dec, parallax, Gmag".
+        target table with columns "name, source_id, ra, dec, parallax, Gmag, BPmag, RPmag".
     flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
     con_file : `str`
@@ -462,6 +464,8 @@ def make_datarow(t_target, scc, d_target, labels_cont):
           t_target["dec"],
           t_target["parallax"],
           t_target["Gmag"],
+          t_target["BPmag"],
+          t_target["RPmag"],
           scc[0],
           scc[1],
           scc[2],
@@ -500,6 +504,8 @@ def make_failrow(t_target, scc):
         #. dec: declination
         #. parallax: parallax
         #. Gmag: Gaia DR3 apparent G-band magnitude
+        #. BPmag: Gaia DR3 apparent BP-band magnitude
+        #. RPmag: Gaia DR3 apparent RP-band magnitude
         #. log_tot_bg_star: log-10 value of the flux ratio between contaminants and target (optional)
         #. log_max_bg_star: log-10 value of the flux ratio between the largest contaminant and target (optional)
         #. n_contaminants: number of contaminant sources (optional)
@@ -526,6 +532,8 @@ def make_failrow(t_target, scc):
           t_target["dec"],
           t_target["parallax"],
           t_target["Gmag"],
+          t_target["BPmag"],
+          t_target["RPmag"],
           scc[0],
           scc[1],
           scc[2],

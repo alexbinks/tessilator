@@ -44,7 +44,6 @@ def table_from_simbad(input_names):
     '''
     # Part 1: Use the SIMBAD database to retrieve the Gaia source identifier
     #         from the target names. 
-
     # set the column header = "ID"
     input_names.rename_column(input_names.colnames[0], 'ID')
     input_names["ID"] = input_names["ID"].astype(str)
@@ -100,7 +99,8 @@ def table_from_simbad(input_names):
             ID_string += gaia_name+','
         else:
             ID_string += gaia_name
-    qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag "\
+    print(ID_string)
+    qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag,phot_bp_mean_mag,phot_rp_mean_mag "\
           "FROM gaiadr3.gaia_source "\
           f"WHERE source_id in ({ID_string});"
     job = Gaia.launch_job_async( qry )
@@ -117,7 +117,9 @@ def table_from_simbad(input_names):
     gaia_table = gaia_table[list_ind]
     gaia_table['name'] = NameList
     gaia_table.rename_column('phot_g_mean_mag', 'Gmag')
-    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    gaia_table.rename_column('phot_bp_mean_mag', 'BPmag')
+    gaia_table.rename_column('phot_rp_mean_mag', 'RPmag')
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]
     return gaia_table
 
@@ -173,7 +175,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
     gaia_table : `astropy.table.Table`
         The output table ready for further analysis
     '''
-    gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'), \
+    gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag'), \
                        dtype=(int,float,float,float,float))
     if type_coord == 'galactic':
         gal = SkyCoord(l=coord_table['col1'],\
@@ -196,7 +198,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         for i in range(len(coord_table)):
         # Generate an SQL query for each target, where the nearest source is
         # returned within a maximum radius set by ang_max.
-            qry = f"SELECT source_id, ra, dec, parallax, phot_g_mean_mag, \
+            qry = f"SELECT source_id, ra, dec, parallax, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag \
                     DISTANCE(\
                     POINT({coord_table['ra'][i]}, {coord_table['dec'][i]}),\
                     POINT(ra, dec)) AS ang_sep\
@@ -211,7 +213,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
             if len(x) == 0:
                 continue
             else:
-                y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag']
+                y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag']
                 gaia_table.add_row((y))
         # For each source, query the identifiers resolved by SIMBAD and return the
         # target with the shortest number of characters (which is more likely to be
@@ -229,12 +231,12 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         twomass_name = get_twomass_like_name(c)
         for i in range(len(twomass_name)):
             source_id = f'{i+1:0{len(str(len(twomass_name)))}d}'
-            row = [source_id, c[i].ra.deg, c[i].dec.deg, -999, -999]
+            row = [source_id, c[i].ra.deg, c[i].dec.deg, -999, -999, -999, -999]
             gaia_table.add_row(row)
         gaia_table['name'] = twomass_name
 
 
-    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]
     return gaia_table
 
@@ -255,6 +257,8 @@ def table_from_table(input_table, name_is_source_id=False):
         * dec (data type: `float`)
         * parallax (data type: `float`)
         * Gmag (data type: `float`)
+        * BPmag (data type: `float`)
+        * RPmag (data type: `float`)
 
         The column headers must not be included!
     name_is_source_id : `bool`, optional, default=False
@@ -266,8 +270,8 @@ def table_from_table(input_table, name_is_source_id=False):
         the output table ready for further analysis
     '''
 
-    gaia_table = Table(data=input_table, dtype=(str, float, float, float, float),
-                       names=('source_id', 'ra', 'dec', 'parallax', 'Gmag'))
+    gaia_table = Table(data=input_table, dtype=(str, float, float, float, float, float, float),
+                       names=('source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag'))
     gaia_table['source_id'] = gaia_table['source_id'].astype(int)
     if name_is_source_id:
         gaia_table['name'] = gaia_table['source_id'].data
@@ -281,7 +285,7 @@ def table_from_table(input_table, name_is_source_id=False):
             else:
                 NameList.append(sorted(r["ID"], key=len)[0])
         gaia_table["name"] = NameList
-    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag']
+    new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]
     return gaia_table
 
@@ -329,7 +333,7 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
         tbl = table_from_simbad(gaia_table)
     elif len(gaia_table.colnames) == 2:
         tbl = table_from_coords(gaia_table, type_coord=type_coord, gaia_sys=gaia_sys)
-    elif len(gaia_table.colnames) == 5:
+    elif len(gaia_table.colnames) == 7:
         tbl = table_from_table(gaia_table, name_is_source_id=name_is_source_id)
     else:
         raise Exception('Input table has invalid format. Please use one of the \
