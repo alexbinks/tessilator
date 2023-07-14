@@ -12,6 +12,7 @@ gaia_sys = True
 logging.basicConfig(filename="output.log", level=logging.INFO)
 
 print("Reading the table and formatting into astropy table structure.")
+print(tFile)
 tTargets = tessilator.read_data(tFile, gaia_sys=gaia_sys, type_coord='icrs')
 print("Done reading the table and formatting.")
 
@@ -21,4 +22,4 @@ print("Done calculating the contamination.")
 
 print("...now iterating over each source.")
 tessilator.all_sources_cutout(tTargets, periodFile, lcCon, fluxCon, conFile,
-                              makePlots, choose_sec=None, store_lc=True, tot_attempts=10, cap_files=5, fix_noise=True)
+                              makePlots, choose_sec=None, store_lc=True, tot_attempts=10, cap_files=7, fix_noise=False)

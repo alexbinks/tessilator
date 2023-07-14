@@ -100,6 +100,7 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[0,0].add_patch(circ_ann1)
     axs[0,0].add_patch(circ_ann2)
     if isinstance(XY_contam, Iterable):
+        print(XY_contam)
         axs[0,0].scatter(XY_contam[:, 0], XY_contam[:, 1], marker='X',
                          s=400, color='orange')
 
@@ -150,9 +151,9 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[1,0].set_ylabel("normalised flux", c='g', fontsize=fsize)
     axs[1,0].plot(LS_dict["time"], LS_dict['y_fit_LS'], c='orange',
                   linewidth=1.5, label='LS best fit')
-    axs[1,0].scatter(t_orig0, orig["nflux"], s=0.5, alpha=0.3,
+    axs[1,0].scatter(t_orig0, orig["nflux"], s=1.0, c='pink', alpha=0.5,
                      label='raw, normalized')
-    axs[1,0].scatter(clean["time"], clean["oflux"],s=0.5, c='r', alpha=0.5,
+    axs[1,0].scatter(clean["time"], clean["oflux"],s=1.0, c='r', alpha=0.5,
                      label='cleaned, normalized')
     axs[1,0].scatter(clean["time"], clean["nflux"],s=1.2, c='g', alpha=0.7,
                      label='cleaned, normalized, detrended')
@@ -169,7 +170,11 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[1,0].text(0.99,0.70, "$\log (f_{\\rm bg}/f_{*})$ = "
                   f"{float(t_table['log_tot_bg']):.3f}", fontsize=lsize,
                   horizontalalignment='right', transform=axs[1,0].transAxes)
-    axs[1,0].legend(loc='lower right')
+    leg = axs[1,0].legend(loc='lower right')
+    leg.legendHandles[1]._sizes = [30]
+    leg.legendHandles[2]._sizes = [30]
+    leg.legendHandles[3]._sizes = [30]
+
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
