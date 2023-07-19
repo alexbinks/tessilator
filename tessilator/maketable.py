@@ -99,7 +99,6 @@ def table_from_simbad(input_names):
             ID_string += gaia_name+','
         else:
             ID_string += gaia_name
-    print(ID_string)
     qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag,phot_bp_mean_mag,phot_rp_mean_mag "\
           "FROM gaiadr3.gaia_source "\
           f"WHERE source_id in ({ID_string});"
