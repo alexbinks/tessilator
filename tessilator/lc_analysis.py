@@ -455,8 +455,8 @@ def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.):
     
     jump_flag = False
     
-    for i in range(len(np.unique(lc_part))):
-        g = np.array(lc_part == i)
+    for lc in np.unique(lc_part):
+        g = np.array(lc_part == lc)
         f_mean = moving_average(flux[g], n_avg)
         t_mean = moving_average(time[g], n_avg)
         
@@ -500,7 +500,7 @@ def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.):
     norm_comp = False
     Ncomp = len(np.unique(lc_part))
     if Ncomp > 1:
-        i = 0
+        i = 1
         while i < Ncomp-1:
             g1 = np.array(lc_part == i)
             g2 = np.array(lc_part == i+1)
@@ -521,7 +521,7 @@ def normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.):
     return norm_comp
 
 
-def detrend_lc(ds,df,t,m,f,err, MAD_fac=2., poly_max=8):
+def detrend_lc(t,f,err,lc, MAD_fac=2., poly_max=8):
     '''Detrend and normalise the lightcurves.
 
     | This function runs several operations to detrend the lightcurve, as follows:
@@ -562,62 +562,72 @@ def detrend_lc(ds,df,t,m,f,err, MAD_fac=2., poly_max=8):
         | "polyord" -> The polynomial order used for each detrend        
     '''
 
-    dict_lc = defaultdict(list)
-    t_orig, f_orig, e_orig = np.array([]), np.array([]), np.array([])
-    m_orig, lc_part = np.array([]), np.array([])
-
-
-    # 1. Remove sparse data
-    std_crit_val = int(np.sum(np.array([df[i]+1 - ds[i] for i in range(len(ds))]))/10.)
-    ds, df = remove_sparse_data(ds, df, std_crit=std_crit_val)
-        
-    # 2. Include only data that are within a given number of median absolute deviation values.
-    for i in range(len(ds)):
-        # determine the start and end points for each data string
-        rs, rf = ds[i], df[i]+1
-
-        fm = np.median(f[rs:rf])
-        f_MAD  = MAD(f[rs:rf], scale='normal')
-        g = np.abs(f[rs:rf]-fm) <= MAD_fac*f_MAD
-        
-        t_orig = np.append(t_orig, t[rs:rf][g])
-        m_orig = np.append(m_orig, m[rs:rf][g])
-        f_orig = np.append(f_orig, f[rs:rf][g])
-        e_orig = np.append(e_orig, err[rs:rf][g])
-        lc_part = np.append(lc_part, np.full(np.sum(g), i))
-
     # 3. Choose the best detrending polynomial using the Aikaike Information Criterion, and
     #    detrend the lightcurve
-    s_fit, coeffs = AIC_selector(t_orig, f_orig, e_orig, poly_max=8)
-    f_norm = f_orig/np.polyval(coeffs, t_orig)
-
+    s_fit, coeffs = AIC_selector(t, f, err, poly_max=8)
+    f_norm = f/np.polyval(coeffs, t)
     # 4. Decide whether to use the detrended lightcurve from part 3, or to separate the
     #    lightcurve into individual components and detrend each one separately
-    norm_comp = normalisation_choice(t_orig, f_orig, e_orig, lc_part, MAD_fac=2.)
-
+    norm_comp = normalisation_choice(t, f, err, lc, MAD_fac=2.)
+    s_fit, coeffs = None, None
     if norm_comp:
         f_detrend = np.array([])
-        for i in range(len(ds)):
-            g = np.array(lc_part == i)
-            s_fit, coeffs = AIC_selector(t_orig[g], f_orig[g], e_orig[g], poly_max=8)
-            f_n = f_orig[g]/np.polyval(coeffs, t_orig[g])
+        for l in np.unique(lc):
+            g = np.array(lc == l)
+            s_fit, coeffs = AIC_selector(t[g], f[g], err[g], poly_max=8)
+            f_n = f[g]/np.polyval(coeffs, t[g])
             f_detrend = np.append(f_detrend, f_n)
         f_norm = f_detrend
     else:
         f_norm = f_norm
-    # 5. Place the results into a dictionary.
-    for i in range(len(t_orig)):
-        dict_lc["time_o"].append(t_orig[i])
-        dict_lc["mag"].append(m_orig[i])
-        dict_lc["oflux"].append(f_orig[i])
-        dict_lc["nflux"].append(f_norm[i])
-        dict_lc["enflux"].append(e_orig[i])
-        dict_lc["lc_part"].append(lc_part[i])
-    return dict_lc
-    
-    
+    return f_norm
 
-def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
+
+
+def test_cbv_fit(t, of, cf):
+    of_score, cf_score = 0, 0
+
+#1) number of outliers test
+    of_nflux, cf_nflux = np.array(of)/np.median(of), np.array(cf)/np.median(cf)
+    print(of_nflux, cf_nflux, 'of/cf')
+    of_nMADf, cf_nMADf = MAD(of_nflux, scale='normal'), MAD(cf_nflux, scale='normal')
+    num_of, num_cf = np.sum(abs(of_nflux-1.) > of_nMADf), np.sum(abs(cf_nflux-1.) > cf_nMADf)
+    print(num_of, num_cf, 'num of/cf')
+
+    if num_of > num_cf:
+        cf_score += 1
+    else:
+        of_score += 1
+        
+#2) which has the largest MAD value
+    if of_nMADf > cf_nMADf:
+        cf_score += 1
+    else:
+        of_score += 1
+    print(of_nMADf, cf_nMADf, 'MAD of/cf')
+#3) which makes the best sine fit?
+    pops_of, popsc_of = curve_fit(sin_fit, t, of_nflux,
+                            bounds=(0, [2., 2., 1000.]))
+    pops_cf, popsc_cf = curve_fit(sin_fit, t, cf_nflux,
+                            bounds=(0, [2., 2., 1000.]))
+    yp_of = sin_fit(of_nflux, *pops_of)
+    yp_cf = sin_fit(cf_nflux, *pops_cf)
+    chi_of = np.sum((yp_of-of_nflux)**2)/(len(of_nflux)-len(pops_of)-1)
+    chi_cf = np.sum((yp_cf-cf_nflux)**2)/(len(cf_nflux)-len(pops_cf)-1)
+    print(chi_of, chi_cf, 'sin of/cf')    
+    if chi_of > chi_cf:
+        cf_score += 1
+    else:
+        of_score += 1
+    
+    if of_score > cf_score:
+        use_f = 'oflux'
+    else:
+        use_f = 'cbv_oflux'
+    return use_f
+
+
+def make_lc(phot_table, name_lc, orig_mad_fac=20., norm_mad_fac=2., store_lc=False, lc_dir='lc'):
     '''Construct the normalised TESS lightcurve.
 
     | The function runs the following tasks:
@@ -659,40 +669,81 @@ def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
         | "nflux" -> The original, normalised flux values
         | "mag" -> The TESS magnitude values
     '''
-    m_diff = phot_table["flux_corr"][:] - np.median(phot_table["flux_corr"][:])
-    m_thr = 20.0*MAD(phot_table["flux_corr"][:], scale='normal')
-    g = np.abs(m_diff < m_thr)
-    time = np.array(phot_table["time"][:][g])
-    mag = np.array(phot_table["mag"][:][g])
-    flux = np.array(phot_table["flux_corr"][:][g])
-    eflux = np.array(phot_table["flux_err"][:][g])
+    
+    final_lc = {}
+    final_lc["time"] = phot_table["time"].data
+    final_lc["mag"] = phot_table["mag"].data
+    final_lc["oflux"] = phot_table["flux_corr"].data
+    final_lc["cbv_oflux"] = phot_table["cbv_flux_corr"].data
+    final_lc["eflux"] = phot_table["flux_err"].data
 
-    ds, df = clean_lc(time, flux, eflux)
+    fin_o = test_cbv_fit(final_lc["time"], final_lc["oflux"], final_lc["cbv_oflux"])
+    print(fin_o)
+    # step 1: select data points that are match an initial MAD criteria.    
+    m_diff = final_lc[f'{fin_o}'] - np.median(final_lc[f'{fin_o}'])
+    print(m_diff)
+    m_thr = orig_mad_fac*MAD(final_lc[f'{fin_o}'], scale='normal')    
+    g = np.abs(m_diff < m_thr)
+    final_lc["pass_mad_1"] = g
+
+    # step 2: clean the lightcurve using clean_lc algorithm
+    ds, df = clean_lc(final_lc["time"][g], final_lc[f'{fin_o}'][g], final_lc["eflux"][g])
+    std_crit_val = int(np.sum(np.array([df[i]+1 - ds[i] for i in range(len(ds))]))/10.)
+    ds, df = remove_sparse_data(ds, df, std_crit=std_crit_val)
+    final_lc["pass_clean"] = np.array(np.zeros(len(final_lc["time"])), dtype='bool')
+    for s, f in zip(ds, df):
+        final_lc["pass_clean"][np.where(g)[0][s]:np.where(g)[0][f]+1] = True
+
     print('cleaned lc!')
     if (len(ds) == 0) or (len(df) == 0):
-        return [], []
+        return []
+        
     # 1st: normalise the flux by dividing by the median value
-    nflux  = flux/np.median(flux)
+    g_qual = np.where(final_lc["pass_clean"])[0]
+    final_lc["onflux"] = final_lc[f'{fin_o}']/np.median(final_lc[f'{fin_o}'][g_qual])
+    final_lc["nflux"] = np.full(len(final_lc["time"]), -999.)
+    final_lc["nflux"][g_qual] = final_lc[f'{fin_o}'][g_qual]/np.median(final_lc[f'{fin_o}'][g_qual])    
     with np.errstate(invalid='ignore'):
-        neflux = eflux/flux
+        final_lc["enflux"] = np.full(len(final_lc["time"]), -999.)
+        final_lc["enflux"][g_qual] = final_lc["eflux"][g_qual]/final_lc[f'{fin_o}'][g_qual]
+                
+    final_lc["lc_part"] = np.zeros(len(final_lc["time"]), dtype=int)
+    final_lc["pass_mad_2"] = np.array(np.zeros(len(final_lc["time"])), dtype='bool')
+    # 2. Include only data that are within a given number of median absolute deviation values.
+
+    for i in range(len(ds)):
+        # determine the start and end points for each data string
+        rs, rf = ds[i], df[i]+1
+        fm = np.median(final_lc["nflux"][g_qual][rs:rf])
+        f_MAD  = MAD(final_lc["nflux"][g_qual][rs:rf], scale='normal')
+        g_mad = np.where(np.abs(final_lc["nflux"][g_qual][rs:rf]-fm) <= norm_mad_fac*f_MAD)[0]
+        final_lc["pass_mad_2"][g_qual[rs:rf][g_mad]] = True
+        final_lc["lc_part"][g_qual[rs:rf][g_mad]] = int(i+1)
+
+
     # 2nd: detrend each lightcurve sections by either a straight-line fit or a
     # parabola. The choice is selected using AIC.
-    cln = detrend_lc(ds, df, time, mag, nflux, neflux)
-    cln["time"] = [cln["time_o"][i]-time[0] for i in range(len(cln["time_o"]))]
-    orig = dict()
-    orig["time"] = np.array(time)
-    orig["nflux"] = np.array(nflux)
-    orig["mag"] = np.array(mag)
-    if len(cln["time"]) > 50:
+    g_f = np.where(final_lc["pass_mad_2"])[0]
+    
+    final_lc["nflux_detrend"] = np.full(len(final_lc["time"]), -999.)
+    final_lc["nflux_detrend"][g_f] = detrend_lc(final_lc["time"][g_f], final_lc["nflux"][g_f], final_lc["enflux"][g_f], final_lc["lc_part"][g_f])
+
+
+    if len(final_lc["time"]) > 50:
+        tab_out = Table(final_lc)
+        if fin_o == 'cbv_oflux':
+            tab_out["cbv_choice"] = 'cbv'
+        else:
+            tab_out["cbv_choice"] = 'ori'
+
         if store_lc:
-            tab_out = Table(cln)
             path_exist = os.path.exists(f'./{lc_dir}')
             if not path_exist:
                 os.makedirs(f'./{lc_dir}')
             tab_out.write(f'./{lc_dir}/{name_lc}', format='csv', overwrite=True)
-        return cln, orig
+        return tab_out
     else:
-        return [], []
+        return []
 
 
 
@@ -918,12 +969,14 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
     LS_dict = dict()
+    cln = cln[np.where(cln["pass_mad_2"])[0]]
     time = np.array(cln["time"])
     if "nflux_corr" in cln.keys():
         nflux = np.array(cln["nflux_corr"])
     else:
-        nflux = np.array(cln["nflux"])
+        nflux = np.array(cln["nflux_detrend"])
     enflux = np.array(cln["enflux"])
+    
     if check_jump:
         lc_part = np.array(cln["lc_part"])
         jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
@@ -936,7 +989,7 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
     probabilities = [0.1, 0.05, 0.01]
     FAP_test = ls.false_alarm_level(probabilities)
     p_m = np.argmax(power)
-    
+
     y_fit_sine = ls.model(time, frequency[p_m])
     y_fit_sine_param = ls.model_parameters(frequency[p_m])
     chisq_model_sine = np.sum((y_fit_sine-nflux)**2/enflux**2)/(len(nflux)-3-1)
@@ -952,7 +1005,6 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
     power = power[::-1]
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
-    
     if len(power) == 0:
         LS_dict['median_MAD_nLC'] = -999
         LS_dict['jump_flag'] = -999

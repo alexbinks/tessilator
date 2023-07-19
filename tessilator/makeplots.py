@@ -14,7 +14,7 @@ from collections.abc import Iterable
 __all__ = ['make_plot']
 
 
-def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(10,10),
+def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
               SkyRad = [6.,8.], im_dir='plots', nc='nc'):
     '''Produce a plot of tessilator results.
@@ -31,8 +31,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
         The cut-out image of the target
     clean : `dict`
         The modified (cleaned) lightcurve after processing
-    orig : `dict`
-        The original normalised lightcurve before processing.
     LS_dict : `dict`
         The dictionary of parameters calculated by the Lomb-Scargle periodogram
     scc : `list`, size=3
@@ -61,14 +59,24 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     -------
     Nothing returned. The plot produced is saved to file.
     '''
+    
+    if "nflux_corr" in clean.colnames:
+        clean["nflux_detrend"] = clean["nflux_corr"]
+#['time', 'mag', 'oflux', 'eflux', 'pass_mad_1', 'pass_clean', 'onflux', 'nflux', 'enflux', 'lc_part', 'pass_mad_2', 'nflux_detrend']
+
+    t_0 = clean["time"][0]
+    c_norm = np.where(np.array(clean["pass_clean"]))[0]
+    c_detr = np.where(np.array(clean["pass_mad_2"]))[0]
+    clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["onflux"], clean["mag"]
+    clean_norm_time, clean_norm_flux = clean["time"][c_norm]-t_0, clean["nflux"][c_norm]
+    clean_detr_time, clean_detr_flux = clean["time"][c_detr]-t_0, clean["nflux_detrend"][c_detr]
+
     mpl.rcParams.update({'font.size': 14})
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
         best_fit_type = 'linear'
     else:
         best_fit_type = 'sine'
 
-    if "nflux_corr" in clean.keys():
-        clean["nflux"] = clean["nflux_corr"]
     fsize = 22.
     lsize = 0.9*fsize
     fig, axs = plt.subplots(2,2, figsize=(20,15))
@@ -78,7 +86,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[1,0].set_position([0.05,0.3,0.90,0.2])
     axs[1,1].set_position([0.05,0.05,0.90,0.2])
 
-    t_orig0 = orig["time"]-orig["time"][0]
     circ_aper = Circle(XY_ctr, Rad, linewidth=1.2, fill=False, color='r')
     circ_ann1 = Circle(XY_ctr, SkyRad[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(XY_ctr, SkyRad[1], linewidth=1.2, fill=False, color='b')
@@ -100,7 +107,6 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[0,0].add_patch(circ_ann1)
     axs[0,0].add_patch(circ_ann2)
     if isinstance(XY_contam, Iterable):
-        print(XY_contam)
         axs[0,0].scatter(XY_contam[:, 0], XY_contam[:, 1], marker='X',
                          s=400, color='orange')
 
@@ -151,11 +157,11 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     axs[1,0].set_ylabel("normalised flux", c='g', fontsize=fsize)
     axs[1,0].plot(LS_dict["time"], LS_dict['y_fit_LS'], c='orange',
                   linewidth=1.5, label='LS best fit')
-    axs[1,0].scatter(t_orig0, orig["nflux"], s=1.0, c='pink', alpha=0.5,
+    axs[1,0].scatter(clean_orig_time, clean_orig_flux, s=1.0, c='pink', alpha=0.5,
                      label='raw, normalized')
-    axs[1,0].scatter(clean["time"], clean["oflux"],s=1.0, c='r', alpha=0.5,
+    axs[1,0].scatter(clean_norm_time, clean_norm_flux, s=1.0, c='r', alpha=0.5,
                      label='cleaned, normalized')
-    axs[1,0].scatter(clean["time"], clean["nflux"],s=1.2, c='g', alpha=0.7,
+    axs[1,0].scatter(clean_detr_time, clean_detr_flux, s=1.2, c='g', alpha=0.7,
                      label='cleaned, normalized, detrended')
     if LS_dict['jump_flag']:
         axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
@@ -174,11 +180,10 @@ def make_plot(im_plot, clean, orig, LS_dict, scc, t_table, name_target, XY_ctr=(
     leg.legendHandles[1]._sizes = [30]
     leg.legendHandles[2]._sizes = [30]
     leg.legendHandles[3]._sizes = [30]
-
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
-    ax2.scatter(t_orig0, orig["mag"], s=0.3, alpha=0.3, color="b", marker="x")
+    ax2.scatter(clean_orig_time, clean_orig_mag, s=0.3, alpha=0.3, color="b", marker="x")
     ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
     axs[1,1].set_xlim([0,1])
     axs[1,1].set_xlabel("phase", fontsize=fsize)

@@ -11,14 +11,14 @@ times = np.linspace(start=start+typical_timestep, stop=stop, num=int(stop/typica
 
 def test_flat():
     '''TRY A COMPLETELY FLAT LIGHTCURVE'''
-    x, y = clean_lc(times, np.ones(len(times)), np.zeros(len(times)))
+    x, y = clean_lc(times, np.ones(len(times)), 0.0001*np.ones(len(times)))
     assert(x[0] == 0)
     assert(y[0] == len(times)-1)
 
 
 def test_sine():
     '''TRY A PERFECTLY SINUSOIDAL LIGHTCURVE'''
-    x, y = clean_lc(times, 1.0 + 0.1*np.sin(2.*math.pi*times/period), np.zeros(len(times)))
+    x, y = clean_lc(times, 1.0 + 0.1*np.sin(2.*math.pi*times/period), 0.0001*np.ones(len(times)))
     assert(x[0] == 0)
     assert(y[0] == len(times)-1)
 
@@ -38,7 +38,7 @@ def test_simulated():
     flux_fin = flux_sin+flux_exp0+flux_exp1
 
     i = 0
-    MAD_test = 1.0
+    MAD_test = 2.0
     while abs(flux_fin[LCpart == 0][i] - np.median(flux_fin)) >= MAD_test*median_abs_deviation(flux_fin, scale='normal'):
         i += 1
     i0 = i
@@ -58,9 +58,12 @@ def test_simulated():
         i -= 1
     i3 = i + sum(LCpart == 0)
 
-
     x, y = clean_lc(times_fin, flux_fin, np.zeros(len(times_fin)), MAD_fac=MAD_test, time_fac=10., min_num_per_group=50)
 
+    print(x[0], i0)
+    print(x[1], i1)
+    print(y[0], i2)
+    print(y[1], i3)
     assert(x[0] == i0)
     assert(y[0] == i1)
     assert(x[1] == i2)

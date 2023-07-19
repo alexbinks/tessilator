@@ -3,6 +3,7 @@ Functions used by the tessilator.
 '''
 
 from .lc_analysis import *
+from .detrend_cbv import *
 from .contaminants import *
 from .maketable import *
 from .makeplots import *
@@ -373,7 +374,6 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs', gaia_sys=T
         t_input = ascii.read(t_filename, delimiter=',', format='no_header')
     elif isinstance(t_filename, Table):
         t_input = t_filename
-    print(t_input)
     t_targets = get_gaia_data(t_input, name_is_source_id=name_is_source_id, type_coord=type_coord, gaia_sys=gaia_sys)
 
     return t_targets
@@ -574,15 +574,17 @@ def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, make_plots=False):
         The updated target lightcurve dictionary, with an extra key containing
         the noise-corrected flux.
     '''
+    
+    targ_lc = targ_lc[np.where(targ_lc["pass_mad_2"])[0]]
     targ_time = np.array([t-min(targ_lc["time"]) for t in targ_lc["time"]])
     sim_flux = []
     for t in range(len(targ_time)):
-        sim_bit = np.interp(targ_time[t], med_lc["time"], med_lc["nflux"])
-        targ_lc["nflux_corr"].append(targ_lc["nflux"][t]/sim_bit)
+        sim_bit = np.interp(targ_time[t], med_lc["time"], med_lc["nflux_detrend"])
+        targ_lc["nflux_corr"].append(targ_lc["nflux_detrend"][t]/sim_bit)
         sim_flux.append(sim_bit)
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_local_lc.png"
-        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux"], sim_flux)
+        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_detrend"], sim_flux)
     return targ_lc
 
 
@@ -621,6 +623,9 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, mag_extr_lim=3., make_p
         The updated target lightcurve dictionary, with an extra key containing
         the noise-corrected flux.
     '''
+    
+    targ_lc = targ_lc[np.where(targ_lc["pass_mad_2"])[0]]
+    
     mag_files = sorted(glob(f'./tesssim/lc/{scc[0]:02d}_{scc[1]}_{scc[2]}/mag*'))
     if not mag_files:
         logger.warning(f"No simulated lightcurve for {targ_name}, Sector {scc[0]:02d}, Camera {scc[1]}, CCD {scc[2]}")
@@ -644,15 +649,15 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, mag_extr_lim=3., make_p
         return targ_lc
 
     sim_lc = Table.read(sim_tab)
-    targ_time = np.array([t-min(targ_lc["time_o"]) for t in targ_lc["time_o"]])
+    targ_time = np.array([t-min(targ_lc["time"]) for t in targ_lc["time"]])
     sim_flux = []
     for t in range(len(targ_time)):
         sim_bit = np.interp(targ_time[t], sim_lc["time"], sim_lc["nflux"])
-        targ_lc["nflux_corr"].append(targ_lc["nflux"][t]/sim_bit)
+        targ_lc["nflux_corr"].append(targ_lc["nflux_detrend"][t]/sim_bit)
         sim_flux.append(sim_bit)
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_sim_lc.png"
-        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux"], sim_flux)
+        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_detrend"], sim_flux)
     return targ_lc
 
 
@@ -771,7 +776,7 @@ def get_median_lc(files, directory, scc, n_bin=10):
 
 
 
-def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20, store_lc=False, lc_dir='lc', keep_data=False, flux_con=False, LC_con=False, con_file=False, XY_pos=(10.,10.), Rad=1., SkyRad=[6.,8.], fix_noise=False):
+def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20, cbv_flag=True, store_lc=False, lc_dir='lc', keep_data=False, flux_con=False, LC_con=False, con_file=False, XY_pos=(10.,10.), Rad=1., SkyRad=[6.,8.], fix_noise=False):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
     This function calls a set of functions in the lc_analysis.py module to
@@ -820,7 +825,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
     * A plot of the lightcurve (if requested).
     '''
     nc = 'nc'
-    print(file_in, t_target)
     try:
         tpf = aper_run(file_in, t_target, Rad=Rad,
                        SkyRad=SkyRad, XY_pos=XY_pos)
@@ -832,6 +836,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
         for t in t_target:
             final_table.add_row(make_failrow(t, scc))
         return None
+
+    if cbv_flag == True:
+        corrected_flux, weights = get_cbv_scc(scc, tpf)
+        tpf["cbv_flux_corr"] = corrected_flux[1][:]
+    else:
+        tpf["cbv_flux_corr"] = tpf["flux_corr"]
+        
     phot_targets = tpf.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
@@ -845,7 +856,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
 
         if len(g_c) >= 50:
             name_lc = f'lc_{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}.csv'
-            clean_norm_lc, original_norm_lc = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
+            clean_norm_lc = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
         else:
             logger.error(f"No photometry was recorded for this group.")
             final_table.add_row(make_failrow(t_targets, scc))
@@ -860,13 +871,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
             logger.info('fixing the noise!')
             clean_norm_lc = fix_noise_lc_sim(clean_norm_lc, name_target, t_targets, scc, make_plots=make_plots)
             nc = 'corr_sim'
+
         d_target = run_ls(clean_norm_lc, check_jump=True)
         if d_target['period_best'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
             final_table.add_row(make_failrow(t_targets, scc))
             continue
-
         
         if LC_con:
             lc_cont_dir = 'lc_cont'
@@ -918,11 +929,10 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
             im_plot, XY_ctr = make_2d_cutout(file_in, group, \
                                              im_size=(cutout_size+1,\
                                                       cutout_size+1))
-            make_plot(im_plot, clean_norm_lc, original_norm_lc,\
+            make_plot(im_plot, clean_norm_lc,\
                          d_target, scc, t_targets, name_target, XY_contam=XY_con,\
                          p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,\
                          SkyRad=[6.,8.], nc=nc)
-                         
         final_table.add_row(make_datarow(t_targets, scc, d_target,\
                                          labels_cont))
         if not keep_data:
@@ -1033,7 +1043,7 @@ def run_test_for_contaminant(XY_arr, file_in, con_table, d_target, scc, store_lc
         labels_cont = 'd'
     else:
         name_lc = f'lc_{con_table["source_id_target"]}_{con_table["source_id"]}_{scc[0]:04d}_{scc[1]}_{scc[2]}.csv'
-        clean_norm_lc_cont, original_norm_lc_cont = make_lc(phot_cont, name_lc, store_lc=True, lc_dir=lc_cont_dir)
+        clean_norm_lc_cont = make_lc(phot_cont, name_lc, store_lc=True, lc_dir=lc_cont_dir)
         if len(clean_norm_lc_cont) != 0:
             d_cont = run_ls(clean_norm_lc_cont)
             labels_cont = is_period_cont(d_target, d_cont, con_table)
