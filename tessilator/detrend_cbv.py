@@ -200,9 +200,6 @@ def get_cbv_scc(scc, lc):
     with open('./cbv/curl_cbv.scr', 'r') as curl_file:
         lines = curl_file.readlines()
         cbv_comm = [l for l in lines if f'{scc[0]}-{scc[1]}-{scc[2]}' in l]
-        if len(cbv_comm) == 0:
-            print("oh dear")
-            return
         cbv_comm = cbv_comm[0]
         cbv_file = cbv_comm.split(' ')[6]
         if os.path.exists(f'./cbv/{cbv_file}') is False:

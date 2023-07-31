@@ -59,17 +59,12 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
     -------
     Nothing returned. The plot produced is saved to file.
     '''
-    
-    if "nflux_corr" in clean.colnames:
-        clean["nflux_detrend"] = clean["nflux_corr"]
-#['time', 'mag', 'oflux', 'eflux', 'pass_mad_1', 'pass_clean', 'onflux', 'nflux', 'enflux', 'lc_part', 'pass_mad_2', 'nflux_detrend']
-
     t_0 = clean["time"][0]
-    c_norm = np.where(np.array(clean["pass_clean"]))[0]
-    c_detr = np.where(np.array(clean["pass_mad_2"]))[0]
-    clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["onflux"], clean["mag"]
-    clean_norm_time, clean_norm_flux = clean["time"][c_norm]-t_0, clean["nflux"][c_norm]
-    clean_detr_time, clean_detr_flux = clean["time"][c_detr]-t_0, clean["nflux_detrend"][c_detr]
+    c_1 = clean["pass_sparse"].data
+    c_2 = clean["pass_clean"].data
+    clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["nflux_ori"], clean["mag"]
+    clean_norm_time, clean_norm_flux = clean["time"][c_1]-t_0, clean["nflux_ori"][c_1]
+    clean_detr_time, clean_detr_flux = clean["time"][c_2]-t_0, clean["nflux_dt2"][c_2]
 
     mpl.rcParams.update({'font.size': 14})
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
@@ -155,7 +150,7 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
         [LS_dict['median_MAD_nLC'][0]-(8.*LS_dict['median_MAD_nLC'][1]),
         LS_dict['median_MAD_nLC'][0]+(8.*LS_dict['median_MAD_nLC'][1])])
     axs[1,0].set_ylabel("normalised flux", c='g', fontsize=fsize)
-    axs[1,0].plot(LS_dict["time"], LS_dict['y_fit_LS'], c='orange',
+    axs[1,0].plot(LS_dict["time"]-t_0, LS_dict['y_fit_LS'], c='orange',
                   linewidth=1.5, label='LS best fit')
     axs[1,0].scatter(clean_orig_time, clean_orig_flux, s=1.0, c='pink', alpha=0.5,
                      label='raw, normalized')
@@ -165,6 +160,15 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
                      label='cleaned, normalized, detrended')
     if LS_dict['jump_flag']:
         axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
+                      horizontalalignment='left',
+                      transform=axs[1,0].transAxes)
+
+    if LS_dict["best_lc"] == 1:
+        axs[1,0].text(0.01,0.01, f'best fit: original flux', fontsize=lsize,
+                      horizontalalignment='left',
+                      transform=axs[1,0].transAxes)
+    if LS_dict["best_lc"] == 2:
+        axs[1,0].text(0.01,0.01, f'best fit: CBV corrected flux', fontsize=lsize,
                       horizontalalignment='left',
                       transform=axs[1,0].transAxes)
     axs[1,0].text(0.99,0.90, Gaia_name, fontsize=lsize,
