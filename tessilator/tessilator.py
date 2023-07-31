@@ -3,6 +3,7 @@ Functions used by the tessilator.
 '''
 
 from .lc_analysis import *
+from .periodogram import *
 from .detrend_cbv import *
 from .contaminants import *
 from .maketable import *
@@ -23,6 +24,9 @@ import astropy.units as u
 from astroquery.mast import Tesscut
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+
+from astroquery import log
+log.setLevel("WARNING")
 
 __all__ = ['start', 'logger',
            'create_table_template', 'setup_input_parameters',
@@ -60,10 +64,10 @@ print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
 # Create custom logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 # create console handler and set level to info
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.WARNING)
 logger.addHandler(ch)
 
 
@@ -82,11 +86,11 @@ def create_table_template():
                            'n_contaminants', 'Period_Max', 'Period_Gauss',\
                            'e_Period', 'Period_2', 'power1', 'power1_power2',\
                            'FAP_001', 'AIC_line', 'AIC_sine', 'amp', 'scatter',\
-                           'chisq_phase', 'fdev', 'Ndata','jump_flag','cont_flags'],\
+                           'chisq_phase', 'fdev', 'Ndata','jump_flag', 'best_lc','cont_flags'],\
                         dtype=(str, str, float, float, float, float, float, float, int, int,\
                                int, float, float, int, float, float, float,\
                                float, float, float, float, float, float, float, float,\
-                               float, float, int, int, str))
+                               float, float, int, int, int, str))
     return final_table
     
     
@@ -487,6 +491,7 @@ def make_datarow(t_target, scc, d_target, labels_cont):
           d_target['frac_phase_outliers'],
           d_target['Ndata'],
           d_target['jump_flag'],
+          d_target['best_lc'],
           labels_cont
           ]
     return dr
@@ -542,6 +547,7 @@ def make_failrow(t_target, scc):
           t_target["num_tot_bg"]]
     for i in range(13):
         dr.append(np.nan)
+    dr.append(0)
     dr.append(0)
     dr.append(0)
     dr.append('z')
@@ -624,7 +630,7 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, mag_extr_lim=3., make_p
         the noise-corrected flux.
     '''
     
-    targ_lc = targ_lc[np.where(targ_lc["pass_mad_2"])[0]]
+    targ_lc = targ_lc[targ_lc["pass_clean"]]
     
     mag_files = sorted(glob(f'./tesssim/lc/{scc[0]:02d}_{scc[1]}_{scc[2]}/mag*'))
     if not mag_files:
@@ -653,11 +659,11 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, mag_extr_lim=3., make_p
     sim_flux = []
     for t in range(len(targ_time)):
         sim_bit = np.interp(targ_time[t], sim_lc["time"], sim_lc["nflux"])
-        targ_lc["nflux_corr"].append(targ_lc["nflux_detrend"][t]/sim_bit)
+        targ_lc["nflux_corr"].append(targ_lc["nflux_dt2"][t]/sim_bit)
         sim_flux.append(sim_bit)
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_sim_lc.png"
-        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_detrend"], sim_flux)
+        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_dt2"], sim_flux)
     return targ_lc
 
 
@@ -776,6 +782,53 @@ def get_median_lc(files, directory, scc, n_bin=10):
 
 
 
+def assess_lc(ls_results):
+    ori_sc, cbv_sc = 0, 0
+    ori_ls, cbv_ls = ls_results[0], ls_results[1]
+
+#1) Check the best fit sine vs best fit line scores...
+    if (ori_ls["AIC_sine"]-ori_ls["AIC_line"]) < (cbv_ls["AIC_sine"]-cbv_ls["AIC_line"]):
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+#2) Check how jumpy the lightcurves are...
+    if (ori_ls["jump_flag"]) != True:
+        ori_sc += 1
+    if (cbv_ls["jump_flag"]) != True:
+        cbv_sc += 1
+#3) Check the max_power/2nd_max_power...
+    if (ori_ls["power_best"]/ori_ls["power_second"]) > (cbv_ls["power_best"]/cbv_ls["power_second"]):
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+#4) Check the max_power/FAP_001
+    if (ori_ls["power_best"]/ori_ls["FAPs"][2]) > (cbv_ls["power_best"]/cbv_ls["FAPs"][2]):
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+#5) Check the height of the amplitude
+    if ori_ls["pops_vals"][1]/ori_ls["phase_scatter"] > cbv_ls["pops_vals"][1]/cbv_ls["phase_scatter"]:
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+#6) Check number of outliers in the phase-folded curve
+    if ori_ls["frac_phase_outliers"] < cbv_ls["frac_phase_outliers"]:
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+#7) Check number of datapoints
+    if ori_ls["Ndata"] > cbv_ls["Ndata"]:
+        ori_sc += 1
+    else:
+        cbv_sc += 1
+        
+    print('scores: ', ori_sc, cbv_sc)
+    if ori_sc > cbv_sc:
+        lc_choice = 0
+    else:
+        lc_choice = 1
+    return lc_choice
+
 def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20, cbv_flag=True, store_lc=False, lc_dir='lc', keep_data=False, flux_con=False, LC_con=False, con_file=False, XY_pos=(10.,10.), Rad=1., SkyRad=[6.,8.], fix_noise=False):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
@@ -839,10 +892,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
 
     if cbv_flag == True:
         corrected_flux, weights = get_cbv_scc(scc, tpf)
-        tpf["cbv_flux_corr"] = corrected_flux[1][:]
+        tpf["cbv_oflux"] = corrected_flux[1][:]
     else:
-        tpf["cbv_flux_corr"] = tpf["flux_corr"]
-        
+        tpf["cbv_oflux"] = tpf["reg_oflux"]
     phot_targets = tpf.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
@@ -855,13 +907,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
         name_target = get_name_target(t_targets["name"][0])
 
         if len(g_c) >= 50:
-            name_lc = f'lc_{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}.csv'
-            clean_norm_lc = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
+            name_lc = f'lc_{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}'
+            lcs = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
         else:
             logger.error(f"No photometry was recorded for this group.")
             final_table.add_row(make_failrow(t_targets, scc))
             continue
-        if len(clean_norm_lc) == 0:
+        if len(lcs) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
             final_table.add_row(make_failrow(t_targets, scc))
@@ -869,10 +921,23 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
 
         if fix_noise and not LC_con:
             logger.info('fixing the noise!')
-            clean_norm_lc = fix_noise_lc_sim(clean_norm_lc, name_target, t_targets, scc, make_plots=make_plots)
+            for l in range(len(lcs)):
+                lcs[l] = fix_noise_lc_sim(lcs[l], name_target, t_targets, scc, make_plots=make_plots)
             nc = 'corr_sim'
 
-        d_target = run_ls(clean_norm_lc, check_jump=True)
+        ls_results = []
+        for lc in lcs:
+            ls = run_ls(lc, check_jump=True)
+            ls_results.append(ls)
+        if len(lcs) == 1:
+            choose_lc = 0
+            best_lc = 0
+            d_target = ls_results[choose_lc]
+        else:
+            choose_lc = assess_lc(ls_results)
+            d_target = ls_results[choose_lc]
+            best_lc = 1 + choose_lc
+        d_target["best_lc"] = best_lc
         if d_target['period_best'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
@@ -914,27 +979,29 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
                     if len(lc_cont_files) > 0:
                         nc = 'corr_local'
                         t_median_lc = get_median_lc(lc_cont_files, lc_cont_dir, scc)
-                        clean_norm_lc = fix_noise_lc_local(clean_norm_lc, t_median_lc, scc, name_target, make_plots=make_plots)
-                        d_target = run_ls(clean_norm_lc, check_jump=True)
+                        clean_norm_lc = fix_noise_lc_local(lcs[choose_lc], t_median_lc, scc, name_target, make_plots=make_plots)
+                        d_target = run_ls(lcs[choose_lc], check_jump=True)
                     else:
                         nc = 'corr_sim'
-                        clean_norm_lc = fix_noise_lc_sim(clean_norm_lc, name_target, t_targets, scc, make_plots=make_plots)
-                        d_target = run_ls(clean_norm_lc, check_jump=True)
+                        lc = fix_noise_lc_sim(lcs[choose_lc], name_target, t_targets, scc, make_plots=make_plots)
+                        d_target = run_ls(lc, check_jump=True)
                 else:
                     nc = 'local'
         else:
             labels_cont = 'z'
             XY_con = None
+
         if make_plots:
             im_plot, XY_ctr = make_2d_cutout(file_in, group, \
                                              im_size=(cutout_size+1,\
                                                       cutout_size+1))
-            make_plot(im_plot, clean_norm_lc,\
+            make_plot(im_plot, lcs[choose_lc],\
                          d_target, scc, t_targets, name_target, XY_contam=XY_con,\
                          p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,\
                          SkyRad=[6.,8.], nc=nc)
         final_table.add_row(make_datarow(t_targets, scc, d_target,\
                                          labels_cont))
+        final_table.write('temp_file.csv', overwrite=True)
         if not keep_data:
             if len(file_in) == 1:
                 os.remove(file_in)
@@ -1264,7 +1331,7 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
         return manifest
     else:
         num_attempts = 0
-        while num_attempt < tot_attempts:
+        while num_attempts < tot_attempts:
             try:
                 fits_file = glob(f'./{fits_dir}/{name_target}_{choose_sec:04d}*')
                 if fits_file:
@@ -1277,8 +1344,8 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
                     manifest.append(dl["Local Path"][0])
                 return manifest
             except:
-                print(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempt+1}")
-                logger.error(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempt+1}")
+                print(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}")
+                logger.error(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}")
                 num_attempts += 1
         if num_attempts == tot_attempts:
             print(f"No data found for {name_target} in {choose_sec}")
@@ -1390,7 +1457,7 @@ def get_cutouts(coord, cutout_size, name_target, choose_sec=None, tot_attempts=3
     if choose_sec is None:
         manifest = cutout_allsecs(coord, cutout_size, name_target, tot_attempts=tot_attempts, cap_files=cap_files, fits_dir=fits_dir)
     elif isinstance(choose_sec, int):
-        manifest = cutout_onesec(coord, cutout_size, name_target, tot_attempts=tot_attempts, cap_files=cap_files, fits_dir=fits_dir)
+        manifest = cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=tot_attempts, cap_files=cap_files, fits_dir=fits_dir)
     elif isinstance(choose_sec, Iterable):
         manifest = cutout_chosensecs(coord, cutout_size, name_target, choose_sec, tot_attempts=tot_attempts, cap_files=cap_files, fits_dir=fits_dir)
     else:

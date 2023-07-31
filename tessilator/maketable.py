@@ -175,7 +175,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         The output table ready for further analysis
     '''
     gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag'), \
-                       dtype=(int,float,float,float,float))
+                       dtype=(int,float,float,float,float,float,float))
     if type_coord == 'galactic':
         gal = SkyCoord(l=coord_table['col1'],\
                        b=coord_table['col2'],\
@@ -197,7 +197,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         for i in range(len(coord_table)):
         # Generate an SQL query for each target, where the nearest source is
         # returned within a maximum radius set by ang_max.
-            qry = f"SELECT source_id, ra, dec, parallax, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag \
+            qry = f"SELECT source_id,ra,dec,parallax,phot_g_mean_mag,phot_bp_mean_mag,phot_rp_mean_mag, \
                     DISTANCE(\
                     POINT({coord_table['ra'][i]}, {coord_table['dec'][i]}),\
                     POINT(ra, dec)) AS ang_sep\
@@ -208,11 +208,12 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
                     ORDER BY ang_sep ASC"
             job = Gaia.launch_job_async( qry )
             x = job.get_results() # Astropy table
+            print(f'astroquery completed for target {i+1} of {len(coord_table)}')
             # Fill the empty table with results from astroquery
             if len(x) == 0:
                 continue
             else:
-                y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag']
+                y = x[0]['source_id', 'ra', 'dec', 'parallax', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag']
                 gaia_table.add_row((y))
         # For each source, query the identifiers resolved by SIMBAD and return the
         # target with the shortest number of characters (which is more likely to be
@@ -233,7 +234,6 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
             row = [source_id, c[i].ra.deg, c[i].dec.deg, -999, -999, -999, -999]
             gaia_table.add_row(row)
         gaia_table['name'] = twomass_name
-
 
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]

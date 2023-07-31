@@ -75,7 +75,6 @@ def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempt
                 num_attempts += 1
     if num_attempts < tot_attempts:
         t_gaia = job.get_results()
-        print(f"Super! We have contamination data for {t_target['source_id']}!")
         return t_gaia
     else:
         print('Most likely there is a server problem. Try again later.')
@@ -172,6 +171,7 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
 
     for i in range(len(t_targets)):
         r = run_sql_query_contaminants(t_targets[i])
+        print(f"sql search for contaminants completed {t_targets['source_id'][i]}, target {i+1} of {len(t_targets)}.")
         # convert the angular separation from degrees to arcseconds
         r["ang_sep"] = r["ang_sep"]*3600.
         if len(r) > 1:
