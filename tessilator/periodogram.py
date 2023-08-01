@@ -1,6 +1,6 @@
 # imports
 import logging
-__all__ = ['check_for_jumps', 'gauss_fit', 'gauss_fit_peak', 'get_second_peak', 'is_period_cont', 'logger', 'mean_of_arrays', 'moving_average', 'run_ls', 'sin_fit']
+__all__ = ['check_for_jumps', 'gauss_fit', 'gauss_fit_peak', 'get_second_peak', 'is_period_cont', 'logger', 'mean_of_arrays', 'run_ls', 'sin_fit']
 
 
 import warnings
@@ -38,7 +38,7 @@ logger.setLevel(logging.ERROR)
 
 
 
-def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.):
+def check_for_jumps(time, flux, lc_part, n_avg=10, thresh_diff=10.):
     '''Identify if the lightcurve has jumps.
     
     A jumpy lightcurve is one that has small contiguous data points that change in flux significantly compared to the amplitude of the lightcurve. These could be due to some instrumental noise or response to a non-astrophysical effect. They may also be indicative of a stellar flare or active event.
@@ -51,8 +51,6 @@ def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.):
         The time coordinate
     flux : `Iterable`
         The original, normalised flux values
-    eflux : `Iterable`
-        The error on "flux"
     lc_part : `Iterable`
         The running index for each contiguous data section in the lightcurve
     n_avg : `int`, optional, default=10
@@ -70,8 +68,9 @@ def check_for_jumps(time, flux, eflux, lc_part, n_avg=10, thresh_diff=10.):
     
     for lc in np.unique(lc_part):
         g = np.array(lc_part == lc)
-        f_mean = moving_average(flux[g], n_avg)
-        t_mean = moving_average(time[g], n_avg)
+        
+        f_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
+        t_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
         
         f_shifts = np.abs(np.diff(f_mean))
 
@@ -293,24 +292,6 @@ def mean_of_arrays(arr, num):
     return mean_out, std_out
     
 
-def moving_average(x, w):
-    '''Calculate the moving average of an array.
-    
-    parameters
-    ----------
-    x : `Iterable`
-        The input data to be analysed.
-    w : `int`
-        The number of data points that the moving average will convolve.
-
-    returns
-    -------
-    z : `np.array`
-        An array of the moving averages
-    '''
-    
-    z = np.convolve(x, np.ones(w), 'valid') / w
-    return z
 
 
 def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, check_jump=False):
@@ -370,14 +351,14 @@ def run_ls(cln, n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
     LS_dict = dict()
-    cln = cln[cln["pass_clean"]]
+    cln = cln[cln["pass_outlier"]]
     time = np.array(cln["time"])
     nflux = np.array(cln["nflux_dt2"])
     enflux = np.array(cln["nflux_err"])
     
     if check_jump:
         lc_part = np.array(cln["lc_part"])
-        jump_flag = check_for_jumps(time, nflux, enflux, lc_part)
+        jump_flag = check_for_jumps(time, nflux, lc_part)
     med_f, MAD_f = np.median(nflux), MAD(nflux, scale='normal')
     ls = LombScargle(time, nflux, dy=enflux)
     frequency, power = ls.autopower(minimum_frequency=1./p_max_thresh,

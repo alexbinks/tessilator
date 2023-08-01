@@ -48,6 +48,8 @@ from photutils.aperture import CircularAperture, CircularAnnulus
 from photutils.aperture import aperture_photometry, ApertureStats
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
+from scipy.stats import iqr
+
 import itertools as it
 from operator import itemgetter
 
@@ -102,9 +104,11 @@ def aic_selector(x, y, poly_max=3):
             return poly_ord, coeffs
         else:
             q += 1
-            if q == poly_max-1:
+            if q >= poly_max-1:
                 poly_ord, coeffs = q+1, p2
                 return poly_ord, coeffs
+
+
 
 
 
@@ -225,7 +229,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     return full_phot_table
     
     
-def clean_flux_edges(f, MAD_fac=.1):
+def clean_flux_edges(f, MAD_fac=1., n_avg=11):
     '''Remove data points from the lightcurve that are likely to be spurious.
 
     Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and
@@ -258,11 +262,22 @@ def clean_flux_edges(f, MAD_fac=.1):
     f : `int`
        The end index for the data string.
     '''
-    
+    if n_avg // 2 == 0:
+        n_avg += 1
+    p_e = int((n_avg-1)/2)
     # get the median time and flux, the median absolute deviation in flux
     # and the time difference for each neighbouring point.
     f_med, f_MAD = np.median(f), MAD(f, scale='normal')
-    g = (np.abs(f-f_med) <= MAD_fac*f_MAD).astype(int)
+    f_diff = np.zeros(len(f))
+    f_diff[1:] = np.diff(f)
+    f_diff_med = np.median(np.absolute(f_diff))
+    
+    f_diff[1:] = np.diff(f)
+    f_diff_med = np.median(np.absolute(f_diff))
+    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
+    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
+    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_diff_med, MAD_fac*f_diff_med))
+    g = ((np.abs(f-f_med) < MAD_fac*f_MAD) & (np.abs(f_diff_run) < f_diff_med)).astype(int)
     i=0
     while i < len(f)-1:
         if g[i] != 1:
@@ -347,7 +362,7 @@ def get_time_segments(t, t_fac=10.):
     ss = np.array(ss).T
     ds, df = ss[0,:], ss[1,:]
     ds[1:] = [ds[i]-1 for i in range(1,len(ds))]
-    df = [(i+1) for i in df]
+    df = np.array([(i+1) for i in df])
     return ds, df
 
 
@@ -534,7 +549,7 @@ def remove_sparse_data(x_start, x_end, std_crit=100):
     return y_start, y_end
 
 
-def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, orig_mad_fac=20., norm_mad_fac=2.):
+def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     '''Produce the lightcurves using the cleaning, normalisation and detrending functions
     
     During each procedure, the function keeps a record of datapoints that are either kept
@@ -592,7 +607,6 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, orig_mad_fac=20., norm_ma
 
     # (2) split the lightcurve into 'time segments'
     ds1, df1 = get_time_segments(f_lc["time"])
-    
     # (3) remove very sparse elements from the lightcurve
     comp_lengths = np.array([f-s for s, f in zip(ds1, df1)])
     std_crit_val = int(np.sum(comp_lengths)*min_comp_frac)
@@ -607,7 +621,7 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, orig_mad_fac=20., norm_ma
         f_lc["lc_part"][s:f] = int(i+1)
     g_cln = f_lc["pass_sparse"]
     f_lc["nflux_dt1"] = np.full(len(f_lc["time"]), -999.)
-    f_lc["nflux_dt1"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=5)
+    f_lc["nflux_dt1"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
     # (5) clean the lightcurve using clean_lc algorithm
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
@@ -623,8 +637,15 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, orig_mad_fac=20., norm_ma
     # the previous criteria
     g_cln = f_lc["pass_clean"]
     f_lc["nflux_dt2"] = np.full(len(f_lc["time"]), -999.)
-    f_lc["nflux_dt2"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=5)
-
+    f_lc["nflux_dt2"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=3)
+    
+    # (7) finally cut out data that are extreme outliers.
+    med_lc = np.median(f_lc["nflux_dt2"][g_cln])
+    MAD_lc = MAD(f_lc["nflux_dt2"][g_cln], scale='normal')
+    f_lc["pass_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    for f in range(len(f_lc["time"])):
+        if (abs(f_lc["nflux_dt2"][f] - med_lc) < outl_mad_fac*MAD_lc):
+            f_lc["pass_outlier"][f] = True
     # (7) return the dictionary
     return f_lc
 
