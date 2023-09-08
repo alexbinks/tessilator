@@ -14,9 +14,9 @@ from collections.abc import Iterable
 __all__ = ['make_plot']
 
 
-def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10),
+def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./plots', XY_ctr=(10,10),
               XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
-              SkyRad = [6.,8.], im_dir='plots', nc='nc'):
+              SkyRad = [6.,8.], nc='nc'):
     '''Produce a plot of tessilator results.
 
     | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
@@ -39,6 +39,8 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
         Table containing the input data for the target
     name_target : `str`
         The name of the target
+    plot_dir : `str`
+        The directory to save the plots.
     XY_ctr : `tuple`, optional, default=(10,10)
         The centroid (in pixels) of the target in the TESS image.
     XY_contam : `Iterable` or `None`, optional, default = `None`
@@ -51,8 +53,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
         The aperture radius from the aperture photometry
     SkyRad : `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
-    im_dir : `str`, optional, default='plots'
-        The name of the directory where the plots will be saved.
     nc : `str`, optional, default='nc'
         A string to describe the type of noise correction applied to the lightcurve.
     returns
@@ -64,7 +64,7 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
     c_2 = clean["pass_clean"].data
     clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["nflux_ori"], clean["mag"]
     clean_norm_time, clean_norm_flux = clean["time"][c_1]-t_0, clean["nflux_ori"][c_1]
-    clean_detr_time, clean_detr_flux = clean["time"][c_2]-t_0, clean["nflux_dt2"][c_2]
+    clean_detr_time, clean_detr_flux = clean["time"][c_2]-t_0, clean["nflux_dtr"][c_2]
 
     mpl.rcParams.update({'font.size': 14})
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
@@ -122,20 +122,20 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
                   fontsize=lsize,horizontalalignment='left', 
                   transform=axs[0,1].transAxes)
     axs[0,1].text(0.99,0.94, "$P_{\\rm rot}^{\\rm (max)}$ = "
-                  f"{LS_dict['period_best']:.3f} days, "
-                  f"power = {LS_dict['power_best']:.3f}",
+                  f"{LS_dict['period_1']:.3f} days, "
+                  f"power = {LS_dict['power_1']:.3f}",
                   fontsize=lsize, horizontalalignment='right',
                   transform=axs[0,1].transAxes)
     axs[0,1].text(0.99,0.82, "$P_{\\rm rot}^{\\rm (2nd)}$ = "
-                  f"{LS_dict['period_second']:.3f}",
+                  f"{LS_dict['period_2']:.3f}",
                   fontsize=lsize, horizontalalignment='right',
                   transform=axs[0,1].transAxes)
     axs[0,1].text(0.99,0.76, f"power ratio = "
-                  f"{LS_dict['power_best']/LS_dict['power_second']:.3f}",
+                  f"{LS_dict['power_1']/LS_dict['power_2']:.3f}",
                   fontsize=lsize,horizontalalignment='right', 
                   transform=axs[0,1].transAxes)
     if LS_dict['Gauss_fit_peak_parameters'][1] != 15:
-        axs[0,1].plot(LS_dict['period_around_peak'],
+        axs[0,1].plot(LS_dict['period_around_1'],
                       LS_dict['Gauss_fit_peak_y_values'],
                       c='r', label='Best fit')
         axs[0,1].text(0.99,0.88, "$P_{\\rm rot}^{\\rm (Gauss)}$ = "
@@ -212,8 +212,5 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, XY_ctr=(10,10)
                         label='cycle number')
     plot_name = '_'.join([name_target, f"{scc[0]:04d}",
                           f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
-    path_exist = os.path.exists(f'./{im_dir}')
-    if not path_exist:
-        os.mkdir(f'./{im_dir}')
-    plt.savefig(f'./{im_dir}/{plot_name}', bbox_inches='tight')
+    plt.savefig(f'{plot_dir}/{plot_name}', bbox_inches='tight')
     plt.close('all')
