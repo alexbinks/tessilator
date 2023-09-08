@@ -82,17 +82,20 @@ def create_table_template():
     '''
     final_table = Table(names=['name', 'source_id', 'ra', 'dec', 'parallax',\
                            'Gmag', 'BPmag', 'RPmag', 'Sector', 'Camera', 'CCD',\
-                           'log_tot_bg_star', 'log_max_bg_star',\
-                           'n_contaminants', 'Period_Max', 'Period_Gauss',\
-                           'e_Period', 'Period_2', 'power1', 'power1_power2',\
+                           'log_tot_bg_star', 'log_max_bg_star', 'n_contaminants',\
+                           'period_1', 'period_1_fit', 'period_1_err', 'power_1',
+                           'period_2', 'power_2', 'period_3', 'power_3', 'period_4', 'power_4',\
                            'FAP_001', 'AIC_line', 'AIC_sine', 'amp', 'scatter',\
                            'chisq_phase', 'fdev', 'Ndata','jump_flag', 'best_lc','cont_flags'],\
-                        dtype=(str, str, float, float, float, float, float, float, int, int,\
-                               int, float, float, int, float, float, float,\
-                               float, float, float, float, float, float, float, float,\
+                        dtype=(str, str, float, float, float,\
+                               float, float, float, int, int, int,\
+                               float, float, int,\
+                               float, float, float, float,\
+                               float, float, float, float, float, float,\
+                               float, float, float, float, float,\
                                float, float, int, int, int, str))
     return final_table
-    
+
     
 def setup_input_parameters():
     '''Retrieve the input parameters to run the tessilator program.
@@ -137,7 +140,7 @@ def setup_input_parameters():
     t_filename : `str`
         The name of the input table containing the targets (or a single target)
      '''
-    max_sec = 65
+    max_sec = 67
     if len(sys.argv) != 6:
         flux_con = pyip.inputInt("Do you want to search for contaminants? "
                    "1=yes, 0=no : ", min=0, max=1)
@@ -476,12 +479,16 @@ def make_datarow(t_target, scc, d_target, labels_cont):
           t_target["log_tot_bg"],
           t_target["log_max_bg"],
           t_target["num_tot_bg"],
-          d_target['period_best'],
+          d_target['period_1'],
           d_target['Gauss_fit_peak_parameters'][1],
           d_target['Gauss_fit_peak_parameters'][2],
-          d_target['period_second'],
-          d_target['power_best'],
-          d_target['power_best']/d_target['power_second'],
+          d_target['power_1'],
+          d_target['period_2'],
+          d_target['power_2'],
+          d_target['period_3'],
+          d_target['power_3'],
+          d_target['period_4'],
+          d_target['power_4'],
           d_target['FAPs'][2],
           d_target['AIC_line'],          
           d_target['AIC_sine'],
@@ -545,7 +552,7 @@ def make_failrow(t_target, scc):
           t_target["log_tot_bg"],
           t_target["log_max_bg"],
           t_target["num_tot_bg"]]
-    for i in range(13):
+    for i in range(16):
         dr.append(np.nan)
     dr.append(0)
     dr.append(0)
@@ -659,11 +666,11 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, mag_extr_lim=3., make_p
     sim_flux = []
     for t in range(len(targ_time)):
         sim_bit = np.interp(targ_time[t], sim_lc["time"], sim_lc["nflux"])
-        targ_lc["nflux_corr"].append(targ_lc["nflux_dt2"][t]/sim_bit)
+        targ_lc["nflux_corr"].append(targ_lc["nflux_dtr"][t]/sim_bit)
         sim_flux.append(sim_bit)
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_sim_lc.png"
-        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_dt2"], sim_flux)
+        make_lc_corr_plot(plot_name, targ_time, targ_lc["nflux_dtr"], sim_flux)
     return targ_lc
 
 
@@ -797,12 +804,12 @@ def assess_lc(ls_results):
     if (cbv_ls["jump_flag"]) != True:
         cbv_sc += 1
 #3) Check the max_power/2nd_max_power...
-    if (ori_ls["power_best"]/ori_ls["power_second"]) > (cbv_ls["power_best"]/cbv_ls["power_second"]):
+    if (ori_ls["power_1"]/ori_ls["power_1"]) > (cbv_ls["power_1"]/cbv_ls["power_1"]):
         ori_sc += 1
     else:
         cbv_sc += 1
 #4) Check the max_power/FAP_001
-    if (ori_ls["power_best"]/ori_ls["FAPs"][2]) > (cbv_ls["power_best"]/cbv_ls["FAPs"][2]):
+    if (ori_ls["power_1"]/ori_ls["FAPs"][2]) > (cbv_ls["power_1"]/cbv_ls["FAPs"][2]):
         ori_sc += 1
     else:
         cbv_sc += 1
@@ -822,14 +829,13 @@ def assess_lc(ls_results):
     else:
         cbv_sc += 1
         
-    print('scores: ', ori_sc, cbv_sc)
     if ori_sc > cbv_sc:
         lc_choice = 0
     else:
         lc_choice = 1
     return lc_choice
 
-def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20, cbv_flag=True, store_lc=False, lc_dir='lc', keep_data=False, flux_con=False, LC_con=False, con_file=False, XY_pos=(10.,10.), Rad=1., SkyRad=[6.,8.], fix_noise=False):
+def full_run_lc(file_in, t_target, make_plots, scc, final_table, ref_name='targets', cutout_size=20, cbv_flag=True, store_lc=False, lc_dir='lc', pg_dir='pg', plot_ext='plots', keep_data=False, flux_con=False, LC_con=False, con_file=False, XY_pos=(10.,10.), Rad=1., SkyRad=[6.,8.], fix_noise=False):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
     This function calls a set of functions in the lc_analysis.py module to
@@ -852,6 +858,10 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
         Choose to save the cleaned lightcurve to file
     lc_dir : `str`, optional, default='lc'
         The directory used to store the lightcurve files if lc_dir==True
+    pg_dir : `str`, optional, default='pg'
+        The directory used to store the periodogram data.
+    plot_ext : `str`, optional, default='plots'
+        The directory used to store the plots if make_plots==True
     keep_data : `bool`
         Choose to save the input data to file.
     flux_con : `bool`, optional, default=False
@@ -889,7 +899,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
         for t in t_target:
             final_table.add_row(make_failrow(t, scc))
         return None
-
     if cbv_flag == True:
         corrected_flux, weights = get_cbv_scc(scc, tpf)
         tpf["cbv_oflux"] = corrected_flux[1][:]
@@ -905,10 +914,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
             t_targets["source_id"] = t_targets["source_id"].astype(str)
             
         name_target = get_name_target(t_targets["name"][0])
-
+        name_full = f'{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}'
         if len(g_c) >= 50:
-            name_lc = f'lc_{name_target}_{scc[0]:02d}_{scc[1]}_{scc[2]}'
-            lcs = make_lc(g_c, name_lc, store_lc=store_lc, lc_dir=lc_dir)
+            lcs = make_lc(g_c, name_lc='lc_'+name_full, store_lc=store_lc, lc_dir=lc_dir)
         else:
             logger.error(f"No photometry was recorded for this group.")
             final_table.add_row(make_failrow(t_targets, scc))
@@ -927,7 +935,8 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
 
         ls_results = []
         for lc in lcs:
-            ls = run_ls(lc, check_jump=True)
+            lc_type = lc.colnames[2][:3]
+            ls = run_ls(lc, lc_type=lc_type, name_pg='pg_'+name_full, check_jump=True, pg_dir=pg_dir)
             ls_results.append(ls)
         if len(lcs) == 1:
             choose_lc = 0
@@ -938,7 +947,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
             d_target = ls_results[choose_lc]
             best_lc = 1 + choose_lc
         d_target["best_lc"] = best_lc
-        if d_target['period_best'] == -999:
+        if d_target['period_1'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
             final_table.add_row(make_failrow(t_targets, scc))
@@ -990,13 +999,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, cutout_size=20,
         else:
             labels_cont = 'z'
             XY_con = None
-
         if make_plots:
+            plot_dir = make_dir(plot_ext, ref_name)
             im_plot, XY_ctr = make_2d_cutout(file_in, group, \
                                              im_size=(cutout_size+1,\
                                                       cutout_size+1))
             make_plot(im_plot, lcs[choose_lc],\
-                         d_target, scc, t_targets, name_target, XY_contam=XY_con,\
+                         d_target, scc, t_targets, name_target, plot_dir=plot_dir, XY_contam=XY_con,\
                          p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,\
                          SkyRad=[6.,8.], nc=nc)
         final_table.add_row(make_datarow(t_targets, scc, d_target,\
@@ -1260,11 +1269,13 @@ def cutout_allsecs(coord, cutout_size, name_target, tot_attempts=3, cap_files=No
     manifest : `list`
         A list of the fits files for lightcurve analysis.
     '''
+    print(fits_dir)
     num_attempts, manifest = 0, []
     while num_attempts < tot_attempts:
         logger.info(f'attempting download request {num_attempts+1} of {tot_attempts}...')
         try:
             sectors = Tesscut.get_sectors(coordinates=coord)['sector'].data
+            print(f'There are {len(sectors)} in total: {sectors}') 
             if len(sectors) == 0:
                 logger.error(f'Sorry, no TESS data available for {name_target}')
                 break
@@ -1274,7 +1285,7 @@ def cutout_allsecs(coord, cutout_size, name_target, tot_attempts=3, cap_files=No
             for n_s, sec in enumerate(sectors):
                 logger.info(f'getting sector {sec}, {n_s+1} of {len(sectors)}')
                 s = f'{sec:04d}'
-                fits_file = glob(f'./{fits_dir}/{name_target}_{s}*')
+                fits_file = glob(f'{fits_dir}/{name_target}_{s}*')
                 if fits_file:
                     manifest.append(fits_file[0])
                 else:
@@ -1333,7 +1344,7 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
         num_attempts = 0
         while num_attempts < tot_attempts:
             try:
-                fits_file = glob(f'./{fits_dir}/{name_target}_{choose_sec:04d}*')
+                fits_file = glob(f'{fits_dir}/{name_target}_{choose_sec:04d}*')
                 if fits_file:
                      manifest.append(fits_file[0])
                 else:
@@ -1344,12 +1355,12 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
                     manifest.append(dl["Local Path"][0])
                 return manifest
             except:
-                print(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}")
-                logger.error(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}")
+                print(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}/{tot_attempts}")
+                logger.error(f"Didn't get data for {name_target} in {choose_sec}, attempt {num_attempts+1}/{tot_attempts}")
                 num_attempts += 1
         if num_attempts == tot_attempts:
-            print(f"No data found for {name_target} in {choose_sec}")
-            logger.error(f"No data found for {name_target} in {choose_sec}")
+            print(f"No data found for {name_target} in Sector {choose_sec}")
+            logger.error(f"No data found for {name_target} in Sector {choose_sec}")
             return manifest
 
 
@@ -1399,7 +1410,7 @@ def cutout_chosensecs(coord, cutout_size, name_target, choose_sec, tot_attempts=
             while num_attempts < tot_attempts:
                 print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
                 try:
-                    fits_file = glob(f'./{fits_dir}/{name_target}_{c}*')[0]
+                    fits_file = glob(f'{fits_dir}/{name_target}_{c}*')[0]
                     if os.exists(fits_file):
                         manifest.append(fits_file)
                     else:
@@ -1469,8 +1480,9 @@ def get_cutouts(coord, cutout_size, name_target, choose_sec=None, tot_attempts=3
     return manifest
 
 def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
-                      final_table, choose_sec=None, store_lc=False, cutout_size=20, \
-                      tot_attempts=3, cap_files=None, fits_dir='fits', lc_dir='lc', fix_noise=False):
+                      final_table, ref_name, choose_sec=None, store_lc=False, cutout_size=20, \
+                      tot_attempts=3, cap_files=None, fits_dir='fits', lc_dir='lc',
+                      pg_dir='pg', fix_noise=False):
     '''Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources".
@@ -1492,6 +1504,8 @@ def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
         Decides is plots are made from the lightcurve analysis.
     final_table : `astropy.table.Table`
         The table to store the final tessilator results.
+    ref_name : `str`
+        The reference name for each subdirectory which will connect all output files.
     choose_sec : `None`, `int` or `Iterable`, optional, default=None
         | The sector, or sectors required for download.
         * If `None`, TESScut will download all sectors available for the target.
@@ -1513,6 +1527,7 @@ def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
     Nothing returned. Results are saved to table and plots are generated (if
     specified). 
     '''
+    
     # Set the contaminant parameters to the default values in case
     # they have not been added
     if 'log_tot_bg' not in target.colnames:
@@ -1529,7 +1544,7 @@ def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
     # use Tesscut to get the cutout fits files for the target star
     # there may be more than 1 fits file if the target lands in
     # multiple sectors!
-    fits_files = get_cutouts(coo, cutout_size, name_target, tot_attempts=tot_attempts, choose_sec=choose_sec, cap_files=cap_files, fits_dir='fits')
+    fits_files = get_cutouts(coo, cutout_size, name_target, tot_attempts=tot_attempts, choose_sec=choose_sec, cap_files=cap_files, fits_dir=fits_dir)
     if fits_files is None:
         logger.error(f"could not download any data for {target['name']}. "
                      f"Trying next target.")
@@ -1540,29 +1555,38 @@ def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
     # rename the fits file to something more legible for users
                 f_sp = file_in.split('/')[-1].split('-')
                 if (len(f_sp) >=3) & (f_sp[0] == 'tess'):
-                    f_new = f'./{fits_dir}/'+'_'.join([name_target, f_sp[1][1:], f_sp[2],\
+                    f_new = f'{fits_dir}/'+'_'.join([name_target, f_sp[1][1:], f_sp[2],\
                                                        f_sp[3][0]])+'.fits'
                     os.rename(f'./{file_in}', f_new)
                     logger.info(f"target: {target['source_id']}, "
                                 f"{m+1}/{len(fits_files)}")
     # run the lightcurve analysis for the given target/fits file
                 elif len(f_sp) == 1:
-                    f_new = f'./{fits_dir}/{f_sp[0]}'
+                    f_new = f'{fits_dir}/{f_sp[0]}'
                 else:
                     f_new = file_in
                 t_sp = f_new.split('_')
     # simply extract the sector, ccd and camera numbers from the fits file.
                 scc = [int(t_sp[-3][1:]), int(t_sp[-2]), int(t_sp[-1][0])]
-                full_run_lc(f_new, target, make_plots, scc, final_table, 
-                                   flux_con=flux_con, store_lc=store_lc, LC_con=LC_con,
-                                   con_file=con_file, XY_pos=(10.,10.), lc_dir=lc_dir, fix_noise=fix_noise)
+                full_run_lc(f_new, target, make_plots, scc, final_table, ref_name=ref_name, 
+                            flux_con=flux_con, store_lc=store_lc, LC_con=LC_con,
+                            lc_dir=lc_dir, pg_dir=pg_dir, con_file=con_file,
+                            XY_pos=(10.,10.), fix_noise=fix_noise)
             except Exception as e:
                 logger.error(f"Error occurred when processing {file_in}. "
                              f"Trying next target.")
 
-        
+def make_dir(extn, ref):
+    dir_name = f'./{extn}/{ref}'
+    dir_path_exist = os.path.exists(dir_name)
+    if not dir_path_exist:
+        os.makedirs(dir_name)
+    return dir_name
+    
+    
+
 def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
-                       make_plots, choose_sec=None, store_lc=False, tot_attempts=3, cap_files=None, res_dir='results', lc_dir='lc', fits_dir='fits', keep_data=False, fix_noise=False):
+                       make_plots, ref_name, choose_sec=None, store_lc=False, tot_attempts=3, cap_files=None, res_ext='results', lc_ext='lc', pg_ext='pg', fits_ext='fits', keep_data=False, fix_noise=False):
     '''Run the tessilator for all targets.
 
     parameters
@@ -1591,6 +1615,8 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         from contaminants.
     make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
+    ref_name : `str`
+        The reference name for each subdirectory which will connect all output files.
     choose_sec : `None`, `int`, or `Iterable`, optional, default=None
         | The sector, or sectors required for download.
         * If `None`, TESScut will download all sectors available for the target.
@@ -1603,11 +1629,11 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
         server errors
     cap_files : `int`, optional, default=None
         The maximum number of sectors for each target.
-    res_dir : `str`, optional, default='results'
+    res_ext : `str`, optional, default='results'
         The directory to store the final results file.
-    lc_dir : `str`, optional, default='lc'
+    lc_ext : `str`, optional, default='lc'
         The directory used to store the lightcurve files if lc_dir==True
-    fits_dir : `str`, optional, default='fits'
+    fits_ext : `str`, optional, default='fits'
         The name of the directory to store the fits files.
     keep_data : `bool`
         Choose to save the input data to file.
@@ -1619,9 +1645,10 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
     Nothing returned. The final table is saved to file and the program
     terminates.
     '''
-    fits_path_exist = os.path.exists(f'./{fits_dir}')
-    if not fits_path_exist:
-        os.makedirs(f'./{fits_dir}')
+    fits_dir = make_dir(fits_ext, ref_name)
+    lc_dir = make_dir(lc_ext, ref_name)
+    pg_dir = make_dir(pg_ext, ref_name)
+    res_dir = make_dir(res_ext, ref_name)
 
     final_table = create_table_template()
     if 'log_tot_bg' not in t_targets.colnames:
@@ -1631,14 +1658,12 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, con_file,\
     for i, target in enumerate(t_targets):
         print(f"{target['name']} (Gaia DR3 {target['source_id']}), star # {i+1} of {len(t_targets)}")
         one_source_cutout(target, LC_con, flux_con, con_file,
-                          make_plots, final_table, store_lc=store_lc, choose_sec=choose_sec,
-                          tot_attempts=tot_attempts, cap_files=cap_files, lc_dir=lc_dir, fix_noise=fix_noise)
+                          make_plots, final_table, ref_name, store_lc=store_lc, choose_sec=choose_sec,
+                          tot_attempts=tot_attempts, cap_files=cap_files, fits_dir=fits_dir,
+                          lc_dir=lc_dir, pg_dir=pg_dir, fix_noise=fix_noise)
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
-    res_path_exist = os.path.exists(f'./{res_dir}')
-    if not res_path_exist:
-        os.makedirs(f'./{res_dir}')
-    final_table.write(f'./{res_dir}/{period_file}_{dt_string}.ecsv')
+    final_table.write(f'{res_dir}/{period_file}_{dt_string}.ecsv')
 
     hrs_mins_secs = print_time_taken(start, finish)
     print(f"Finished {len(t_targets)} targets in {hrs_mins_secs}")

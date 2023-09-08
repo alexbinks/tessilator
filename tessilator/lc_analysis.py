@@ -35,6 +35,8 @@ import warnings
 # Third party imports
 import numpy as np
 import os
+import json
+
 
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
@@ -61,6 +63,15 @@ from .fixedconstants import *
 logger = logging.getLogger(__name__)
 #logger_aq = logging.getLogger("astroquery")
 #logger_aq.setLevel(logging.ERROR)    
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
 
 def aic_selector(x, y, poly_max=3):
     '''Chooses the most appropriate polynomial fit, using the Aikaike Information Criterion
@@ -101,12 +112,12 @@ def aic_selector(x, y, poly_max=3):
         
         if AIC1 < (AIC2 + 2):
             poly_ord, coeffs = q, p1
-            return poly_ord, coeffs
+            return poly_ord, list(coeffs)
         else:
             q += 1
-            if q >= poly_max-1:
-                poly_ord, coeffs = q+1, p2
-                return poly_ord, coeffs
+            if q >= poly_max:
+                poly_ord, coeffs = q, p2
+                return poly_ord, list(coeffs)
 
 
 
@@ -229,7 +240,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     return full_phot_table
     
     
-def clean_flux_edges(f, MAD_fac=1., n_avg=11):
+def clean_flux_edges(f, MAD_fac=2., n_avg=11):
     '''Remove data points from the lightcurve that are likely to be spurious.
 
     Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and
@@ -277,7 +288,7 @@ def clean_flux_edges(f, MAD_fac=1., n_avg=11):
     f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
     f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
     f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_diff_med, MAD_fac*f_diff_med))
-    g = ((np.abs(f-f_med) < MAD_fac*f_MAD) & (np.abs(f_diff_run) < f_diff_med)).astype(int)
+    g = ((np.abs(f-f_med) < MAD_fac*f_MAD) & (np.abs(f_diff_run) < 2.*f_diff_med)).astype(int)
     i=0
     while i < len(f)-1:
         if g[i] != 1:
@@ -327,29 +338,38 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
 
     # 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and
     #    detrend the lightcurve as a whole.
-    s_fit, coeffs = aic_selector(t, f, poly_max=poly_max)
-#    print(f'step 1: {s_fit}, {coeffs}')
-    f_norm = f/np.polyval(coeffs, t)
+    s_fit_0, coeffs_0 = aic_selector(t, f, poly_max=poly_max)
+    f_norm = f/np.polyval(coeffs_0, t)
+
     # 2. Decide whether to use the detrended lightcurve from part 1, or to separate the
     #    lightcurve into individual components and detrend each one separately
-    norm_comp = normalisation_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
-#    print(f'do we normalise separately? {norm_comp}')
-    s_fit, coeffs = None, None
+    norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
+                    normalisation_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
+
     # 3. Detrend the lightcurve following steps 1 and 2.
+    s_fit, coeffs = [], []
     if norm_comp:
         # normalise each component separately.
         f_detrend = np.array([])
         for l in np.unique(lc):
             g = np.array(lc == l)
-            s_fit, coeffs = aic_selector(t[g], f[g], poly_max=poly_max)
-#            print(f'final_fits: {s_fit}, {coeffs}') 
-            f_n = f[g]/np.polyval(coeffs, t[g])
+            s_fit_n, coeffs_n = aic_selector(t[g], f[g], poly_max=poly_max)
+            s_fit.append(s_fit_n)
+            coeffs.append(coeffs_n)
+            f_n = f[g]/np.polyval(coeffs_n, t[g])
             f_detrend = np.append(f_detrend, f_n)
         f_norm = f_detrend
     else:
         # normalise the entire lightcurve as a whole
         f_norm = f_norm
-    return f_norm
+    detr_dict = {'norm_comp' : norm_comp,
+                 'f1_at_f2_0' : f1_at_f2_0,
+                 'f2_at_f2_0' : f2_at_f2_0,
+                 'f1_MAD' : f1_MAD,
+                 'f2_MAD' : f2_MAD,
+                 's_fit' : s_fit,
+                 'coeffs' : coeffs}
+    return f_norm, detr_dict
 
 
 def get_time_segments(t, t_fac=10.):
@@ -393,7 +413,7 @@ def get_xy_pos(targets, head):
     return positions
     
     
-def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
+def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
     '''Construct the normalised TESS lightcurve.
 
     | The function runs the following tasks:
@@ -410,7 +430,8 @@ def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
         | "mag" -> The target magnitude
         | "reg_oflux" or "cbv_oflux" -> The total flux subtracted by the background flux
         | "flux_err" -> The error on flux_corr
-    name_lc : `str`
+    name_lc : `str`, optional, default='target'
+        The name of the file which the lightcurve data will be saved to.
         The target name
     store_lc : `bool`, optional, default=False
         Choose to save the cleaned lightcurve to file
@@ -440,18 +461,20 @@ def make_lc(phot_table, name_lc, store_lc=False, lc_dir='lc'):
         final_lc["mag"] = phot_table["mag"].data
         final_lc[f'{f_label}'] = phot_table[f'{f_label}'].data
         final_lc["eflux"] = phot_table["flux_err"].data
-        f_out = run_make_lc_steps(final_lc, f_label)
-        if len(f_out["time"]) > 50: 
-            tab_out = Table(f_out)
+        flux_dict, detr_dict = run_make_lc_steps(final_lc, f_label)
+        if len(flux_dict["time"]) > 50: 
+            flux_tab = Table(flux_dict)
             if f_label == "reg_oflux":
-                final_tabs.append(tab_out)
+                final_tabs.append(flux_tab)
             if (f_label == "cbv_oflux") and (cbv_ret):
-                final_tabs.append(tab_out)
+                final_tabs.append(flux_tab)
             if store_lc:
                 path_exist = os.path.exists(f'./{lc_dir}')
                 if not path_exist:
                     os.makedirs(f'./{lc_dir}')
-                tab_out.write(f'./{lc_dir}/{name_lc}_{f_label}.csv', format='csv', overwrite=True)
+                flux_tab.write(f'./{lc_dir}/{name_lc}_{f_label}.csv', format='csv', overwrite=True)
+                with open(f'./{lc_dir}/{name_lc}_{f_label}.json', 'w') as convert_file:
+                    convert_file.write(json.dumps(detr_dict))
     return final_tabs
 
 
@@ -481,36 +504,29 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
     norm_comp : `bool`
         Determines whether the data should be detrended as one whole component (False) or in parts (True)
     '''
-#    print(np.unique(lc_part))
     norm_comp = False
     Ncomp = len(np.unique(lc_part))
+    f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = [], [], [], []
     if Ncomp > 1:
         i = 1
         while i < Ncomp:
             g1 = np.array(lc_part == i)
             g2 = np.array(lc_part == i+1)
-            
+
             s_fit1, coeff1 = aic_selector(t_orig[g1], f_orig[g1], poly_max=poly_max)
             s_fit2, coeff2 = aic_selector(t_orig[g2], f_orig[g2], poly_max=poly_max)
-
-#            print(f'lc {i}: {s_fit1}, {coeff1}')
-#            print(f'lc {i+1}: {s_fit2}, {coeff2}')
             
-            f1_at_f2_0 = np.polyval(coeff1, t_orig[g2][0]) # yes, the index IS supposed to be [g2]
-            f2_at_f2_0 = np.polyval(coeff2, t_orig[g2][0])
-#            print(f'matching points: {f1_at_f2_0}, {f2_at_f2_0}')
-#            print(f'time at f2_0: {t_orig[g2][0]}')
+            f1_at_f2_0.append(np.polyval(coeff1, t_orig[g2][0])) # yes, the index IS supposed to be [g2]
+            f2_at_f2_0.append(np.polyval(coeff2, t_orig[g2][0]))
             f1_n = f_orig[g1]/np.polyval(coeff1, t_orig[g1])
             f2_n = f_orig[g2]/np.polyval(coeff2, t_orig[g2])
-            f1_MAD = MAD(f1_n, scale='normal')
-            f2_MAD = MAD(f2_n, scale='normal')
-#            if abs(f1_at_f2_0 - f2_at_f2_0) > MAD_fac*((f1_MAD+f2_MAD)/2.) and \
-#               max(np.sum(g1), np.sum(g2))/min(np.sum(g1), np.sum(g2)) < 3.0:
-            if abs(f1_at_f2_0 - f2_at_f2_0) > MAD_fac*((f1_MAD+f2_MAD)/2.):
+            f1_MAD.append(MAD(f1_n, scale='normal'))
+            f2_MAD.append(MAD(f2_n, scale='normal'))
+            if abs(f1_at_f2_0[-1] - f2_at_f2_0[-1]) > MAD_fac*((f1_MAD[-1]+f2_MAD[-1])/2.):
                 norm_comp = True
-                return norm_comp
+                break
             else: i += 1
-    return norm_comp
+    return norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
 
 
 def remove_sparse_data(x_start, x_end, std_crit=100):
@@ -607,6 +623,7 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
 
     # (2) split the lightcurve into 'time segments'
     ds1, df1 = get_time_segments(f_lc["time"])
+    
     # (3) remove very sparse elements from the lightcurve
     comp_lengths = np.array([f-s for s, f in zip(ds1, df1)])
     std_crit_val = int(np.sum(comp_lengths)*min_comp_frac)
@@ -620,13 +637,14 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     for i, (s, f) in enumerate(zip(ds2, df2)):
         f_lc["lc_part"][s:f] = int(i+1)
     g_cln = f_lc["pass_sparse"]
-    f_lc["nflux_dt1"] = np.full(len(f_lc["time"]), -999.)
-    f_lc["nflux_dt1"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
+    f_lc["nflux_dtr"] = np.full(len(f_lc["time"]), -999.)
+    f_lc["nflux_dtr"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
+
     # (5) clean the lightcurve using clean_lc algorithm
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
         g = np.where(f_lc["lc_part"] == lc)[0]
-        s, f = clean_flux_edges(f_lc["nflux_dt1"][g])
+        s, f = clean_flux_edges(f_lc["nflux_dtr"][g])
         ds3.append(g[s])
         df3.append(g[f])
     f_lc["pass_clean"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
@@ -635,19 +653,20 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     
     # (6) detrend the original lightcurve, but only using the data that passed the
     # the previous criteria
-    g_cln = f_lc["pass_clean"]
-    f_lc["nflux_dt2"] = np.full(len(f_lc["time"]), -999.)
-    f_lc["nflux_dt2"][g_cln] = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=3)
-    
+#    g_cln = f_lc["pass_clean"]
+#    f_lc["nflux_dtr2"] = np.full(len(f_lc["time"]), -999.)
+#    f_lc["nflux_dtr2"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
+
     # (7) finally cut out data that are extreme outliers.
-    med_lc = np.median(f_lc["nflux_dt2"][g_cln])
-    MAD_lc = MAD(f_lc["nflux_dt2"][g_cln], scale='normal')
+    med_lc = np.median(f_lc["nflux_dtr"][g_cln])
+    MAD_lc = MAD(f_lc["nflux_dtr"][g_cln], scale='normal')
     f_lc["pass_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for f in range(len(f_lc["time"])):
-        if (abs(f_lc["nflux_dt2"][f] - med_lc) < outl_mad_fac*MAD_lc):
+        if abs(f_lc["nflux_dtr"][f] - med_lc) < outl_mad_fac*MAD_lc:
             f_lc["pass_outlier"][f] = True
-    # (7) return the dictionary
-    return f_lc
+
+    # (8) return the dictionary
+    return f_lc, detr_dict
 
 
 def sin_fit(x, y0, A, phi):
