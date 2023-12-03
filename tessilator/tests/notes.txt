@@ -1,0 +1,8 @@
+4 targets in the test sample
+
+1) Bright, fast rotator: ABDor
+2) Bright, slow rotator: BDp20_2465
+3) Faint, fast rotator: GESJ08065664-4703000
+4) Faint, slow rotator: Gaia_DR3_2314778985026776320
+
+

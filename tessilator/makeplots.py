@@ -65,7 +65,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["nflux_ori"], clean["mag"]
     clean_norm_time, clean_norm_flux = clean["time"][c_1]-t_0, clean["nflux_ori"][c_1]
     clean_detr_time, clean_detr_flux = clean["time"][c_2]-t_0, clean["nflux_dtr"][c_2]
-
     mpl.rcParams.update({'font.size': 14})
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
         best_fit_type = 'linear'
@@ -134,13 +133,13 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
                   f"{LS_dict['power_1']/LS_dict['power_2']:.3f}",
                   fontsize=lsize,horizontalalignment='right', 
                   transform=axs[0,1].transAxes)
-    if LS_dict['Gauss_fit_peak_parameters'][1] != 15:
+    if (LS_dict['Gauss_1'][1] != 15) & (isinstance(LS_dict['period_around_1'], Iterable)):
         axs[0,1].plot(LS_dict['period_around_1'],
-                      LS_dict['Gauss_fit_peak_y_values'],
+                      LS_dict['Gauss_y_1'],
                       c='r', label='Best fit')
         axs[0,1].text(0.99,0.88, "$P_{\\rm rot}^{\\rm (Gauss)}$ = "
-                      f"{LS_dict['Gauss_fit_peak_parameters'][1]:.3f} $\\pm$"
-                      f"{LS_dict['Gauss_fit_peak_parameters'][2]:.3f}",
+                      f"{LS_dict['Gauss_1'][1]:.3f} $\\pm$"
+                      f"{LS_dict['Gauss_1'][2]:.3f}",
                       fontsize=lsize, horizontalalignment='right',
                       transform=axs[0,1].transAxes)        
                       
@@ -162,7 +161,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
         axs[1,0].text(0.01,0.90, 'Jumps detected', fontsize=lsize,
                       horizontalalignment='left',
                       transform=axs[1,0].transAxes)
-
     if LS_dict["best_lc"] == 1:
         axs[1,0].text(0.01,0.01, f'best fit: original flux', fontsize=lsize,
                       horizontalalignment='left',
@@ -189,6 +187,7 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     ax2.invert_yaxis()
     ax2.scatter(clean_orig_time, clean_orig_mag, s=0.3, alpha=0.3, color="b", marker="x")
     ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
+
     axs[1,1].set_xlim([0,1])
     axs[1,1].set_xlabel("phase", fontsize=fsize)
     axs[1,1].set_ylabel("normalised flux", fontsize=fsize)

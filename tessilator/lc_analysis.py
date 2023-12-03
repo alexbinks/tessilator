@@ -25,7 +25,7 @@ This module contains functions to perform aperture photmetry and clean lightcurv
 
 # imports
 import logging
-__all__ = ['aic_selector', 'aper_run', 'clean_flux_edges', 'detrend_lc',
+__all__ = ['aic_selector', 'aper_run', 'clean_edges_outlier', 'clean_edges_scatter', 'detrend_lc',
            'get_time_segments', 'get_xy_pos', 'logger', 'make_lc',
            'normalisation_choice', 'remove_sparse_data', 'sin_fit', 'test_cbv_fit']
 
@@ -65,15 +65,15 @@ logger = logging.getLogger(__name__)
 #logger_aq.setLevel(logging.ERROR)    
 
 
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
+#class NumpyEncoder(json.JSONEncoder):
+#    def default(self, obj):
+#        if isinstance(obj, np.ndarray):
+#            return obj.tolist()
+#        return json.JSONEncoder.default(self, obj)
 
 
 
-def aic_selector(x, y, poly_max=3):
+def aic_selector(x, y, poly_max=3, cov_min=1e-10):
     '''Chooses the most appropriate polynomial fit, using the Aikaike Information Criterion
     
     This function uses the Aikaike Information Criterion to find the most appropriate polynomial order to a set of X, Y data points.
@@ -97,28 +97,29 @@ def aic_selector(x, y, poly_max=3):
         The polynomial coefficients.
     
     '''
-
+    
     q = 0
     N = float(len(x))
-    while q < poly_max:
-        k1, k2 = q+1, q+2
-        p1, r1, _,_,_ = np.polyfit(x, y, q, full=True)
-        p2, r2, _,_,_ = np.polyfit(x, y, q+1, full=True)
-        with np.errstate(invalid='ignore'):
-            SSR1 = np.sum((np.polyval(p1, x) - y)**2)
-            SSR2 = np.sum((np.polyval(p2, x) - y)**2)
-        AIC1 = akaike_info_criterion_lsq(SSR1, k1, N)
-        AIC2 = akaike_info_criterion_lsq(SSR2, k2, N)
-        
-        if AIC1 < (AIC2 + 2):
-            poly_ord, coeffs = q, p1
-            return poly_ord, list(coeffs)
-        else:
-            q += 1
-            if q >= poly_max:
-                poly_ord, coeffs = q, p2
+    try:
+        while q < poly_max:
+            k1, k2 = q+1, q+2
+            p1, r1, _,_,_ = np.polyfit(x, y, q, full=True)
+            p2, r2, _,_,_ = np.polyfit(x, y, q+1, full=True)
+            with np.errstate(invalid='ignore'):
+                SSR1 = np.sum((np.polyval(p1, x) - y)**2)
+                SSR2 = np.sum((np.polyval(p2, x) - y)**2)
+            AIC1 = akaike_info_criterion_lsq(SSR1, k1, N)
+            AIC2 = akaike_info_criterion_lsq(SSR2, k2, N)
+            if (AIC1 < (AIC2 + 2)) | (r1 < cov_min):
+                poly_ord, coeffs = q, p1
                 return poly_ord, list(coeffs)
-
+            else:
+                q += 1
+                if q >= poly_max:
+                    poly_ord, coeffs = q, p2
+                    return poly_ord, list(coeffs)
+    except:
+        return 0, [1.0]
 
 
 
@@ -154,13 +155,14 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     else:
         fits_files = [file_in]
 
-    full_phot_table = Table(names=('id', 'xcenter', 'ycenter', 'flux',
+    full_phot_table = Table(names=('run_no','id', 'xcenter', 'ycenter', 'flux',
                                    'flux_err', 'bkg', 'total_bkg',
                                    'reg_oflux', 'mag', 'mag_err', 'time'),
-                            dtype=(str, float, float, float, float, float,
+                            dtype=(int, str, float, float, float, float, float,
                                    float, float, float, float, float))
+    print(fits_files)
     for f_num, f_file in enumerate(fits_files):
-        print(f_num, f_file)
+        print(f'{f_num}, {f_file}, running aperture photometry')
         try:
             with fits.open(f_file) as hdul:
                 data = hdul[1].data
@@ -211,6 +213,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                         #calculate the background contribution to the aperture
                         aperture_area = aperture.area_overlap(flux_ap)
                         #print out the data to "t"
+                        t['run_no'] = n_step
                         t['id'] = targets['source_id']
                         t['id'] = t['id'].astype(str)
                         t['bkg'] = aperstats.median
@@ -226,7 +229,7 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
                             t['aperture_sum_err'][g].data/\
                             t['aperture_sum'][g].data)
                         t['time'] = time_val[n_step]
-                        fix_cols = ['id', 'xcenter', 'ycenter',
+                        fix_cols = ['run_no', 'id', 'xcenter', 'ycenter',
                                     'aperture_sum', 'aperture_sum_err', 'bkg',
                                     'tot_bkg', 'ap_sum_sub', 'mag',
                                     'mag_err', 'time']
@@ -240,24 +243,53 @@ def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
     return full_phot_table
     
     
-def clean_flux_edges(f, MAD_fac=2., n_avg=11):
-    '''Remove data points from the lightcurve that are likely to be spurious.
-
-    Many lightcurves have a 1 or 2 day gap. To avoid systematic offsets and
-    ensure the data is efficiently normalized, the lightcurve is split into
-    "strings" of contiguous data. Neighbouring data points must have been
-    observed within "time_fac" times the median absolute deviation of the
-    time difference between each observation.
+def clean_flux_algorithm(g):
+    '''A basic algorithm that trims both sides of a contiguous data string
+    if a condition is not satisfied, until the condition is met for the
+    first time.
     
+    parameters
+    ----------
+    g : `Iter`
+        The array of boolean results indicating if a condition is met (=1) or not (=0)
+    
+    returns
+    -------
+    start : `int`
+        The trimmed start point of the array
+    fin : `int`
+        The trimmed final part of the array
+    '''
+    i, j = 0, len(g)-1
+    while i < j:
+        if g[i] != 1:
+            i+=1
+        else:
+            start=i
+            break
+    while j > 0:
+        if g[j] != 1:
+            j-=1
+        else:
+            fin=j
+            break
+    if j <= i:
+        start, fin = 0, len(g)-1
+        return start, fin
+    else:
+        return start, fin
+    
+    
+
+    
+def clean_edges_outlier(f, MAD_fac=5.):
+    '''Remove spurious data points at the start and end parts of the lightcurve.
+
     The start and end point of each data section must have a flux value within
     a given number of MAD from the median flux in the sector. This is done
     because often after large time gaps the temperature of the sensors changes,
     and including these components is likely to just result in a signal from
     instrumental noise.
-    
-    The function returns the start and end points for each data section in the
-    sector, which must contain a chosen number of data points. This is to
-    ensure there are enough datapoints to construct a periodogram analysis.
 
     parameters
     ----------
@@ -268,11 +300,54 @@ def clean_flux_edges(f, MAD_fac=2., n_avg=11):
 
     returns
     -------
+    start : `int`
+       The start index for the data string.
+    fin : `int`
+       The end index for the data string.
+    '''
+    f_med, f_MAD = np.median(f), MAD(f, scale='normal')
+    f_diff = np.zeros(len(f))
+    f_diff[1:] = np.diff(f)
+    f_diff_med = np.median(np.absolute(f_diff))
+    try: 
+        g = (np.abs(f-f_med) < MAD_fac*f_MAD).astype(int)
+        start, fin = clean_flux_algorithm(g)
+        
+    except:
+        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        start, fin = 0, len(g)-1
+    return start, fin
+
+
+def clean_edges_scatter(f, MAD_fac=5., len_IQR=[11,10]):
+    '''Remove data points from the lightcurve that are likely to be spurious.
+
+    Occasionally there are lightcurves that appear to have very scattered data at the start and end
+    points of the lightcurves. These can degrade the quality of the periodogram analysis, or even return
+    an incorrect period.
+    
+    The idea is to group the first "n_avg" datapoints, and calculate the median absolute deviation (MAD).
+    If this local MAD value is greater (less) than "MAD_fac" times the MAD of the full lightcurve, then
+    we flag this point with 0 (1). The first and last "(n_avg-1)/2" in the lightcurve are given a constant
+    value. If the first/last MAD comparison yield a "1" value, then we do no extra cleaning to the lightcurve. 
+
+    parameters
+    ----------
+    f : `Iterable`
+        The set of normalised flux coordinates
+    MAD_fac : `float`, optional, default=2.
+        The threshold number of MAD values to allow.
+    n_avg : `int`, optional, default=21
+        The number of data points to be used in the local MAD value.
+
+    returns
+    -------
     s : `int`
        The start index for the data string.
     f : `int`
        The end index for the data string.
     '''
+    n_avg =min(len_IQR[0], int(len(f)/len_IQR[1]))
     if n_avg // 2 == 0:
         n_avg += 1
     p_e = int((n_avg-1)/2)
@@ -283,27 +358,22 @@ def clean_flux_edges(f, MAD_fac=2., n_avg=11):
     f_diff[1:] = np.diff(f)
     f_diff_med = np.median(np.absolute(f_diff))
     
-    f_diff[1:] = np.diff(f)
-    f_diff_med = np.median(np.absolute(f_diff))
-    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
-    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
-    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_diff_med, MAD_fac*f_diff_med))
-    g = ((np.abs(f-f_med) < MAD_fac*f_MAD) & (np.abs(f_diff_run) < 2.*f_diff_med)).astype(int)
-    i=0
-    while i < len(f)-1:
-        if g[i] != 1:
-            i+=1
-        else:
-            s=i
-            break
-    i=len(f)-1
-    while i > 0:
-        if g[i] != 1:
-            i-=1
-        else:
-            f=i
-            break
-    return s, f
+#    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
+    f_x = np.array([MAD(f[i:i+n_avg], scale='normal') for i in range(len(f)-n_avg+1)])
+#    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
+    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
+    try: 
+        g = (np.abs(f_diff_run) < MAD_fac*f_diff_med).astype(int)
+        start, fin = clean_flux_algorithm(g)
+        if start <= p_e:
+            start = 0
+        if fin >= len(g)-1-(2*p_e+1):
+            fin = len(g)-1
+    except:
+        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        start, fin = 0, len(g)-1
+    return start, fin
+
 
 
 def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
@@ -512,20 +582,30 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
         while i < Ncomp:
             g1 = np.array(lc_part == i)
             g2 = np.array(lc_part == i+1)
-
-            s_fit1, coeff1 = aic_selector(t_orig[g1], f_orig[g1], poly_max=poly_max)
-            s_fit2, coeff2 = aic_selector(t_orig[g2], f_orig[g2], poly_max=poly_max)
-            
-            f1_at_f2_0.append(np.polyval(coeff1, t_orig[g2][0])) # yes, the index IS supposed to be [g2]
-            f2_at_f2_0.append(np.polyval(coeff2, t_orig[g2][0]))
-            f1_n = f_orig[g1]/np.polyval(coeff1, t_orig[g1])
-            f2_n = f_orig[g2]/np.polyval(coeff2, t_orig[g2])
-            f1_MAD.append(MAD(f1_n, scale='normal'))
-            f2_MAD.append(MAD(f2_n, scale='normal'))
-            if abs(f1_at_f2_0[-1] - f2_at_f2_0[-1]) > MAD_fac*((f1_MAD[-1]+f2_MAD[-1])/2.):
-                norm_comp = True
+            try:
+                s_fit1, coeff1 = aic_selector(t_orig[g1], f_orig[g1], poly_max=poly_max)
+                s_fit2, coeff2 = aic_selector(t_orig[g2], f_orig[g2], poly_max=poly_max)
+                f1_at_f2_0.append(np.polyval(coeff1, t_orig[g2][0]))
+                f2_at_f2_0.append(np.polyval(coeff2, t_orig[g2][0])) # YES THIS IS SUPPOSED TO BE AT INDEX "g2"
+                f1_n = f_orig[g1]/np.polyval(coeff1, t_orig[g1])
+                f2_n = f_orig[g2]/np.polyval(coeff2, t_orig[g2])
+                f1_MAD.append(MAD(f1_n, scale='normal'))
+                f2_MAD.append(MAD(f2_n, scale='normal'))
+                if abs(f1_at_f2_0[i-1] - f2_at_f2_0[i-i]) > MAD_fac*((f1_MAD[i-1]+f2_MAD[i-1])/2.):
+                    norm_comp = True
+                    break
+                else:
+                    i += 1
+            except:
+                logger.error('Could not run the AIC selector, probably because of a zero-division.')
+                f1_at_f2_0.append(np.polyval([1], t_orig[g2][0]))
+                f2_at_f2_0.append(np.polyval([1], t_orig[g2][0]))
+                f1_n = f_orig[g1]
+                f2_n = f_orig[g2]
+                f1_MAD.append(MAD(f1_n, scale='normal'))
+                f2_MAD.append(MAD(f2_n, scale='normal'))
+                norm_comp = False
                 break
-            else: i += 1
     return norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
 
 
@@ -644,9 +724,11 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
         g = np.where(f_lc["lc_part"] == lc)[0]
-        s, f = clean_flux_edges(f_lc["nflux_dtr"][g])
-        ds3.append(g[s])
-        df3.append(g[f])
+        s_1, f_1 = clean_edges_outlier(f_lc["nflux_dtr"][g])
+        g_time = g[s_1:f_1]
+        s_2, f_2 = clean_edges_scatter(f_lc["nflux_dtr"][g_time])
+        ds3.append(g[s_2])
+        df3.append(g[f_2])
     f_lc["pass_clean"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for s, f in zip(ds3, df3):
         f_lc["pass_clean"][s:f] = True
@@ -741,21 +823,26 @@ def test_cbv_fit(t, of, cf):
     else:
         of_score += 1
 #3) which makes the best sine fit?
-    pops_of, popsc_of = curve_fit(sin_fit, t, of_nflux,
-                            bounds=(0, [2., 2., 1000.]))
-    pops_cf, popsc_cf = curve_fit(sin_fit, t, cf_nflux,
-                            bounds=(0, [2., 2., 1000.]))
-    yp_of = sin_fit(of_nflux, *pops_of)
-    yp_cf = sin_fit(cf_nflux, *pops_cf)
-    chi_of = np.sum((yp_of-of_nflux)**2)/(len(of_nflux)-len(pops_of)-1)
-    chi_cf = np.sum((yp_cf-cf_nflux)**2)/(len(cf_nflux)-len(pops_cf)-1)
-    if chi_of > chi_cf:
-        cf_score += 1
-    else:
-        of_score += 1
+    try:
+        pops_of, popsc_of = curve_fit(sin_fit, t, of_nflux,
+                                bounds=(0, [2., 2., 1000.]))
+        pops_cf, popsc_cf = curve_fit(sin_fit, t, cf_nflux,
+                                bounds=(0, [2., 2., 1000.]))
+        yp_of = sin_fit(of_nflux, *pops_of)
+        yp_cf = sin_fit(cf_nflux, *pops_cf)
+        chi_of = np.sum((yp_of-of_nflux)**2)/(len(of_nflux)-len(pops_of)-1)
+        chi_cf = np.sum((yp_cf-cf_nflux)**2)/(len(cf_nflux)-len(pops_cf)-1)
+        if chi_of > chi_cf:
+            cf_score += 1
+        else:
+            of_score += 1
+    except:
+        logger.error('Could not do the sine-fit comparison for ori vs cbv lightcurves')
 # get the final score - if cbv wins, then a True statement is returned.    
     if of_score >= cf_score:
         use_cbv = False
     else:
         use_cbv = True
     return use_cbv
+
+
