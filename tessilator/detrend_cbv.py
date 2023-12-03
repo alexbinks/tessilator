@@ -21,16 +21,23 @@ from .stats_cbv import cdpp, medransig
 
 
 def fit_basis(flux, basis, scl = None):
-    '''
-    weights = fit_basis(flux, basis, scl = None)
-    fit VB linear basis model to one or more light curves
+    '''Calculate the flux-correction weights for the co-trending basis vectors (CBVs).
+    
+    This routine is taken directly from `Aigrain et al. 2017 <https://github.com/saigrain/CBVshrink>`_
 
-    Inputs:
-        flux: (nobj x nobs) light curve(s) 
-        basis: (nobs x nb) basis trends
-        scl: (nb) prior scaling factors for the basis trends
-    Outputs:
-        weights: (nobj x nb) weights
+    parameters
+    ----------
+    flux : `iterable`
+        The list of normalised flux values from the target lightcurve.
+    basis : `iterable`
+        The list of co-trending basis vectors.
+    scl : `float`, optional, default='None'
+        An additional scaling factor for the CBVs.
+
+    returns
+    -------
+    weights : `iterable`
+        The weights assigned for each lightcurve data point.
     '''
     # pre-process basis
     nb,nobs = basis.shape
@@ -56,17 +63,24 @@ def fit_basis(flux, basis, scl = None):
     return weights
 
 def apply_basis(weights, basis):
-    '''
-    model = apply_basis(weights, basis) 
-    Compute linear basis model given weights and basis matrix
-
-    Inputs:
-        weights: (nobj x nb) weights
-        basis: (nobs x nb) basis trends
-    Outputs:
+    '''Calculate the dot product between the weights and the CBVs.
+    
+    parameters
+    ----------
+    weights : `Iterable`
+        The weights for each lightcurve data point.
+    basis : `Iterable`
+        The CBVs for each data point.
+    
+    returns
+    -------
+        dot_prod_res : `Iterable`
+            The dot product between the weights and the basis vectors.
         corr: (nobj x nobs) correction to apply to light curves
     '''
-    return np.dot(weights, basis)
+
+    dot_prod_res = np.dot(weights, basis)
+    return dot_prod_res
 
 def fixed_nb(flux, cbv, nB = 4, use = None, doPlot = True):
     '''

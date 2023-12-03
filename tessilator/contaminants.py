@@ -19,7 +19,7 @@ def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempt
     '''Perform an SQL Query to identify neighbouring contaminants.
 
     If an analysis of flux contribution from neighbouring contaminants is
-    specified, this function generates the SQL query to identify targets
+    required, this function generates the SQL query to identify targets
     within a specified pixel radius. The function returns a table of Gaia
     information on the neighbouring sources which is used to quantify the
     flux contamination within the target aperture.
@@ -102,9 +102,9 @@ def flux_fraction_contaminant(ang_sep, s, d_thr=5.e-6):
     s : `float`
         For a given aperture size, Rad (in pixels)
         and an FWHM of the TESS PSF, exprf (set at 0.65 pixels), :math:`s = {\\rm Rad}^2/(2.0*{\\rm exprf}^2)`
-    d_th : `float`, optional, default=5.e-6
+    d_thr : `float`, optional, default=5.e-6
         The threshold value to stop the summations. When the next component contributes a value which is
-        less than d_th, the summation ends. 
+        less than d_thr, the summation ends. 
 
     returns
     -------
@@ -152,7 +152,7 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
         The input table for all the targets.
     Rad : `float`, optional, default=1.0
         The size of the radius aperture (in pixels)
-    n_cont : `int`, optional, default=5
+    n_cont : `int`, optional, default=10
         The maximum number of neighbouring contaminants to store to table.
 
     returns
@@ -169,23 +169,25 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
                           'DEC', 'Gmag', 'BPmag', 'RPmag', 'd_as', 'log_flux_frac'),\
                    dtype=(str, str, float, float, float, float, float, float, float))
 
-    for i in range(len(t_targets)):
-        r = run_sql_query_contaminants(t_targets[i])
-        print(f"sql search for contaminants completed {t_targets['source_id'][i]}, target {i+1} of {len(t_targets)}.")
+    for i, t_target in enumerate(t_targets):
+        r = run_sql_query_contaminants(t_target)
+        print(f"sql search for contaminants completed {t_target['source_id']}, target {i+1} of {len(t_targets)}.")
         # convert the angular separation from degrees to arcseconds
         r["ang_sep"] = r["ang_sep"]*3600.
         if len(r) > 1:
             # make a table of all objects from the SQL except the target itself
             rx = Table(r[r["source_id"].astype(str) != \
-                         t_targets["source_id"][i].astype(str)])
+                         t_target["source_id"].astype(str)])
             # calculate the fraction of flux from the source object that falls
             # into the aperture using the Rayleigh formula
             s = Rad**(2)/(2.0*exprf**(2)) # measured in pixels
-            frp_star = (1.0-np.exp(-s))*10**(-0.4*t_targets["RPmag"][i])
+            frp_star = (1.0-np.exp(-s))*10**(-0.4*t_target["RPmag"])
             frp_cont = []
             # calculate the fractional flux incident in the aperture from
             # each contaminant.
             for G_cont, RP_cont, ang_sep in zip(rx["phot_g_mean_mag"], rx["phot_rp_mean_mag"], rx["ang_sep"]):
+                # if there is no RP magnitude, use the G magnitude, and add 0.756 to it (equivalent to removing
+                # half the G-band flux, which could represent the red part of the G-magnitude passband.)
                 if type(RP_cont) == np.ma.core.MaskedConstant:
                     RP_cont = G_cont + 0.756
                     RP_cont = RP_cont.astype(np.float32)
@@ -194,7 +196,7 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
                 frp_cont.append(f_frac*10**(-0.4*RP_cont))
 
             rx['log_flux_frac'] = np.log10(frp_cont/frp_star)
-            rx['source_id_target'] = t_targets["source_id"][i]
+            rx['source_id_target'] = t_target["source_id"]
             new_order = ['source_id_target', 'source_id', 'ra', 'dec', \
                          'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'ang_sep', 'log_flux_frac']
             rx.sort(['log_flux_frac'], reverse=True)

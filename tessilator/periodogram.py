@@ -65,21 +65,23 @@ def check_for_jumps(time, flux, lc_part, n_avg=10, thresh_diff=10.):
     '''
     
     jump_flag = False
-    
-    for lc in np.unique(lc_part):
-        g = np.array(lc_part == lc)
+    try:
+        for lc in np.unique(lc_part):
+            g = np.array(lc_part == lc)
         
-        f_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
-        t_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
+            f_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
+            t_mean = np.convolve(flux[g], np.ones(n_avg), 'valid') / n_avg
         
-        f_shifts = np.abs(np.diff(f_mean))
+            f_shifts = np.abs(np.diff(f_mean))
 
-        median_f_shifts = np.median(f_shifts)
-        max_f_shifts = np.max(f_shifts)
-        if max_f_shifts/median_f_shifts > thresh_diff:
-            jump_flag = True
-            return jump_flag
-
+            median_f_shifts = np.median(f_shifts)
+            max_f_shifts = np.max(f_shifts)
+            if max_f_shifts/median_f_shifts > thresh_diff:
+                jump_flag = True
+                return jump_flag
+    except:
+        logger.error('Could not run the jump flag criteria for this target.')
+        return jump_flag
     return jump_flag
 
 
@@ -206,7 +208,7 @@ def get_next_peak(power, frac_peak=0.85):
             x = x+1
         p_r = x
         p_rx = 0
-        while (power[p_r] > frac_peak*power[p_m]) and (p_r < len(power)-2):
+        while (power[p_r] > frac_peak*power[p_m]) and (p_r < len(power)-3):
             p_rx = 1
             p_r = p_r + 1
         if p_rx == 1:
@@ -253,8 +255,8 @@ def is_period_cont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
     '''
     per_targ = d_target["period_1"]
     per_cont = d_cont["period_1"]
-    err_targ = d_target["Gauss_fit_peak_parameters"][2]
-    err_cont = d_cont["Gauss_fit_peak_parameters"][2]
+    err_targ = d_target["Gauss_1"][2]
+    err_cont = d_cont["Gauss_1"][2]
     amp_targ = d_target["pops_vals"][1]
     amp_cont = d_cont["pops_vals"][1]
     flux_frac = 10**(t_cont["log_flux_frac"])
@@ -293,6 +295,42 @@ def mean_of_arrays(arr, num):
     
 
 
+def get_Gauss_params_pg(period, power, ind, p_min_thresh=0.05, p_max_thresh=100.):
+#    print(period[ind], power[ind], ind)
+# first -- check there are more than 3 values for the Gaussian fit.
+    if (isinstance(ind, Iterable)) and (len(ind) > 3):
+        pow_r = max(power[ind])-min(power[ind])
+        ind_fit = ind[power[ind] > min(power[ind]) + .05*pow_r]
+        popt, ym = gauss_fit_peak(period[ind], power[ind])
+    else:
+        if np.isclose(period[ind], p_max_thresh, atol=0.001).any():
+            popt = [1.0, p_max_thresh, 50.]
+            ind_fit = np.arange(ind-10, ind)
+            ym = power[ind]
+        elif np.isclose(period[ind], p_min_thresh, atol=0.001).any():
+            popt = [1.0, p_min_thresh, 50.]
+            ind_fit = np.arange(ind, ind+10)
+            ym = power[ind_fit]
+        else:
+            popt = [-999, -999, -999]
+            n, i_n = 0, ind[-1]
+            while i_n+1 < len(power):
+                n+=1
+                i_n+=1
+                if n==3:
+                    break
+            m, i_m = 0, ind[0]
+            while i_m-1 > 0:
+                m-=1
+                i_m-=1
+                if m==-2:
+                    break
+            ind_fit = np.arange(ind[0]-m, ind[-1]+n)
+            ym = power[ind_fit-1]
+            
+    return popt, ym
+
+
 
 def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, check_jump=False):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
@@ -311,6 +349,8 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
         A file name which the periodogram output will be saved to.
     pg_dir : `string`, optional, default='pg'
         The name of the directory to store the periodogram data
+    n_sca : `int`, optional, default=10
+        The number of evenly-split lightcurve parts used to measure the flux scatter.
     p_min_thresh : `float`, optional, default=0.05
         The minimum period (in days) to be calculated.
     p_max_thresh : `float`, optional, default=100.
@@ -362,9 +402,9 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
         | "frac_phase_outliers" : The fraction of data points that are more than 3 median absolute deviation values from the best-fit.
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
-    LS_dict = dict()
     cln_cond = np.logical_and(lc_data["pass_clean"], lc_data["pass_outlier"])
     cln = lc_data[cln_cond]
+
     time = np.array(cln["time"])
     nflux = np.array(cln["nflux_dtr"])
     enflux = np.array(cln["nflux_err"])
@@ -377,9 +417,16 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
     frequency, power = ls.autopower(minimum_frequency=1./p_max_thresh,
                                     maximum_frequency=1./p_min_thresh,
                                     samples_per_peak=samples_per_peak)
-    FAP = ls.false_alarm_probability(power.max())
-    probabilities = [0.1, 0.05, 0.01]
-    FAP_test = ls.false_alarm_level(probabilities)
+    if len(power) == 0:
+        return {}
+
+    try:
+        FAP = ls.false_alarm_probability(power.max())
+        probabilities = [0.1, 0.05, 0.01]
+        FAP_test = ls.false_alarm_level(probabilities)
+    except:
+        logger.error(f'Something went wrong with the FAP test, maybe division by 0.')
+        FAP_test = np.array([0.3, 0.2, 0.1])
     p_m = np.argmax(power)
 
     y_fit_sine = ls.model(time, frequency[p_m])
@@ -396,81 +443,58 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
     period = 1./frequency[::-1]
     power = power[::-1]
 
-
-    res_table = Table(names=('period', 'power'), dtype=(float,float))
-    for pe, po in zip(period, power):
-        res_table.add_row([pe, po])
-    res_table.write(f'{pg_dir}/{name_pg}_{lc_type}.csv', overwrite=True)
-
+    if name_pg:
+        res_table = Table(names=('period', 'power'), dtype=(float,float))
+        for pe, po in zip(period, power):
+            res_table.add_row([pe, po])
+        res_table.write(f'{pg_dir}/{name_pg}_{lc_type}.csv', overwrite=True)
 
 
     # a_g: array of datapoints that form the Gaussian around the highest power
     # a_o: the array for all other datapoints
-    if len(power) == 0:
-        LS_dict['median_MAD_nLC'] = -999
-        LS_dict['jump_flag'] = -999
-        LS_dict['period'] = -999
-        LS_dict['power'] = -999
-        LS_dict['time'] = -999
-        LS_dict['y_fit_LS'] = -999
-        LS_dict['AIC_sine'] = -999
-        LS_dict['AIC_line'] = -999
-        LS_dict['FAPs'] = -999
-        LS_dict['period_1'] = -999
-        LS_dict['power_1'] = -999
-        LS_dict['Gauss_fit_peak_parameters'] = -999
-        LS_dict['Gauss_fit_peak_y_values'] = -999
+
+        
+    LS_dict = {}
+    LS_dict['a_1'] = np.arange(len(power))
+    LS_dict['period_a_1'] = period
+    LS_dict['power_a_1'] = power
+    LS_dict['period_1'] = period_1
+    LS_dict['power_1'] = power_1
+    n_peaks = 4
+    for i in 1+np.arange(n_peaks):
+        try:
+            # get the indices of all the peaks that were not part of the last peak
+            LS_dict[f'a_{i+1}'] = get_next_peak(LS_dict[f'power_a_{i}'])
+            # all the indices that 'are' part of the peak
+            LS_dict[f'a_g_{i}'] = np.delete(np.array(LS_dict[f'a_{i}']), np.array(LS_dict[f'a_{i+1}']))
+            LS_dict[f'Gauss_{i}'], LS_dict[f'Gauss_y_{i}'] = get_Gauss_params_pg(period, power, LS_dict[f'a_g_{i}'])
+           # find all the new period values in the new array
+            LS_dict[f'period_a_{i+1}'] = LS_dict[f'period_a_{i}'][LS_dict[f'a_{i+1}']]
+            # find all the new power values in the new array
+            LS_dict[f'power_a_{i+1}'] = LS_dict[f'power_a_{i}'][LS_dict[f'a_{i+1}']]
+            # calculate the period of the maximum power peak
+            LS_dict[f'period_{i+1}'] = LS_dict[f'period_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+            # return the maximum power peak value
+            LS_dict[f'power_{i+1}'] = LS_dict[f'power_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+        except:
+            logger.error(f'Something went wrong with the periods/powers of subsequent peaks. Probably an empty array of values.')
+            LS_dict[f'Gauss_{i}'] = [-999, -999, -999]
+            LS_dict[f'period_a_{i+1}'] = -999
+            LS_dict[f'power_a_{i+1}'] = -999
+            LS_dict[f'period_{i+1}'] = -999
+            LS_dict[f'power_{i+1}'] = -999
+    LS_dict.pop(f'a_{n_peaks+1}', None)
+    LS_dict.pop(f'period_a_{n_peaks+1}', None)
+    LS_dict.pop(f'power_a_{n_peaks+1}', None)
+    LS_dict.pop(f'period_{n_peaks+1}', None)
+    LS_dict.pop(f'power_{n_peaks+1}', None)
+
+    try:
+        LS_dict['period_around_1'] = period[LS_dict['a_g_1']]
+        LS_dict['power_around_1'] = power[LS_dict['a_g_1']]
+    except:
         LS_dict['period_around_1'] = -999
         LS_dict['power_around_1'] = -999
-        LS_dict['period_not_1'] = -999 
-        LS_dict['power_not_1'] = -999 
-        LS_dict['period_2'] = -999
-        LS_dict['power_2'] = -999
-        LS_dict['period_3'] = -999
-        LS_dict['power_3'] = -999
-        LS_dict['period_4'] = -999
-        LS_dict['power_4'] = -999
-        LS_dict['phase_fit_x'] = -999
-        LS_dict['phase_fit_y'] = -999
-        LS_dict['phase_x'] = -999
-        LS_dict['phase_y'] = -999
-        LS_dict['phase_chisq'] = -999
-        LS_dict['phase_col'] = -999
-        LS_dict['pops_vals'] = -999    
-        LS_dict['pops_cov'] = -999
-        LS_dict['phase_scatter'] = -999
-        LS_dict['frac_phase_outliers'] = -999
-        LS_dict['Ndata'] = -999
-        return LS_dict
-        
-    peaks_dict = {}
-    peaks_dict['period_a_1'] = period
-    peaks_dict['power_a_1'] = power
-    for i in [1,2,3]:
-        peaks_dict[f'a_{i+1}'] = get_next_peak(peaks_dict[f'power_a_{i}'])
-        peaks_dict[f'period_a_{i+1}'] = peaks_dict[f'period_a_{i}'][peaks_dict[f'a_{i+1}']]
-        peaks_dict[f'power_a_{i+1}'] = peaks_dict[f'power_a_{i}'][peaks_dict[f'a_{i+1}']]
-        peaks_dict[f'period_{i+1}'] = peaks_dict[f'period_a_{i+1}'][np.argmax(peaks_dict[f'power_a_{i+1}'])]
-        peaks_dict[f'power_{i+1}'] = peaks_dict[f'power_a_{i+1}'][np.argmax(peaks_dict[f'power_a_{i+1}'])]
-    a_1 = np.delete(np.arange(len(power)), np.array(peaks_dict['a_2']))
-
-    if isinstance(a_1, Iterable):
-        pow_r = max(power[a_1])-min(power[a_1])
-        a_1_fit = a_1[power[a_1] > min(power[a_1]) + .05*pow_r]
-        popt, ym = gauss_fit_peak(period[a_1_fit], power[a_1_fit])
-    else:
-        if period[a_1] == p_max_thresh:
-            popt = [1.0, p_max_thresh, 50.]
-            a_1_fit = np.arange(a_1-10, a_1)
-            ym = power[a_1_fit]
-        elif period[a_1] == p_min_thresh:
-            popt = [1.0, p_min_thresh, 50.]
-            a_1_fit = np.arange(a_1, a_1+10)
-            ym = power[a_1_fit]
-        else:
-            popt = [-999, -999, -999]
-            a_1_fit = np.arange(a_1-2, a_1+3)
-            ym = power[a_1_fit]
 
     tdiff = np.array(time-min(time))
     nflux = np.array(nflux)
@@ -516,20 +540,6 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
     LS_dict['AIC_sine'] = AIC_sine
     LS_dict['AIC_line'] = AIC_line
     LS_dict['FAPs'] = FAP_test
-    LS_dict['period_1'] = period_1
-    LS_dict['power_1'] = power_1
-    LS_dict['Gauss_fit_peak_parameters'] = popt
-    LS_dict['Gauss_fit_peak_y_values'] = ym
-    LS_dict['period_around_1'] = period[a_1_fit]
-    LS_dict['power_around_1'] = power[a_1_fit]
-    LS_dict['period_not_1'] = peaks_dict['period_a_2']
-    LS_dict['power_not_1'] = peaks_dict['power_a_2']
-    LS_dict['period_2'] = peaks_dict['period_2']
-    LS_dict['power_2'] = peaks_dict['power_2']
-    LS_dict['period_3'] = peaks_dict['period_3']
-    LS_dict['power_3'] = peaks_dict['power_3']
-    LS_dict['period_4'] = peaks_dict['period_4']
-    LS_dict['power_4'] = peaks_dict['power_4']
     LS_dict['phase_fit_x'] = pha_fit
     LS_dict['phase_fit_y'] = yp
     LS_dict['phase_x'] = pha_plt

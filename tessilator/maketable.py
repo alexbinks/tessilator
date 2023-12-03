@@ -95,10 +95,10 @@ def table_from_simbad(input_names):
     # Part 2: Query Gaia database using Gaia identifiers retrieved in part 1.
     ID_string = ""
     for g_i, gaia_name in enumerate(GaiaList):
-        if g_i < len(GaiaList)-1:
-            ID_string += gaia_name+','
-        else:
+        if g_i == len(GaiaList)-1:
             ID_string += gaia_name
+        else:
+            ID_string += gaia_name+','
     qry = "SELECT source_id,ra,dec,parallax,phot_g_mean_mag,phot_bp_mean_mag,phot_rp_mean_mag "\
           "FROM gaiadr3.gaia_source "\
           f"WHERE source_id in ({ID_string});"
@@ -295,17 +295,19 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
 
     | The table must be in comma-separated variable format, in either of these 3 ways:
     | 1) A table with a single column containing the source identifier
-    |     * note that this is the preferred method since the target identified in the Gaia query is unambiguously the same as the input value.
+    |     * note that this is the preferred method since the target identified in the Gaia query
+            is unambiguously the same as the input value. Also, the name match runs faster than
+            the coordinate match using astroquery.
     | 2) A table with sky-coordinates in either the 'icrs' (default),'galactic', or 'ecliptic' system.
     |     * note this is slower because of the time required to run the Vizier query.
-    | 3) A table with all 5 columns already made.
+    | 3) A table with all 7 columns already made.
 
     parameters
     ----------
     gaia_table : `astropy.table.Table`
         The input table
     name_is_source_id : `bool`, optional, default=False
-        If the input table has 5 columns, this provides the choice to set the
+        If the input table has 7 columns, this provides the choice to set the
         name column equal to "source_id" (True), or to find a common target
         identifier (False)
     type_coord : `str`, optional, default='icrs'
@@ -326,6 +328,8 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
         * dec: declination (icrs) or latitude (galactic, barycentricmeanecliptic)
         * parallax: parallax from Gaia DR3 (in mas)
         * Gmag: the apparent G-band magnitude from Gaia DR3
+        * BPmag: the apparent BP-band magnitude from Gaia DR3
+        * RPmag: the apparent RP-band magnitude from Gaia DR3
     '''
 
     if len(gaia_table.colnames) == 1:
@@ -337,5 +341,5 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
     else:
         raise Exception('Input table has invalid format. Please use one of the \
                         following formats: \n [1] source_id \n [2] ra and dec \
-                        \n [3] source_id, ra, dec, parallax and Gmag')
+                        \n [3] source_id, ra, dec, parallax, Gmag, BPmag and RPmag')
     return tbl
