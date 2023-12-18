@@ -1,32 +1,28 @@
 '''
 
-Alexander Binks & Moritz Guenther, July 2023
+Alexander Binks & Moritz Guenther, December 2023
 
 Licence: MIT 2023
 
-This module contains functions to perform aperture photmetry and clean lightcurves. These are:
+This module contains functions to clean lightcurves.
 
-1)  aper_run - returns a numpy array containing the times, magnitudes and
-    fluxes from aperture photometry.
     
-2)  clean_lc/detrend_lc/make_lc - these 3 functions are made to correct for systematics
-    using the co-trending basis vectors, remove spurious data points, ensure that only
-    "strings" of contiguous data are being processed, and each string is detrended using
-    a series of decision processes, including normalisation, selection of low-order
-    polynomial fits and whether to detrend the lightcurve as a whole, or in "strings".
-    Finally, the lightcurve is pieced together and make_lc returns a table containing
-    the data ready for periodogram analysis.
-    
-3)  run_LS - function to conduct Lomb-Scargle periodogram analysis. Returns a table
-    with period measurements, plus several data quality flags. If required a plot of
-    the lightcurve, periodogram and phase-folded lightcurve is provided.
+The cleaning and detrending of the lightcurve takes part in 8 steps, each of which are called by the parent function 'run_make_lc_steps'. The steps are:
 
+| (1) Normalise the raw lightcurve.
+| (2) Split the lightcurve into segments of contiguous data (no large time gaps between datapoints)
+| (3) Remove sparse data, i.e., data segments with only a few data points.
+| (4) Detrend the lightcurve.
+| (5) Clean the edges: remove flux outliers.
+| (6) Clean the edges: scattered, noisy datapoints.
+| (7) Remove extreme outliers from the lightcurve
+| (8) Store the lightcurve to file.
 '''
 
 # imports
 import logging
-__all__ = ['aic_selector', 'aper_run', 'clean_edges_outlier', 'clean_edges_scatter', 'detrend_lc',
-           'get_time_segments', 'get_xy_pos', 'logger', 'make_lc',
+__all__ = ['aic_selector', 'clean_edges_outlier', 'clean_edges_scatter', 'detrend_lc',
+           'get_time_segments', 'logger', 'make_lc',
            'normalisation_choice', 'remove_sparse_data', 'sin_fit', 'test_cbv_fit']
 
 
@@ -39,15 +35,9 @@ import json
 
 
 from astropy.table import Table
-from astropy.coordinates import SkyCoord
-from astropy.wcs import WCS
-from astropy.io import fits
 import astropy.units as u
 from astropy.stats import akaike_info_criterion_lsq
 
-
-from photutils.aperture import CircularAperture, CircularAnnulus
-from photutils.aperture import aperture_photometry, ApertureStats
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
 from scipy.stats import iqr
@@ -55,24 +45,86 @@ from scipy.stats import iqr
 import itertools as it
 from operator import itemgetter
 
-# Local application imports
-from .fixedconstants import *
-
 
 # initialize the logger object
 logger = logging.getLogger(__name__)
-#logger_aq = logging.getLogger("astroquery")
-#logger_aq.setLevel(logging.ERROR)    
+logger.setLevel(logging.INFO)
+    
+    
+    
+    
+def get_time_segments(t, t_fac=5.):
+    '''Split the lightcurve into groups of contiguous data, where the time difference between
+    measurements is less than a given value.
+    
+    parameters
+    ----------
+    t : `Iter`
+        The list of time coordinates from the lightcurve
+    t_fac : `float`, optional, default=5.
+        A factor which is multiplied with the median time difference of the neighbouring time coordinates.
+        
+    returns
+    -------
+    ds : `list`
+        The start indices of each time segment
+    df : `list`
+        The final indices of each time segment
+    '''
+    td     = np.zeros(len(t))
+    td[1:] = np.diff(t)
+    t_arr = (td <= t_fac*np.median(td)).astype(int)
+    groups = (list(group) for key, group in it.groupby(enumerate(t_arr), key=itemgetter(1))
+                      if key)
+    ss = [[group[0][0], group[-1][0]] for group in groups if group[-1][0] > group[0][0]]
+    ss = np.array(ss).T
+    ds, df = ss[0,:], ss[1,:]
+    ds[1:] = [ds[i]-1 for i in range(1,len(ds))]
+    df = np.array([(i+1) for i in df])
+    return ds, df
 
 
-#class NumpyEncoder(json.JSONEncoder):
-#    def default(self, obj):
-#        if isinstance(obj, np.ndarray):
-#            return obj.tolist()
-#        return json.JSONEncoder.default(self, obj)
+
+    
+def remove_sparse_data(x_start, x_end, std_crit=50):
+    '''Removes very sparse bits of data from the lightcurve when there are 3 or more components.
+
+    Calculate the mean (mc) and standard deviation (sc) for the number of data
+    points in each component (N).
+    If sc > "std_crit", then only keep components with N > std_crit.
+    
+    parameters
+    ----------
+    x_start : `Iterable`
+        The starting indices for each data component
+    x_end : `Iterable`
+        The end indices for each data component
+    std_crit: `int`
+        The minimum number of data points in a component
+
+    returns
+    -------
+    y_start : `np.array`
+        The starting indices of the new array
+    y_end : `np.array`
+        The end indices of the new array
+    '''
+    y_start, y_end = np.array(x_start), np.array(x_end)
+    # n_points is an array containing the length of the components
+    n_points = np.array([x_end[i] - x_start[i] for i in range(len(x_start))])
+    if len(x_start) > 2:
+        mean_point, std_point = np.mean(n_points), np.std(n_points)
+        if std_point > 1.*std_crit:
+            g = n_points > 1.*std_crit
+            y_start, y_end = y_start[g], y_end[g]
+            return y_start, y_end
+    return y_start, y_end
 
 
 
+    
+    
+    
 def aic_selector(x, y, poly_max=3, cov_min=1e-10):
     '''Chooses the most appropriate polynomial fit, using the Aikaike Information Criterion
     
@@ -84,10 +136,9 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
         The independent variable
     y : `Iterable`
         The dependent variable
-    err : `Iterable`
-        The error bar on 'y'
     poly_max : `int`, optional, default=10
         The maximum polynomial order to test
+    cov_min : A threshold value for the first element of the covariance matrix. Sometimes the AIC will automatically select a higher-order polynomial to a distribution that is clearly best fit by the preceeding lower-order fit. For example, a second-order fit provides a better fit for a perfect straight line. This is a bug in the numerical rounding. Therefore, if the value of the first element of the covariance matrix is less than cov_min for the lower order, then the lower order fit is selected.
 
     returns
     -------
@@ -120,433 +171,9 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
                     return poly_ord, list(coeffs)
     except:
         return 0, [1.0]
-
-
-
-
-def aper_run(file_in, targets, Rad=1., SkyRad=[6.,8.], XY_pos=(10.,10.)):
-    '''Perform aperture photometry for the image data.
-
-    This function reads in each fits file, and performs aperture photometry.
-    A table of aperture photometry results is returned, which forms the raw
-    lightcurve to be processed in subsequent functions.
-
-    parameters
-    ----------
-    file_in : `str`
-        Name of the fits file containing image data
-    targets : `astropy.table.Table`
-        The table of input data
-    Rad : `float`, optional, default=1.
-        The pixel radius to define the circular area for the aperture
-    SkyRad : `tuple`, optional, default=(6.,8.)
-        A 2-element tuple defining the inner and outer annulus to calculate
-        the background flux
-    XY_pos : `tuple`, optional, default=(10.,10.)
-        The X-Y centroid (in pixels) of the aperture.
-
-    returns
-    -------
-    full_phot_table : `astropy.table.Table`
-        The formatted table containing results from the aperture photometry.
-    '''
-    if isinstance(file_in, np.ndarray):
-        fits_files = file_in
-    else:
-        fits_files = [file_in]
-
-    full_phot_table = Table(names=('run_no','id', 'xcenter', 'ycenter', 'flux',
-                                   'flux_err', 'bkg', 'total_bkg',
-                                   'reg_oflux', 'mag', 'mag_err', 'time'),
-                            dtype=(int, str, float, float, float, float, float,
-                                   float, float, float, float, float))
-    print(fits_files)
-    for f_num, f_file in enumerate(fits_files):
-        print(f'{f_num}, {f_file}, running aperture photometry')
-        try:
-            with fits.open(f_file) as hdul:
-                data = hdul[1].data
-                if data.ndim == 1:
-                    head = hdul[0].header
-                    if "FLUX_ERR" in data.names:
-                        n_steps = data.shape[0]-1
-                        flux_vals = data["FLUX"]
-                        qual_val = data["QUALITY"]
-                        time_val = data["TIME"]
-                        erro_vals = data["FLUX_ERR"]
-                    else:
-                        n_steps = 1
-                        flux_vals = data["FLUX"]
-                        qual_val = [data["QUALITY"][0]]
-                        time_val = [data["TIME"][0]]
-                        erro_vals = 0.001*flux_vals
-                    positions = XY_pos
-                elif data.ndim == 2:
-                    n_steps = 1
-                    head = hdul[1].header
-                    qual_val = [head["DQUALITY"]]
-                    time_val = [(head['TSTART'] + head['TSTOP'])/2.]
-                    flux_vals = [data]
-                    erro_vals = [hdul[2].data]
-                    positions = get_xy_pos(targets, head)
-                for n_step in range(n_steps):
-                    if qual_val[n_step] == 0:
-                        #define a circular aperture around all objects
-                        aperture = CircularAperture(positions, Rad)
-                        #select a background annulus
-                        annulus_aperture = CircularAnnulus(positions,
-                                                           SkyRad[0],
-                                                           SkyRad[1])
-                        if flux_vals[:][:][n_step].ndim == 1:
-                            flux_ap = flux_vals
-                            erro_ap = erro_vals
-                        else:
-                            flux_ap = flux_vals[:][:][n_step]
-                            erro_ap = erro_vals[:][:][n_step]
-                        #get the image statistics for the background annulus
-                        aperstats = ApertureStats(flux_ap, annulus_aperture)
-                        #obtain the raw (source+background) flux
-                        with np.errstate(invalid='ignore'):
-                            t = aperture_photometry(flux_ap, aperture,
-                                                    error=erro_ap)
-
-                        #calculate the background contribution to the aperture
-                        aperture_area = aperture.area_overlap(flux_ap)
-                        #print out the data to "t"
-                        t['run_no'] = n_step
-                        t['id'] = targets['source_id']
-                        t['id'] = t['id'].astype(str)
-                        t['bkg'] = aperstats.median
-                        t['tot_bkg'] = \
-                            t['bkg'] * aperture_area
-                        t['ap_sum_sub'] = \
-                            t['aperture_sum'] - t['tot_bkg']
-                        t['mag'] = -999.
-                        t['mag_err'] = -999.
-                        g = np.where(t['ap_sum_sub'] > 0.)[0]
-                        t['mag'][g] = -2.5*np.log10(t['ap_sum_sub'][g].data)+Zpt
-                        t['mag_err'][g] = np.abs((-2.5/np.log(10))*\
-                            t['aperture_sum_err'][g].data/\
-                            t['aperture_sum'][g].data)
-                        t['time'] = time_val[n_step]
-                        fix_cols = ['run_no', 'id', 'xcenter', 'ycenter',
-                                    'aperture_sum', 'aperture_sum_err', 'bkg',
-                                    'tot_bkg', 'ap_sum_sub', 'mag',
-                                    'mag_err', 'time']
-                        t = t[fix_cols]
-                        for r in range(len(t)):
-                            full_phot_table.add_row(t[r])
-        except:
-            print(f"There is a problem opening the file {f_file}")
-            logger.error(f"There is a problem opening the file {f_file}")
-            continue
-    return full_phot_table
     
     
-def clean_flux_algorithm(g):
-    '''A basic algorithm that trims both sides of a contiguous data string
-    if a condition is not satisfied, until the condition is met for the
-    first time.
-    
-    parameters
-    ----------
-    g : `Iter`
-        The array of boolean results indicating if a condition is met (=1) or not (=0)
-    
-    returns
-    -------
-    start : `int`
-        The trimmed start point of the array
-    fin : `int`
-        The trimmed final part of the array
-    '''
-    i, j = 0, len(g)-1
-    while i < j:
-        if g[i] != 1:
-            i+=1
-        else:
-            start=i
-            break
-    while j > 0:
-        if g[j] != 1:
-            j-=1
-        else:
-            fin=j
-            break
-    if j <= i:
-        start, fin = 0, len(g)-1
-        return start, fin
-    else:
-        return start, fin
-    
-    
-
-    
-def clean_edges_outlier(f, MAD_fac=5.):
-    '''Remove spurious data points at the start and end parts of the lightcurve.
-
-    The start and end point of each data section must have a flux value within
-    a given number of MAD from the median flux in the sector. This is done
-    because often after large time gaps the temperature of the sensors changes,
-    and including these components is likely to just result in a signal from
-    instrumental noise.
-
-    parameters
-    ----------
-    f : `Iterable`
-        The set of normalised flux coordinates
-    MAD_fac : `float`, optional, default=2.
-        The threshold number of MAD values to allow.
-
-    returns
-    -------
-    start : `int`
-       The start index for the data string.
-    fin : `int`
-       The end index for the data string.
-    '''
-    f_med, f_MAD = np.median(f), MAD(f, scale='normal')
-    f_diff = np.zeros(len(f))
-    f_diff[1:] = np.diff(f)
-    f_diff_med = np.median(np.absolute(f_diff))
-    try: 
-        g = (np.abs(f-f_med) < MAD_fac*f_MAD).astype(int)
-        start, fin = clean_flux_algorithm(g)
-        
-    except:
-        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
-        start, fin = 0, len(g)-1
-    return start, fin
-
-
-def clean_edges_scatter(f, MAD_fac=5., len_IQR=[11,10]):
-    '''Remove data points from the lightcurve that are likely to be spurious.
-
-    Occasionally there are lightcurves that appear to have very scattered data at the start and end
-    points of the lightcurves. These can degrade the quality of the periodogram analysis, or even return
-    an incorrect period.
-    
-    The idea is to group the first "n_avg" datapoints, and calculate the median absolute deviation (MAD).
-    If this local MAD value is greater (less) than "MAD_fac" times the MAD of the full lightcurve, then
-    we flag this point with 0 (1). The first and last "(n_avg-1)/2" in the lightcurve are given a constant
-    value. If the first/last MAD comparison yield a "1" value, then we do no extra cleaning to the lightcurve. 
-
-    parameters
-    ----------
-    f : `Iterable`
-        The set of normalised flux coordinates
-    MAD_fac : `float`, optional, default=2.
-        The threshold number of MAD values to allow.
-    n_avg : `int`, optional, default=21
-        The number of data points to be used in the local MAD value.
-
-    returns
-    -------
-    s : `int`
-       The start index for the data string.
-    f : `int`
-       The end index for the data string.
-    '''
-    n_avg =min(len_IQR[0], int(len(f)/len_IQR[1]))
-    if n_avg // 2 == 0:
-        n_avg += 1
-    p_e = int((n_avg-1)/2)
-    # get the median time and flux, the median absolute deviation in flux
-    # and the time difference for each neighbouring point.
-    f_med, f_MAD = np.median(f), MAD(f, scale='normal')
-    f_diff = np.zeros(len(f))
-    f_diff[1:] = np.diff(f)
-    f_diff_med = np.median(np.absolute(f_diff))
-    
-#    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
-    f_x = np.array([MAD(f[i:i+n_avg], scale='normal') for i in range(len(f)-n_avg+1)])
-#    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
-    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
-    try: 
-        g = (np.abs(f_diff_run) < MAD_fac*f_diff_med).astype(int)
-        start, fin = clean_flux_algorithm(g)
-        if start <= p_e:
-            start = 0
-        if fin >= len(g)-1-(2*p_e+1):
-            fin = len(g)-1
-    except:
-        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
-        start, fin = 0, len(g)-1
-    return start, fin
-
-
-
-def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
-    '''Detrend and normalise the lightcurves.
-
-    | This function runs 3 major operations to detrend the lightcurve, as follows:
-    | 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and detrend the full lightcurve.
-    | 2. Decide whether to use the detrended lightcurve from part 1, or to separate the lightcurve into individual components and detrend each one separately.
-    | 3. Return the detrended flux.
-
-    parameters
-    ----------
-    t : `Iterable'
-        the time component of the lightcurve
-    f : `Iterable`
-        the flux component of the lightcurve.
-    err : `Iterable`
-        the flux error component of the lightcurve.
-    lc : `Iterable`
-        The index representing the lightcurve component. Note this
-        must be indexed starting from 1.
-    MAD_fac : `float`, optional, default = 2.
-        The factor to multiply the median absolute deviation by.
-    poly_max : `int`, optional, default=8
-        The maximum order of the polynomial fit.
-
-    returns
-    -------
-    f_norm : `Iterable'
-        The corrected lightcurve after the detrending procedures. 
-    '''
-
-    # 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and
-    #    detrend the lightcurve as a whole.
-    s_fit_0, coeffs_0 = aic_selector(t, f, poly_max=poly_max)
-    f_norm = f/np.polyval(coeffs_0, t)
-
-    # 2. Decide whether to use the detrended lightcurve from part 1, or to separate the
-    #    lightcurve into individual components and detrend each one separately
-    norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
-                    normalisation_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
-
-    # 3. Detrend the lightcurve following steps 1 and 2.
-    s_fit, coeffs = [], []
-    if norm_comp:
-        # normalise each component separately.
-        f_detrend = np.array([])
-        for l in np.unique(lc):
-            g = np.array(lc == l)
-            s_fit_n, coeffs_n = aic_selector(t[g], f[g], poly_max=poly_max)
-            s_fit.append(s_fit_n)
-            coeffs.append(coeffs_n)
-            f_n = f[g]/np.polyval(coeffs_n, t[g])
-            f_detrend = np.append(f_detrend, f_n)
-        f_norm = f_detrend
-    else:
-        # normalise the entire lightcurve as a whole
-        f_norm = f_norm
-    detr_dict = {'norm_comp' : norm_comp,
-                 'f1_at_f2_0' : f1_at_f2_0,
-                 'f2_at_f2_0' : f2_at_f2_0,
-                 'f1_MAD' : f1_MAD,
-                 'f2_MAD' : f2_MAD,
-                 's_fit' : s_fit,
-                 'coeffs' : coeffs}
-    return f_norm, detr_dict
-
-
-def get_time_segments(t, t_fac=10.):
-    td     = np.zeros(len(t))
-    td[1:] = np.diff(t)
-    t_arr = (td <= t_fac*np.median(td)).astype(int)
-    groups = (list(group) for key, group in it.groupby(enumerate(t_arr), key=itemgetter(1))
-                      if key)
-    ss = [[group[0][0], group[-1][0]] for group in groups if group[-1][0] > group[0][0]]
-    ss = np.array(ss).T
-    ds, df = ss[0,:], ss[1,:]
-    ds[1:] = [ds[i]-1 for i in range(1,len(ds))]
-    df = np.array([(i+1) for i in df])
-    return ds, df
-
-
-def get_xy_pos(targets, head):
-    '''Locate the X-Y position for targets in a given Sector/CCD/Camera mode
-
-    parameters
-    ----------
-    targets : `astropy.table.Table`
-        The table of input data with celestial coordinates.
-    head : `astropy.io.fits`
-        The fits header containing the WCS coordinate details.
-
-    returns
-    -------
-    positions : `tuple`
-        A tuple of X-Y pixel positions for each target.
-    '''
-    w = WCS(head)
-    c = SkyCoord(targets['ra'], targets['dec'], unit=u.deg, frame='icrs')
-    try:
-        y_obj, x_obj = w.world_to_array_index(c)
-    except:
-        logger.warning("Couldn't get the WCS coordinates to work...")
-        positions = tuple(zip(targets["Xpos"], targets["Ypos"]))
-        return positions
-    positions = tuple(zip(x_obj, y_obj))
-    return positions
-    
-    
-def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
-    '''Construct the normalised TESS lightcurve.
-
-    | The function runs the following tasks:
-    | (1) Read the table produced from the aperture photometry
-    | (2) Normalise the lightcurve using the median flux value.
-    | (4) Detrend the lightcurve using "detrend_lc"
-    | (5) Return the original normalised lightcurve and the cleaned lightcurve
-
-    parameters
-    ----------
-    phot_table : `astropy.table.Table` or `dict`
-        | The data table containing aperture photometry returned by aper_run.py. Columns must include:
-        | "time" -> The time coordinate for each image
-        | "mag" -> The target magnitude
-        | "reg_oflux" or "cbv_oflux" -> The total flux subtracted by the background flux
-        | "flux_err" -> The error on flux_corr
-    name_lc : `str`, optional, default='target'
-        The name of the file which the lightcurve data will be saved to.
-        The target name
-    store_lc : `bool`, optional, default=False
-        Choose to save the cleaned lightcurve to file
-    lc_dir : `str`, optional, default='lc'
-        The directory used to store the lightcurve files if lc_dir==True
-
-    returns
-    -------
-    final_tabs : `list`
-        A list of tables containing the lightcurve data
-        These are for the original lightcurve, and the cbv-corrected lightcurve
-        if required and it satisfies the criteria from test_cbv_fit.
-    '''
-    
-    f_labels = ['reg_oflux']
-    cbv_ret = False
-    if "cbv_oflux" in phot_table.colnames:
-        f_labels.append('cbv_oflux')
-        use_cbv = test_cbv_fit(phot_table["time"], phot_table["reg_oflux"], phot_table["cbv_oflux"])
-        if use_cbv:
-            cbv_ret = True
-
-    final_tabs = []
-    for f_label in f_labels:
-        final_lc = {}
-        final_lc["time"] = phot_table["time"].data
-        final_lc["mag"] = phot_table["mag"].data
-        final_lc[f'{f_label}'] = phot_table[f'{f_label}'].data
-        final_lc["eflux"] = phot_table["flux_err"].data
-        flux_dict, detr_dict = run_make_lc_steps(final_lc, f_label)
-        if len(flux_dict["time"]) > 50: 
-            flux_tab = Table(flux_dict)
-            if f_label == "reg_oflux":
-                final_tabs.append(flux_tab)
-            if (f_label == "cbv_oflux") and (cbv_ret):
-                final_tabs.append(flux_tab)
-            if store_lc:
-                path_exist = os.path.exists(f'./{lc_dir}')
-                if not path_exist:
-                    os.makedirs(f'./{lc_dir}')
-                flux_tab.write(f'./{lc_dir}/{name_lc}_{f_label}.csv', format='csv', overwrite=True)
-                with open(f'./{lc_dir}/{name_lc}_{f_label}.json', 'w') as convert_file:
-                    convert_file.write(json.dumps(detr_dict))
-    return final_tabs
-
+   
 
 
 def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
@@ -609,40 +236,220 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
     return norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
 
 
-def remove_sparse_data(x_start, x_end, std_crit=100):
-    '''Removes very sparse bits of data from the lightcurve when there are 3 or more components.
 
-    Calculate the mean (mc) and standard deviation (sc) for the number of data
-    points in each component (N).
-    If sc > "std_crit", then only keep components with N > std_crit.
-    
+
+
+
+
+def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
+    '''Detrend and normalise the lightcurves.
+
+    | This function runs 3 major operations to detrend the lightcurve, as follows:
+    | 1. Choose whether a zeroth- or first-order polynomial is the best fit to the full light-curve, using the Aikaike Information Criterion, and detrend the full lightcurve.
+    | 2. Decide whether to use the detrended lightcurve from part 1, or to separate the lightcurve into individual components and detrend each one separately.
+    | 3. Return the detrended flux.
+
     parameters
     ----------
-    x_start : `Iterable`
-        The starting indices for each data component
-    x_end : `Iterable`
-        The end indices for each data component
-    std_crit: `int`
-        The minimum number of data points in a component
+    t : `Iterable'
+        the time component of the lightcurve
+    f : `Iterable`
+        the flux component of the lightcurve.
+    lc : `Iterable`
+        The index representing the lightcurve component. Note this
+        must be indexed starting from 1.
+    MAD_fac : `float`, optional, default = 2.
+        The factor to multiply the median absolute deviation by.
+    poly_max : `int`, optional, default=8
+        The maximum order of the polynomial fit.
 
     returns
     -------
-    y_start : `np.array`
-        The starting indices of the new array
-    y_end : `np.array`
-        The end indices of the new array
+    f_norm : `Iterable'
+        The corrected lightcurve after the detrending procedures. 
     '''
 
-    y_start, y_end = np.array(x_start), np.array(x_end)
-    # n_points is an array containing the length of the components
-    n_points = np.array([x_end[i] - x_start[i] for i in range(len(x_start))])
-    if len(x_start) > 2:
-        mean_point, std_point = np.mean(n_points), np.std(n_points)
-        if std_point > 1.*std_crit:
-            g = n_points > 1.*std_crit
-            y_start, y_end = y_start[g], y_end[g]
-            return y_start, y_end
-    return y_start, y_end
+    # 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and
+    #    detrend the lightcurve as a whole.
+    s_fit_0, coeffs_0 = aic_selector(t, f, poly_max=poly_max)
+    f_norm = f/np.polyval(coeffs_0, t)
+
+    # 2. Decide whether to use the detrended lightcurve from part 1, or to separate the
+    #    lightcurve into individual components and detrend each one separately
+    norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
+                    normalisation_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
+
+    # 3. Detrend the lightcurve following steps 1 and 2.
+    s_fit, coeffs = [], []
+    if norm_comp:
+        # normalise each component separately.
+        f_detrend = np.array([])
+        for l in np.unique(lc):
+            g = np.array(lc == l)
+            s_fit_n, coeffs_n = aic_selector(t[g], f[g], poly_max=poly_max)
+            s_fit.append(s_fit_n)
+            coeffs.append(coeffs_n)
+            f_n = f[g]/np.polyval(coeffs_n, t[g])
+            f_detrend = np.append(f_detrend, f_n)
+        f_norm = f_detrend
+    else:
+        # normalise the entire lightcurve as a whole
+        f_norm = f_norm
+    detr_dict = {'norm_comp' : norm_comp,
+                 'f1_at_f2_0' : f1_at_f2_0,
+                 'f2_at_f2_0' : f2_at_f2_0,
+                 'f1_MAD' : f1_MAD,
+                 'f2_MAD' : f2_MAD,
+                 's_fit' : s_fit,
+                 'coeffs' : coeffs}
+    return f_norm, detr_dict
+
+
+
+
+    
+    
+    
+def clean_flux_algorithm(g):
+    '''A basic algorithm that trims both sides of a contiguous data string
+    if a condition is not satisfied, until the condition is met for the
+    first time.
+    
+    parameters
+    ----------
+    g : `Iter`
+        The array of boolean results indicating if a condition is met (=1) or not (=0)
+    
+    returns
+    -------
+    start : `int`
+        The trimmed start point of the array
+    fin : `int`
+        The trimmed final part of the array
+    '''
+    i, j = 0, len(g)-1
+    while i < j:
+        if g[i] != 1:
+            i+=1
+        else:
+            start=i
+            break
+    while j > 0:
+        if g[j] != 1:
+            j-=1
+        else:
+            fin=j
+            break
+    if j <= i:
+        start, fin = 0, len(g)-1
+        return start, fin
+    else:
+        return start, fin
+    
+    
+
+    
+def clean_edges_outlier(f, MAD_fac=2.):
+    '''Remove spurious outliers at the start and end parts of the lightcurve.
+
+    The start and end point of each data section must have a flux value within
+    a given number of MAD from the median flux in the sector. This is done
+    because often after large time gaps the temperature of the sensors changes,
+    and including these components is likely to just result in a signal from
+    instrumental noise.
+
+    parameters
+    ----------
+    f : `Iterable`
+        The set of normalised flux coordinates
+    MAD_fac : `float`, optional, default=2.
+        The threshold number of MAD values to allow.
+
+    returns
+    -------
+    start : `int`
+       The start index for the data string.
+    fin : `int`
+       The end index for the data string.
+    '''
+    f_med, f_MAD = np.median(f), MAD(f, scale='normal')
+    f_diff = np.zeros(len(f))
+    f_diff[1:] = np.diff(f)
+    f_diff_med = np.median(np.absolute(f_diff))
+    try: 
+        g = (np.abs(f-f_med) < MAD_fac*f_MAD).astype(int)
+        start, fin = clean_flux_algorithm(g)
+        
+    except:
+        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        start, fin = 0, len(g)-1
+    return start, fin
+
+
+def clean_edges_scatter(f, MAD_fac=2., len_IQR_raw=11, num_data_fac=0.1):
+    '''Remove highly-scattered data at the start and end parts of the lightcurve.
+
+    Occasionally there are lightcurves that appear to have very scattered data at the start and end
+    points of the lightcurves. These can degrade the quality of the periodogram analysis, or even return
+    an incorrect period.
+    
+    The idea is to group the first "n_IQR" datapoints, and calculate the median absolute deviation (MAD).
+    If this local MAD value is greater (less) than "MAD_fac" times the MAD of the full lightcurve, then
+    we flag this point with 0 (1). The first and last "(n_IQR-1)/2" in the lightcurve are given a constant
+    value. If the first/last MAD comparison yield a "1" value, then we do no extra cleaning to the lightcurve. 
+    
+    The number of datapoints used for the IQR is chosen as the minimum value of "len_IQR_raw", or
+    num_data_fac*(the number of data points in the whole set).
+
+    parameters
+    ----------
+    f : `Iterable`
+        The set of normalised flux coordinates
+    MAD_fac : `float`, optional, default=2.
+        The threshold number of MAD values to allow.
+    len_IQR_raw : `int`, optional, default=11
+        The number of data points to be used in the local MAD value.
+    num_data_fac : `float`, optional, default=0.1
+        The factor to multiply the number of data points by.
+
+    returns
+    -------
+    start : `int`
+       The start index for the data string.
+    fin : `int`
+       The end index for the data string.
+    '''
+    n_IQR =min(len_IQR_raw, int(num_data_fac*len(f)))
+    if n_IQR // 2 == 0:
+        n_IQR += 1
+    p_e = int((n_IQR-1)/2)
+    # get the median time and flux, the median absolute deviation in flux
+    # and the time difference for each neighbouring point.
+    f_med, f_MAD = np.median(f), MAD(f, scale='normal')
+    f_diff = np.zeros(len(f))
+    f_diff[1:] = np.diff(f)
+    f_diff_med = np.median(np.absolute(f_diff))
+#    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
+    f_x = np.array([MAD(f[i:i+n_IQR], scale='normal') for i in range(len(f)-n_IQR+1)])
+#    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
+    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
+    try: 
+        g = (np.abs(f_diff_run) < MAD_fac*f_diff_med).astype(int)
+        start, fin = clean_flux_algorithm(g)
+        if start <= p_e:
+            start = 0
+        elif start > p_e:
+            start = np.where(g)[0][p_e]
+        if fin >= len(g)-1-(2*p_e+1):
+            fin = len(g)-1
+        elif fin < len(g)-1-(2*p_e+1):
+            fin = np.where(g)[0][-p_e]
+    except:
+        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        start, fin = 0, len(g)-1
+    return start, fin
+
+
 
 
 def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
@@ -700,10 +507,10 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     # (1) normalise the original flux points
     f_lc['nflux_ori'] = f_lc[f'{f_orig}']/np.median(f_lc[f'{f_orig}'])
     f_lc['nflux_err'] = f_lc['eflux']/f_lc[f'{f_orig}']
-
+    logger.info('part1: initial normalisation -> done!')
     # (2) split the lightcurve into 'time segments'
     ds1, df1 = get_time_segments(f_lc["time"])
-    
+    logger.info('part2: time segmentation -> done!')
     # (3) remove very sparse elements from the lightcurve
     comp_lengths = np.array([f-s for s, f in zip(ds1, df1)])
     std_crit_val = int(np.sum(comp_lengths)*min_comp_frac)
@@ -711,7 +518,7 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     f_lc["pass_sparse"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for s, f in zip(ds2, df2):
         f_lc["pass_sparse"][s:f] = True
-
+    logger.info('part3: remove sparse data -> done!')
     # (4) run the first detrending process to pass to the cleaning function.
     f_lc["lc_part"] = np.zeros(len(f_lc["time"]), dtype=int)
     for i, (s, f) in enumerate(zip(ds2, df2)):
@@ -719,20 +526,30 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     g_cln = f_lc["pass_sparse"]
     f_lc["nflux_dtr"] = np.full(len(f_lc["time"]), -999.)
     f_lc["nflux_dtr"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
-
-    # (5) clean the lightcurve using clean_lc algorithm
+    logger.info('part4: detrending -> done!')
+    # (5) clean the lightcurve edges from outliers
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
         g = np.where(f_lc["lc_part"] == lc)[0]
-        s_1, f_1 = clean_edges_outlier(f_lc["nflux_dtr"][g])
-        g_time = g[s_1:f_1]
-        s_2, f_2 = clean_edges_scatter(f_lc["nflux_dtr"][g_time])
-        ds3.append(g[s_2])
-        df3.append(g[f_2])
-    f_lc["pass_clean"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+        s_o, f_o = clean_edges_outlier(f_lc["nflux_dtr"][g])
+        ds3.append(g[s_o])
+        df3.append(g[f_o])
+    f_lc["pass_clean_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for s, f in zip(ds3, df3):
-        f_lc["pass_clean"][s:f] = True
-    
+        f_lc["pass_clean_outlier"][s:f] = True
+    logger.info('part5: clean edges, outliers -> done!')
+    # (5) clean the lightcurve edges from scattered data
+    ds4, df4 = [], []
+    for lc in np.unique(f_lc["lc_part"][g_cln]):
+        g = np.where(f_lc["lc_part"] == lc)[0]
+        s_s, f_s = clean_edges_scatter(f_lc["nflux_dtr"][g])
+        ds4.append(g[s_s])
+        df4.append(g[f_s])
+    f_lc["pass_clean_scatter"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    for s, f in zip(ds4, df4):
+        f_lc["pass_clean_scatter"][s:f] = True
+    logger.info('part6: clean edges, scatter -> done!')
+
     # (6) detrend the original lightcurve, but only using the data that passed the
     # the previous criteria
 #    g_cln = f_lc["pass_clean"]
@@ -742,13 +559,16 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     # (7) finally cut out data that are extreme outliers.
     med_lc = np.median(f_lc["nflux_dtr"][g_cln])
     MAD_lc = MAD(f_lc["nflux_dtr"][g_cln], scale='normal')
-    f_lc["pass_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    f_lc["pass_full_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for f in range(len(f_lc["time"])):
         if abs(f_lc["nflux_dtr"][f] - med_lc) < outl_mad_fac*MAD_lc:
-            f_lc["pass_outlier"][f] = True
-
+            f_lc["pass_full_outlier"][f] = True
+    logger.info('part7: remove extreme points -> done!')
+    logger.info('FINISHED!')
     # (8) return the dictionary
     return f_lc, detr_dict
+
+
 
 
 def sin_fit(x, y0, A, phi):
@@ -774,6 +594,10 @@ def sin_fit(x, y0, A, phi):
     '''
     sin_fit = y0 + A*np.sin(2.*np.pi*x + phi)
     return sin_fit
+
+
+
+
 
 
 def test_cbv_fit(t, of, cf):
@@ -845,4 +669,71 @@ def test_cbv_fit(t, of, cf):
         use_cbv = True
     return use_cbv
 
+
+
+
+
+def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
+    '''Construct the normalised, detrended, cleaned TESS lightcurve.
+    
+    This is essentially a parent function that performs all the steps in fixing the lightcurve.
+    
+    The returned product is an array containing the new tabulated lightcurve data for the
+    original (unfiltered) aperture photometry, and (if necessary) another one for the CBV-corrected
+    fluxes (see the 'test_cbv_fit' function for more information.)
+
+    parameters
+    ----------
+    phot_table : `astropy.table.Table` or `dict`
+        | The data table containing aperture photometry returned by aper_run.py. Columns must include:
+        | "time" -> The time coordinate for each image
+        | "mag" -> The target magnitude
+        | "reg_oflux" or "cbv_oflux" -> The total flux subtracted by the background flux
+        | "flux_err" -> The error on flux_corr
+    name_lc : `str`, optional, default='target'
+        The name of the file which the lightcurve data will be saved to.
+        The target name
+    store_lc : `bool`, optional, default=False
+        Choose to save the cleaned lightcurve to file
+    lc_dir : `str`, optional, default='lc'
+        The directory used to store the lightcurve files if lc_dir==True
+
+    returns
+    -------
+    final_tabs : `list`
+        A list of tables containing the lightcurve data
+        These are for the original lightcurve, and the cbv-corrected lightcurve
+        if required and it satisfies the criteria from test_cbv_fit.
+    '''
+    
+    f_labels = ['reg_oflux']
+    cbv_ret = False
+    if "cbv_oflux" in phot_table.colnames:
+        f_labels.append('cbv_oflux')
+        use_cbv = test_cbv_fit(phot_table["time"], phot_table["reg_oflux"], phot_table["cbv_oflux"])
+        if use_cbv:
+            cbv_ret = True
+
+    final_tabs = []
+    for f_label in f_labels:
+        final_lc = {}
+        final_lc["time"] = phot_table["time"].data
+        final_lc["mag"] = phot_table["mag"].data
+        final_lc[f'{f_label}'] = phot_table[f'{f_label}'].data
+        final_lc["eflux"] = phot_table["flux_err"].data
+        flux_dict, detr_dict = run_make_lc_steps(final_lc, f_label)
+        if len(flux_dict["time"]) > 50: 
+            flux_tab = Table(flux_dict)
+            if f_label == "reg_oflux":
+                final_tabs.append(flux_tab)
+            if (f_label == "cbv_oflux") and (cbv_ret):
+                final_tabs.append(flux_tab)
+            if store_lc:
+                path_exist = os.path.exists(f'./{lc_dir}')
+                if not path_exist:
+                    os.makedirs(f'./{lc_dir}')
+                flux_tab.write(f'./{lc_dir}/{name_lc}_{f_label}.csv', format='csv', overwrite=True)
+                with open(f'./{lc_dir}/{name_lc}_{f_label}.json', 'w') as convert_file:
+                    convert_file.write(json.dumps(detr_dict))
+    return final_tabs
 

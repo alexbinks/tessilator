@@ -1,3 +1,12 @@
+'''
+
+Alexander Binks & Moritz Guenther, December 2023
+
+Licence: MIT 2023
+
+A set of functions to perform a Lomb-Scargle periodogram analysis to the TESS lightcurves.
+
+'''
 # imports
 import logging
 __all__ = ['check_for_jumps', 'gauss_fit', 'gauss_fit_peak', 'get_next_peak', 'is_period_cont', 'logger', 'mean_of_arrays', 'run_ls', 'sin_fit']
@@ -402,7 +411,11 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
         | "frac_phase_outliers" : The fraction of data points that are more than 3 median absolute deviation values from the best-fit.
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
-    cln_cond = np.logical_and(lc_data["pass_clean"], lc_data["pass_outlier"])
+    cln_cond = np.logical_and.reduce([
+                   lc_data["pass_clean_scatter"],
+                   lc_data["pass_clean_outlier"],
+                   lc_data["pass_full_outlier"]
+                   ])
     cln = lc_data[cln_cond]
 
     time = np.array(cln["time"])
