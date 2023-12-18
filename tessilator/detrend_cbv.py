@@ -1,3 +1,12 @@
+'''
+
+Alexander Binks & Moritz Guenther, December 2023
+
+Licence: MIT 2023
+
+This module contains the functions needed to perform the co-trending basis vector corrections to the TESS lightcurves, if required. The functions were originally designed for Kepler-data analysis, and written by Suzanne Aigrain -> https://github.com/saigrain/CBVshrink
+'''
+
 import logging
 __all__ = ['get_cbv_scc', 'interpolate_cbv', 'fixed_nb', 'sel_nb', 'fit_basis', 'apply_basis']
 
@@ -83,22 +92,27 @@ def apply_basis(weights, basis):
     return dot_prod_res
 
 def fixed_nb(flux, cbv, nB = 4, use = None, doPlot = True):
-    '''
-    corrected_flux = fixed_nb(flux, basis, nB = 4, use = None, \
-                              doPlot = True)
-    Correct light curve for systematics using first nB CBVs.
+    '''Correct light curve for systematics using first nB CBVs.
 
-    Inputs:
-        flux: (1-D array) light curves 
-        cbv: (2-D array) co-trending basis vectors trends
-    Optional inputs:
-        nB: number of CBVs to use (the first nB are used)
-        use: boolean array, True for data points to use in evaluating correction, 
-             False for data points to ignore (NaNs are also ignored)
-        doPlot: set to False to suppress plot
-    Outputs:
-        corrected_flux: (same shape as flux) corrected light curves
-        weights: (nB array) basis vector coefficients
+    parameters
+    ----------
+    flux : `Iter`
+        The 1-D array of light curves 
+    cbv : `Iter`
+        The 2-D array of co-trending basis vectors trends
+    nb : `int`, optional, default=4
+        The number of CBVs to use (the first nB are used)
+    use : `bool`, optional, default=True
+        True for data points to use in evaluating correction, False for data points to ignore (NaNs are also ignored)
+    doPlot : `bool`, optional, default=True
+        Choose whether to produce a plot of the CBV corrections.
+
+    returns
+    -------
+    corrected_flux : `Iter`
+        The corrected light curves, with the same shape as flux
+    weights : `Iter`
+        An nB-sized array containing the basis vector coefficients
     '''
     nobs = len(flux)    
     if cbv.shape[1] == nobs: cbv_ = cbv[:nB,:]
@@ -121,23 +135,27 @@ def fixed_nb(flux, cbv, nB = 4, use = None, doPlot = True):
     return corrected_flux, weights
 
 def sel_nb(flux, cbv, nBmax = None, use = None):
-    '''
-    (nb_opt, flux_opt, weights_opt), (corr_flux_multi, weights_multi)
-                = sel_nb(flux, basis, nBmax = 8, use = None)
-    Correct light curve for systematics using upt to nB CBVs 
-    (automatically select best number).
+    '''Correct light curve for systematics using upt to nB CBVs (automatically select best number).
 
-    Inputs:
-        flux: (1-D array) light curves 
-        cbv: (2-D array) co-trending basis vectors trends
-    Optional inputs:
-        nBmax: maximum number of CBVs to use (starting with the first)
-        use: boolean array, True for data points to use in evaluating 
-             correction, False for data points to ignore (NaNs are also ignored)
-    Outputs:
-        nBopt: automatically selected number of CBVs used (<= nBmax)
-        corr_flux: (same shape as flux) corrected light curves
-        weights: (nBopt array) basis vector coefficients
+    parameters
+    ----------
+    flux : `Iter`
+        A 1-D array of light curves 
+    cbv : `Iter`
+        A 2-D array of co-trending basis vectors trends
+    nBmax : `int`, optional, default=None
+        The maximum number of CBVs to use (starting with the first)
+    use : `bool`, optional, default=True
+        True for data points to use in evaluating correction, False for data points to ignore (NaNs are also ignored)
+
+    returns
+    -------
+    nBopt : `int`
+        The automatically selected number of CBVs used (<= nBmax)
+    corr_flux : `Iter`
+        The corrected light curves (same shape as flux)
+    weights : `Iter`
+        The co-trending basis vector coefficients (same shape as nBopt).
     '''
     nobs = len(flux)
     if cbv.shape[1] == nobs: cbv_ = np.copy(cbv)
@@ -189,6 +207,24 @@ def sel_nb(flux, cbv, nBmax = None, use = None):
       
       
 def interpolate_cbv(cbv_file, lc, type_cbv='Single'):
+    '''Selects the type of CBV correction and applies them to the lightcurve
+    
+    parameters
+    ----------
+    cbv_file : `str`
+        The name of the CBV-file
+    lc : `astropy.table.Table`
+        The lightcurve data in astropy-tabulated format
+    type_cbv : `str`, optional, default='Single'
+        The type of CBV-corrections to make. Choose from "Single",
+        "Spike", "Multi1", "Multi2" or "Multi3"
+        
+   returns
+   -------
+   v_fin : `astropy.table.Table`
+       The tabulated weights from the CBV fits to be applied to the lightcurve    
+    '''
+
     with fits.open(cbv_file) as hdul:
         if type_cbv == 'Single':
             data = hdul[1].data
@@ -207,10 +243,27 @@ def interpolate_cbv(cbv_file, lc, type_cbv='Single'):
         for i, v in enumerate(vectors):
             x = np.interp(lc["time"], time, data[f'{v}'])
             v_new[:,i] = np.interp(lc["time"], time, data[f'{v}'])
-    return v_new.T
+    v_fin = v_new.T
+    return v_fin
 
 
 def get_cbv_scc(scc, lc):
+    '''Run the CBV fits for a given lightcurve
+    
+    parameters
+    ----------
+    scc : `Iter`
+        A 3-element list containing the sector, camera and CCD of the TESS image
+    lc : `astropy.table.Table`
+        The tabulated lightcurve data.
+
+    returns
+    -------
+    corrected_flux : `list`
+        The flux values after ungoing CBV corrections
+    weights : `list`
+        The weights applied to each lightcurve data point.
+    '''
     with open('./cbv/curl_cbv.scr', 'r') as curl_file:
         lines = curl_file.readlines()
         cbv_comm = [l for l in lines if f'{scc[0]}-{scc[1]}-{scc[2]}' in l]

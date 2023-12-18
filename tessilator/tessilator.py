@@ -2,12 +2,14 @@
 Functions used by the tessilator.
 '''
 
+from .aperture import *
 from .lc_analysis import *
 from .periodogram import *
 from .detrend_cbv import *
 from .contaminants import *
 from .maketable import *
 from .makeplots import *
+from .fixedconstants import *
 from .tess_stars2px import tess_stars2px_function_entry
 from datetime import datetime
 import numpy as np
@@ -569,6 +571,28 @@ def make_failrow(t_target, scc):
     return dr
 
 
+def apply_noise_corr(targ_lc, sim_lc):
+    targ_lc['nflux_err'][np.where(targ_lc['nflux_err'] < 0)] = .01
+    cln_cond = np.logical_and.reduce([
+                   targ_lc["pass_clean_scatter"],
+                   targ_lc["pass_clean_outlier"],
+                   targ_lc["pass_full_outlier"]
+                   ])
+    targ_lc["nflux_noise_corr"] = 0
+    targ_lc["sim_flux"] = 0
+
+    nflux_noise_corr = np.array([])
+    sim_flux = np.array([])
+    for t, time in enumerate(targ_lc["time"]):
+        sim_bit = np.interp(time, sim_lc["time"], sim_lc["nflux"])
+        flux_bit = targ_lc["nflux_dtr"][t]/sim_bit
+        sim_flux = np.append(sim_flux, sim_bit)
+        nflux_noise_corr = np.append(nflux_noise_corr, flux_bit)
+    targ_lc["nflux_noise_corr"][cln_cond] = nflux_noise_corr[cln_cond]
+    targ_lc["sim_flux"][cln_cond] = sim_flux[cln_cond]
+    return targ_lc
+
+
 def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name, make_plots=False):
     '''Apply a flux-corrected key to the target lightcurve dictionary, and make
     a plot of the corrections if required.
@@ -597,18 +621,9 @@ def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name, make_plots=Fal
         The updated target lightcurve dictionary, with an extra key containing
         the noise-corrected flux.
     '''
-    targ_lc['nflux_err'][np.where(targ_lc['nflux_err'] < 0)] = .01
-    cln_cond = np.logical_and(targ_lc["pass_clean"], targ_lc["pass_outlier"])
-    targ_lc = targ_lc[cln_cond]
-    nflux_noise_corr = []
-#    targ_time = np.array([t-min(targ_lc["time"]) for t in targ_lc["time"]])
-    sim_flux = []
-    for t, time in enumerate(targ_lc["time"]):
-        sim_bit = np.interp(time, med_lc["time"], med_lc["nflux_dtr"])
-        nflux_noise_corr.append(targ_lc["nflux_dtr"][t]/sim_bit)
-        sim_flux.append(sim_bit)
-    targ_lc["nflux_noise_corr"] = nflux_noise_corr
-    targ_lc["sim_flux"] = sim_flux
+    sim_lc = Table.read(med_lc)
+    targ_lc = apply_noise_corr(targ_lc, sim_lc)
+
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_local_lc.png"
         make_lc_corr_plot(plot_name, ref_name, targ_lc["time"], targ_lc["nflux_dtr"], targ_lc["sim_flux"])
@@ -653,8 +668,6 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name, mag_extr_lim=
         the noise-corrected flux.
     '''
     
-    cln_cond = np.logical_and(targ_lc["pass_clean"], targ_lc["pass_outlier"])
-    targ_lc = targ_lc[cln_cond]
     mag_files = sorted(glob(f'./tesssim/lc/{scc[0]:02d}_{scc[1]}_{scc[2]}/mag*'))
     if not mag_files:
         logger.warning(f"No simulated lightcurve for {targ_name}, Sector {scc[0]:02d}, Camera {scc[1]}, CCD {scc[2]}")
@@ -665,7 +678,6 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name, mag_extr_lim=
     mag1 = np.array([float(mag_file.split("_")[-1]) for mag_file in mag_files])
 
     g = np.where((mag0 <= mag_target) & (mag1 > mag_target))[0]
-    
     if g.size > 0:
         sim_tab = f'{mag_files[g[0]]}/flux_fin.csv'
     elif (mag_target < mag0[0]) & (np.abs(mag0[0] - mag_target) < mag_extr_lim):
@@ -679,15 +691,8 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name, mag_extr_lim=
         return targ_lc
 
     sim_lc = Table.read(sim_tab)
-    nflux_noise_corr = []
-#    targ_time = np.array([t-min(targ_lc["time"]) for t in targ_lc["time"]])
-    sim_flux = []
-    for t, time in enumerate(targ_lc["time"]):
-        sim_bit = np.interp(time, sim_lc["time"], sim_lc["nflux"])
-        nflux_noise_corr.append(targ_lc["nflux_dtr"][t]/sim_bit)
-        sim_flux.append(sim_bit)
-    targ_lc["nflux_noise_corr"] = nflux_noise_corr
-    targ_lc["sim_flux"] = sim_flux
+    targ_lc = apply_noise_corr(targ_lc, sim_lc)
+
     if make_plots:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_corr_sim_lc.png"
         make_lc_corr_plot(plot_name, ref_name, targ_lc["time"], targ_lc["nflux_dtr"], targ_lc["sim_flux"])
@@ -789,7 +794,12 @@ def get_median_lc(tables, files_loc, scc, n_bin=10):
         tables_chosen = tables
     for t, tab in enumerate(tables_chosen):
         tab['nflux_err'][np.where(tab['nflux_err'] < 0)] = .01
-        cln_cond = np.logical_and(tab["pass_clean"], tab["pass_outlier"])
+        cln_cond = np.logical_and.reduce([
+                       tab["pass_clean_scatter"],
+                       tab["pass_clean_outlier"],
+                       tab["pass_full_outlier"]
+                       ])
+
         tab = tab[cln_cond]
         for t_line in tab:
             num.append(t+1)
@@ -981,7 +991,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, final_table, ref_name='targe
                          f"{t_targets['source_id']}")
             final_table.add_row(make_failrow(t_targets, scc))
             continue
-
         if fix_noise and not LC_con:
             logger.info('fixing the noise!')
             for l in range(len(lcs)):
@@ -1410,7 +1419,7 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
         A list of the fits files for lightcurve analysis.
     '''
     manifest = []
-    if (choose_sec < 1 or choose_sec > 70):
+    if (choose_sec < 1 or choose_sec > sec_max):
         print(f"Sector {choose_sec} is out of range.")
         logger.error(f"Sector {choose_sec} is out of range.")
         return manifest
@@ -1471,7 +1480,7 @@ def cutout_chosensecs(coord, cutout_size, name_target, choose_sec, tot_attempts=
     manifest = []
     cs = np.array(list(set(choose_sec)))
     if all(isinstance(x, np.int64) for x in cs):
-        cs_g = cs[np.where((cs > 0) & (cs < 70))[0]]
+        cs_g = cs[np.where((cs > 0) & (cs <= sec_max))[0]]
         if len(cs) != len(cs_g):
             logger.warning(f"Sectors {np.setdiff1d(cs, cs_g)} are out of "
                            f"range.")
@@ -1482,20 +1491,22 @@ def cutout_chosensecs(coord, cutout_size, name_target, choose_sec, tot_attempts=
         for c in cs_g:
             num_attempts = 0
             while num_attempts < tot_attempts:
-                print(f'attempting download request {num_attempts+1} of {tot_attempts}...')
                 try:
-                    fits_file = glob(f'{fits_dir}/{name_target}_{c}*')[0]
-                    if os.exists(fits_file):
-                        manifest.append(fits_file)
+                    fits_file = glob(f'{fits_dir}/{name_target}_{c:04d}*')
+                    if fits_file:
+                        manifest.append(fits_file[0])
+                        num_attempts = tot_attempts+1
                     else:
                         dl = Tesscut.download_cutouts(coordinates=coord,\
                                                       size=cutout_size,\
                                                       sector=c,\
                                                       path=fits_dir)
                         manifest.append(dl["Local Path"][0])
+                        num_attempts = tot_attempts+1
                 except:
                     print(f"Didn't get Sector {c} data for {name_target}, attempt {num_attempts+1} of {tot_attempts}")
                     logger.error(f"Didn't get Sector {c} data for {name_target}, attempt {num_attempts+1} of {tot_attempts}")
+                    num_attempts += 1
                 if num_attempts == tot_attempts:
                     print(f"No data for {name_target} in Sector {c}")
                     logger.error(f"No data for {name_target} in Sector {c}")
@@ -1646,6 +1657,7 @@ def one_source_cutout(target, LC_con, flux_con, con_file, make_plots,\
                 t_sp = f_new.split('_')
     # simply extract the sector, ccd and camera numbers from the fits file.
                 scc = [int(t_sp[-3][1:]), int(t_sp[-2]), int(t_sp[-1][0])]
+                print(f_new, scc)
                 full_run_lc(f_new, target, make_plots, scc, final_table, ref_name=ref_name, 
                             save_phot=save_phot, cbv_flag=cbv_flag, flux_con=flux_con, store_lc=store_lc, LC_con=LC_con,
                             lc_dir=lc_dir, pg_dir=pg_dir, con_file=con_file,

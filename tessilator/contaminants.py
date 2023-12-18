@@ -1,3 +1,27 @@
+'''
+
+Alexander Binks & Moritz Guenther, December 2023
+
+Licence: MIT 2023
+
+This module contains functions to quantify the background flux contamination from
+neighbouring sources in the TESS full-frame images. Each TESS pixel has a length of
+21", therefore targets are highly susceptible to background contamination when they
+(1) are in crowded fields, (2) are faint sources and/or (3) have high contributing
+sky-counts.
+
+The background is quanitified by acquistioning RP-band magnitudes in the Gaia DR3
+catalogue for potential contaminants in the surrounding image apertures, and
+then calculating their flux contribution which is incident within the target
+aperture using an analytical formula provided as equation 3b-10 in Biser & Millman
+(1965).
+
+An additional function can be called which stores the potential neighbouring
+contaminants, and periodogram analyses for these neighbouring sources are perform to
+assess whether the observed periodicity is that of the target, or a neighbour.
+'''
+
+ 
 import traceback
 import logging
 import warnings

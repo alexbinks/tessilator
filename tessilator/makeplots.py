@@ -1,4 +1,10 @@
-'''Generate pixel images, light-curves and periodogram plots
+'''
+
+Alexander Binks & Moritz Guenther, December 2023
+
+Licence: MIT 2023
+
+Generate pixel images, light-curves and periodogram plots
 
 '''
 import os
@@ -61,10 +67,16 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     '''
     t_0 = clean["time"][0]
     c_1 = clean["pass_sparse"].data
-    c_2 = clean["pass_clean"].data
+    c_2 = clean["pass_clean_outlier"].data
+    cln_cond = np.logical_and.reduce([
+                   clean["pass_clean_scatter"],
+                   clean["pass_clean_outlier"],
+                   clean["pass_full_outlier"]
+                   ])
+
     clean_orig_time, clean_orig_flux, clean_orig_mag = clean["time"]-t_0, clean["nflux_ori"], clean["mag"]
     clean_norm_time, clean_norm_flux = clean["time"][c_1]-t_0, clean["nflux_ori"][c_1]
-    clean_detr_time, clean_detr_flux = clean["time"][c_2]-t_0, clean["nflux_dtr"][c_2]
+    clean_detr_time, clean_detr_flux = clean["time"][cln_cond]-t_0, clean["nflux_dtr"][cln_cond]
     mpl.rcParams.update({'font.size': 14})
     if LS_dict["AIC_line"]+1. < LS_dict["AIC_sine"]:
         best_fit_type = 'linear'

@@ -1,4 +1,10 @@
-'''Make tabular data for tessilator
+'''
+
+Alexander Binks & Moritz Guenther, December 2023
+
+Licence: MIT 2023
+
+Make tabular data for tessilator
 
 This module contains the functions required to convert the input data
 into correct formatted astropy tables to be used for further analysis
