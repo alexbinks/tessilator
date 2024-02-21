@@ -29,7 +29,7 @@ Zpt, eZpt = 20.44, 0.05
 This is held constant. Do not change.
 '''
 
-sec_max = 70
+sec_max = 72
 '''This is the maximum sector number to be acquisitioned when looking for TESS data
 
 This will change over time as more data is collected.

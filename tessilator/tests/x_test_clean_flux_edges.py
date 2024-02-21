@@ -21,6 +21,3 @@ y_med, y_MAD = np.median(y), MAD(y, scale='normal')
 y_min, y_max = y_med+(MAD_fac*y_MAD), y_med-(MAD_fac*y_MAD)
 
 s, f = clean_flux_edges(y)
-print(y_med, 2*y_MAD)
-print(s,f)
-print(jjj)

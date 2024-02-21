@@ -1,8 +1,8 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
 Make tabular data for tessilator
 
@@ -11,25 +11,34 @@ into correct formatted astropy tables to be used for further analysis
 in the tessilator.
 '''
 
-__all__ = ['logger', 'table_from_simbad', 'get_twomass_like_name', 'table_from_coords',
-           'table_from_table', 'get_gaia_data']
+###############################################################################
+####################################IMPORTS####################################
+###############################################################################
+#Internal
+import warnings
+import sys
 
+#Third party
 from astropy.table import Table
 from astropy.io import ascii
 from astroquery.simbad import Simbad
 from astroquery.gaia import Gaia
 from astropy.coordinates import SkyCoord, ICRS
 import astropy.units as u
-
 import numpy as np
-import warnings
-import logging
-import sys
-           
-logger = logging.getLogger(__name__)
 
-# Read the data from the input file as an astropy table (ascii format)
-# Ensure the source_id has a string type (not long integer).
+# Local application
+from .logger import logger_tessilator
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+# initialize the logger object
+logger = logger_tessilator(__name__) 
+
+
 
 
 def table_from_simbad(input_names):
@@ -53,7 +62,6 @@ def table_from_simbad(input_names):
     # set the column header = "ID"
     input_names.rename_column(input_names.colnames[0], 'ID')
     input_names["ID"] = input_names["ID"].astype(str)
-
     # create arrays to store naming variables
     name_arr, is_Gaia = [], [0 for i in input_names]
     for i, input_name in enumerate(input_names["ID"]):
@@ -69,7 +77,10 @@ def table_from_simbad(input_names):
     # the input name
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=UserWarning)
-        result_table = [Simbad.query_objectids(name) for name in name_arr]
+        try:
+            result_table = [Simbad.query_objectids(name) for name in name_arr]
+        except:
+            result_table = [None for name in name_arr]
     NameList = []
     GaiaList = []
     for r, res in enumerate(result_table):
@@ -152,7 +163,7 @@ def get_twomass_like_name(coords):
     for r,d in zip(ra_hms_fin, dec_hms_fin):
         radec_fin.append(f'{r}{d}')
     return radec_fin
-    
+
 
 
 def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=True):
@@ -172,8 +183,8 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         The coordinate system of the input positions. These can be 'icrs'
         (default), 'galactic' or 'ecliptic'.
     gaia_sys : `bool`, optional, default=True
-        Choose to format the data based on Gaia DR3. Note that no contamination can
-        be calculated if this is False.
+        Choose to format the data based on Gaia DR3. Note that no contamination
+        can be calculated if this is False.
 
     returns
     -------
@@ -225,7 +236,10 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
         # target with the shortest number of characters (which is more likely to be
         # the most common reference name for the target).
         GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
-        result_table = [Simbad.query_objectids(i) for i in GDR3_Names]
+        try:
+            result_table = [Simbad.query_objectids(i) for i in GDR3_Names]
+        except:
+            result_table = [None for i in GDR3_Names]
         NameList = []
         for i, r in enumerate(result_table):
             if r is None:
@@ -244,6 +258,8 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs', gaia_sys=Tru
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag', 'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]
     return gaia_table
+    
+    
 
 def table_from_table(input_table, name_is_source_id=False):
     '''Generate the formatted astropy table from a pre-formatted astropy
@@ -283,7 +299,10 @@ def table_from_table(input_table, name_is_source_id=False):
     else:
         GDR3_Names = ["Gaia DR3 " + i for i in gaia_table['source_id'].astype(str)]
         NameList = []
-        result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
+        try:
+            result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
+        except:
+            result_table = [None for i in GDR3_Names]
         for i, r in enumerate(result_table):
             if r is None:
                 NameList.append(gaia_table['source_id'][i].astype(str))
@@ -299,13 +318,17 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
     '''Reads the input table and returns a table in the correct format for
     TESSilator.
 
-    | The table must be in comma-separated variable format, in either of these 3 ways:
+    | The table must be in comma-separated variable format, in either of these
+      3 ways:
     | 1) A table with a single column containing the source identifier
-    |     * note that this is the preferred method since the target identified in the Gaia query
-            is unambiguously the same as the input value. Also, the name match runs faster than
-            the coordinate match using astroquery.
-    | 2) A table with sky-coordinates in either the 'icrs' (default),'galactic', or 'ecliptic' system.
-    |     * note this is slower because of the time required to run the Vizier query.
+    |     * note that this is the preferred method since the target identified
+            in the Gaia query is unambiguously the same as the input value.
+            Also, the name match runs faster than the coordinate match using
+            astroquery.
+    | 2) A table with sky-coordinates in either the 'icrs' (default),
+         'galactic', or 'ecliptic' system.
+    |     * note this is slower because of the time required to run the Vizier
+            query.
     | 3) A table with all 7 columns already made.
 
     parameters
@@ -330,14 +353,15 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
         | The table ready for TESSilator analysis, with the columns:
         * name: the preferred choice of source identifier
         * source_id: the Gaia DR3 source identifier
-        * ra: right ascension (icrs) or longditude (galactic, barycentricmeanecliptic)
-        * dec: declination (icrs) or latitude (galactic, barycentricmeanecliptic)
+        * ra: right ascension (icrs) or longditude (galactic,
+          barycentricmeanecliptic)
+        * dec: declination (icrs) or latitude (galactic,
+          barycentricmeanecliptic)
         * parallax: parallax from Gaia DR3 (in mas)
         * Gmag: the apparent G-band magnitude from Gaia DR3
         * BPmag: the apparent BP-band magnitude from Gaia DR3
         * RPmag: the apparent RP-band magnitude from Gaia DR3
     '''
-
     if len(gaia_table.colnames) == 1:
         tbl = table_from_simbad(gaia_table)
     elif len(gaia_table.colnames) == 2:
@@ -349,3 +373,6 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs', gaia_s
                         following formats: \n [1] source_id \n [2] ra and dec \
                         \n [3] source_id, ra, dec, parallax, Gmag, BPmag and RPmag')
     return tbl
+
+
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]

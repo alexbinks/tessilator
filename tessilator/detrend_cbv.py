@@ -1,18 +1,22 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, December 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
 This module contains the functions needed to perform the co-trending basis vector corrections to the TESS lightcurves, if required. The functions were originally designed for Kepler-data analysis, and written by Suzanne Aigrain -> https://github.com/saigrain/CBVshrink
 '''
 
-import logging
-__all__ = ['get_cbv_scc', 'interpolate_cbv', 'fixed_nb', 'sel_nb', 'fit_basis', 'apply_basis']
-
+###############################################################################
+####################################IMPORTS####################################
+###############################################################################
+#Internal
 import warnings
+import inspect
+import sys
 
-# Third party imports
+
+# Third party 
 import numpy as np
 import os
 import subprocess
@@ -21,15 +25,26 @@ from astropy.table import Table
 from astropy.io import fits
 import astropy.units as u
 
-
 import pylab as pl
+
+
+# Local application
 from .VBLinRegARD import bayes_linear_fit_ard as VBF
 from .stats_cbv import cdpp, medransig
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+# initialize the logger object
+logger = logger_tessilator(__name__)
 
 
 
 
-def fit_basis(flux, basis, scl = None):
+
+def fit_basis(flux, basis, scl=None):
     '''Calculate the flux-correction weights for the co-trending basis vectors (CBVs).
     
     This routine is taken directly from `Aigrain et al. 2017 <https://github.com/saigrain/CBVshrink>`_
@@ -71,6 +86,8 @@ def fit_basis(flux, basis, scl = None):
         weights[iobj,:] = np.array(res[0][:-1]).flatten() * scl * Fs / Bs
     return weights
 
+
+
 def apply_basis(weights, basis):
     '''Calculate the dot product between the weights and the CBVs.
     
@@ -91,7 +108,9 @@ def apply_basis(weights, basis):
     dot_prod_res = np.dot(weights, basis)
     return dot_prod_res
 
-def fixed_nb(flux, cbv, nB = 4, use = None, doPlot = True):
+
+
+def fixed_nb(flux, cbv, nB=4, use=None, doPlot=True):
     '''Correct light curve for systematics using first nB CBVs.
 
     parameters
@@ -134,7 +153,9 @@ def fixed_nb(flux, cbv, nB = 4, use = None, doPlot = True):
         pl.xlabel('Flux')
     return corrected_flux, weights
 
-def sel_nb(flux, cbv, nBmax = None, use = None):
+
+
+def sel_nb(flux, cbv, nBmax=None, use=None):
     '''Correct light curve for systematics using upt to nB CBVs (automatically select best number).
 
     parameters
@@ -247,6 +268,7 @@ def interpolate_cbv(cbv_file, lc, type_cbv='Single'):
     return v_fin
 
 
+
 def get_cbv_scc(scc, lc):
     '''Run the CBV fits for a given lightcurve
     
@@ -276,3 +298,5 @@ def get_cbv_scc(scc, lc):
     corrected_flux, weights = sel_nb(np.array(lc['flux'].data), interpolated_cbv)    
     return corrected_flux, weights
 
+
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]
