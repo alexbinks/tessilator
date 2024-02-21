@@ -1,38 +1,39 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, December 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
-This module contains functions to clean lightcurves.
-
+This module contains functions to normalise, detrend, and clean lightcurves.
     
-The cleaning and detrending of the lightcurve takes part in 8 steps, each of which are called by the parent function 'run_make_lc_steps'. The steps are:
+The cleaning and detrending of the lightcurve takes part in 9 steps, each of
+which are called by the parent function 'run_make_lc_steps'. The steps are:
 
 | (1) Normalise the raw lightcurve.
-| (2) Split the lightcurve into segments of contiguous data (no large time gaps between datapoints)
+| (2) Split the lightcurve into segments of contiguous data (no large time gaps
+      between datapoints)
 | (3) Remove sparse data, i.e., data segments with only a few data points.
 | (4) Detrend the lightcurve.
 | (5) Clean the edges: remove flux outliers.
 | (6) Clean the edges: scattered, noisy datapoints.
 | (7) Remove extreme outliers from the lightcurve
-| (8) Store the lightcurve to file.
+| (8) Normalise the flux in each segment, using the median of qualified data.
+| (9) Store the lightcurve to file.
 '''
 
-# imports
-import logging
-__all__ = ['aic_selector', 'clean_edges_outlier', 'clean_edges_scatter', 'detrend_lc',
-           'get_time_segments', 'logger', 'make_lc',
-           'normalisation_choice', 'remove_sparse_data', 'sin_fit', 'test_cbv_fit']
-
-
+###############################################################################
+####################################IMPORTS####################################
+###############################################################################
+#Internal
 import warnings
+import inspect
+import sys
 
-# Third party imports
+
+# Third party
 import numpy as np
 import os
 import json
-
 
 from astropy.table import Table
 import astropy.units as u
@@ -46,23 +47,33 @@ import itertools as it
 from operator import itemgetter
 
 
+# Local application
+from .logger import logger_tessilator
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
 # initialize the logger object
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger = logger_tessilator(__name__) 
     
     
     
     
-def get_time_segments(t, t_fac=5.):
-    '''Split the lightcurve into groups of contiguous data, where the time difference between
-    measurements is less than a given value.
+def get_time_segments(t, t_fac=10.):
+    '''Split the lightcurve into groups of contiguous data
+    
+    Group data into segments where the time difference between data points is
+    less than some threshold factor, `t_fac`.
     
     parameters
     ----------
     t : `Iter`
         The list of time coordinates from the lightcurve
-    t_fac : `float`, optional, default=5.
-        A factor which is multiplied with the median time difference of the neighbouring time coordinates.
+    t_fac : `float`, optional, default=10.
+        A time factor, which is multiplied by the median cadence of the full
+        lightcurve.
         
     returns
     -------
@@ -86,49 +97,53 @@ def get_time_segments(t, t_fac=5.):
 
 
     
-def remove_sparse_data(x_start, x_end, std_crit=50):
-    '''Removes very sparse bits of data from the lightcurve when there are 3 or more components.
+def remove_sparse_data(x_first, x_last, std_crit=50):
+    '''Removes very sparse data groups, when there are 3 or more groups.
 
-    Calculate the mean (mc) and standard deviation (sc) for the number of data
-    points in each component (N).
-    If sc > "std_crit", then only keep components with N > std_crit.
+    Calculate the mean (mean_group) and standard deviation (std_group) for the
+    number of data points in each group (n_points).
+    If std_group > "std_crit", then only keep groups with n_points > std_crit.
     
     parameters
     ----------
-    x_start : `Iterable`
-        The starting indices for each data component
-    x_end : `Iterable`
-        The end indices for each data component
+    x_first : `Iterable`
+        The index values of the first element in each group
+    x_last : `Iterable`
+        The index values of the last element each group
     std_crit: `int`
-        The minimum number of data points in a component
+        The minimum number of data points required for a group to qualify.
 
     returns
     -------
-    y_start : `np.array`
-        The starting indices of the new array
-    y_end : `np.array`
-        The end indices of the new array
+    y_first : `np.array`
+        The index values of the first element of the new arrays
+    y_last : `np.array`
+        The index values of the last element of the new arrays
     '''
-    y_start, y_end = np.array(x_start), np.array(x_end)
-    # n_points is an array containing the length of the components
-    n_points = np.array([x_end[i] - x_start[i] for i in range(len(x_start))])
-    if len(x_start) > 2:
-        mean_point, std_point = np.mean(n_points), np.std(n_points)
-        if std_point > 1.*std_crit:
-            g = n_points > 1.*std_crit
-            y_start, y_end = y_start[g], y_end[g]
-            return y_start, y_end
-    return y_start, y_end
-
+    try:
+        y_first, y_last = np.array(x_first), np.array(x_last)
+        # n_points is an array containing the length of the components
+        n_points = np.array([x_last[i] - x_first[i] for i in range(len(x_first))])
+        if len(x_first) > 2:
+            mean_group, std_group = np.mean(n_points), np.std(n_points)
+            if std_group > std_crit:
+                g = n_points > std_crit
+                y_first, y_last = y_first[g], y_last[g]
+                return y_first, y_last
+        return y_first, y_last
+    except:
+        logger.warning("The sparse data removal algorithm failed. Retaining the input indices.")
+        return y_first, y_last
 
 
     
     
     
 def aic_selector(x, y, poly_max=3, cov_min=1e-10):
-    '''Chooses the most appropriate polynomial fit, using the Aikaike Information Criterion
+    '''Select the detrending polynomial from the Aikaike Information Criterion
     
-    This function uses the Aikaike Information Criterion to find the most appropriate polynomial order to a set of X, Y data points.
+    This function uses the Aikaike Information Criterion (AIC) to find the most
+    appropriate polynomial order to a set of X, Y data points.
     
     parameters
     ----------
@@ -136,9 +151,17 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
         The independent variable
     y : `Iterable`
         The dependent variable
-    poly_max : `int`, optional, default=10
+    poly_max : `int`, optional, default=3
         The maximum polynomial order to test
-    cov_min : A threshold value for the first element of the covariance matrix. Sometimes the AIC will automatically select a higher-order polynomial to a distribution that is clearly best fit by the preceeding lower-order fit. For example, a second-order fit provides a better fit for a perfect straight line. This is a bug in the numerical rounding. Therefore, if the value of the first element of the covariance matrix is less than cov_min for the lower order, then the lower order fit is selected.
+    cov_min : `float`
+        A threshold value for the first element of the covariance matrix.
+        Sometimes the AIC will automatically select a higher-order
+        polynomial to a distribution that is clearly best fit by the
+        preceeding lower-order fit. For example, a second-order fit provides a
+        better fit for a perfect straight line. This is a bug in the numerical
+        rounding. Therefore, if the value of the first element of the
+        covariance matrix is less than cov_min for the lower order, then the
+        lower order fit is selected.
 
     returns
     -------
@@ -150,7 +173,7 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
     '''
     
     q = 0
-    N = float(len(x))
+    N = 1.*len(x)
     try:
         while q < poly_max:
             k1, k2 = q+1, q+2
@@ -161,7 +184,7 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
                 SSR2 = np.sum((np.polyval(p2, x) - y)**2)
             AIC1 = akaike_info_criterion_lsq(SSR1, k1, N)
             AIC2 = akaike_info_criterion_lsq(SSR2, k2, N)
-            if (AIC1 < (AIC2 + 2)) | (r1 < cov_min):
+            if (AIC1 < AIC2) | (r1 < cov_min):
                 poly_ord, coeffs = q, p1
                 return poly_ord, list(coeffs)
             else:
@@ -171,17 +194,116 @@ def aic_selector(x, y, poly_max=3, cov_min=1e-10):
                     return poly_ord, list(coeffs)
     except:
         return 0, [1.0]
-    
-    
-   
 
 
-def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
-    '''Choose how to detrend the lightcurve, either as one component or in parts.
+
+def relative_root_mean_squared_error(true, pred):
+    '''Return the relative root mean squared error (RRMSE)
     
-    There are always at least two data components in a TESS sector because of the finite time needed for data retrieval. This can sometimes lead to discontinuities between components because of TESS systematics and the temperature gradients across the photometer. These discontinuities can cause the phase of the sinusoidal fit to change, leading to low power output in the periodograms. Alternatively, if the data are all detrended individually, but the data is relatively continuous, this can lead to shorter period measurements.
+    Given a list of predicted and true values, calculate the RRMSE
     
-    The idea with this function is that a polynomial fit is made to each component (chosen using the Aikaike Information Criterion). The extrapolated flux value from component 1 is calculated at the point where component 2 starts. If the difference between this value and the actual normalised flux at this point is greater than a given threshold, the data should be detrended separately. Otherwise the full lightcurve can be detrended as a whole.
+    parameters
+    ----------
+    true : `Iter`
+        The set of true (measured) values
+    pred : `Iter`
+        The set of predicted (model) values
+        
+    returns
+    -------
+    rrmse : `float`
+        The RRMSE value
+    '''
+    num = np.sum(np.square(true - pred))
+    den = np.sum(np.square(pred))
+    squared_error = num/den
+    rrmse = np.sqrt(squared_error)
+    return rrmse
+
+
+def smooth_test(time, flux, n_avg=10):
+    '''Determine how to detrend a lightcurve, based on a smoothness algorithm
+    
+    The idea of this function is to catch lightcurves that appear to have
+    periods longer than ~15 days, and are notably smooth. The function
+    calculates a sine fit to the (linearly) detrended lightcurve, then
+    smoothes it using a running mean. Finally, there are three criteria to
+    decide how the lightcurve should be detrended. A boolean flag is returned,
+    where False=individual groups and True=the whole lightcurve.
+    
+    parameters
+    ----------
+    time : `Iter`
+        A set of time coordinates
+    flux : `Iter`
+        A set of flux coordinates
+    n_avg : `float`, optional, default=10
+        The number of datapoints to be used for the running mean calculation.
+        
+    returns
+    -------
+    smooth_flag : `bool`
+        A boolean flag to (partially) determine how the lightcurve should be
+        detrended (False=individual groups, True=the whole lightcurve)
+    '''
+
+    # 1) detrend the whole lightcurve by a linear fit, and calculate the MAD
+    t_new = time-time[0]
+    p1, r1, _,_,_ = np.polyfit(t_new, flux, 1, full=True)
+    f_new = flux/np.polyval(p1, t_new)
+    f_MAD = MAD(f_new, scale='normal')
+
+    # 2) make a sine fit to the detrended lightcurve
+    pops, popsc = curve_fit(sin_fit_per, t_new, f_new, bounds=([0.5, 0.0, 0.0, 0.0], [1.5, 0.2, 100., 6.3]))
+    yp = sin_fit_per(t_new, *pops)
+    
+    # 3) smooth the arrays using a running mean
+    yp_sm = np.array(np.convolve(yp, np.ones(n_avg)/n_avg, mode='valid'))
+    flux_sm = np.array(np.convolve(f_new, np.ones(n_avg)/n_avg, mode='valid'))
+    t_sm = np.array(np.convolve(t_new, np.ones(n_avg)/n_avg, mode='valid'))
+    
+    # 4) subtract the smoothed "raw" flux by the smoothed sine fit
+    diff_flux = flux_sm - yp_sm
+    d_MAD = MAD(diff_flux, scale='normal')
+
+    # 5) calculate the RRMSE between the detrended flux and the sine fit 
+    rrmse = relative_root_mean_squared_error(f_new, yp)
+    
+    # 6) if:
+    #       a) the predicted period from the sine fit is > 15. days
+    #       b) the RRMSE is < 0.01
+    #       c) the ratio of the MAD between the differential and original flux is < 0.25   
+    if (rrmse < 0.01) & (pops[2] > 15.) & (pops[2] < 99.9) & (d_MAD/f_MAD < 0.25):
+        return True
+    else:
+        return False
+
+       
+
+
+def norm(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
+    '''Choose whether to detrend the lightcurve as one by individual groups.
+    
+    There are always at least two data components in a TESS sector because of
+    the finite time needed for data retrieval. This can sometimes lead to
+    discontinuities between components because of TESS systematics and the
+    temperature gradients across the photometer. These discontinuities can
+    cause the phase of the sinusoidal fit to change, leading to low power
+    output in the periodograms. Alternatively, if the data are all detrended
+    individually, but the data is relatively continuous, this can lead to
+    shorter period measurements.
+    
+    The idea with this function is that a polynomial fit is made to each
+    component (chosen using the Aikaike Information Criterion, AIC). The
+    extrapolated flux value from component 1 is calculated at the point where
+    component 2 starts. If the difference between this value and the actual
+    normalised flux at this point is greater than a given threshold, the data
+    should be detrended separately. Otherwise the full lightcurve can be
+    detrended as a whole.
+    
+    In addition, if the "smooth" flag (calculated from the "smooth_test"
+    function) is True, then the lightcurve is detrended as a whole, regardless
+    of the outcome from this function.
     
     parameters
     ----------
@@ -189,20 +311,32 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
         The time coordinate
     f_orig : `Iterable`
         The original, normalised flux values
-    e_orig : `Iterable`
-        The error on "f_orig"
     lc_part : `Iterable`
         The running index for each contiguous data section in the lightcurve
-    MAD_fac : `float`, optional, default = 2.
-        The factor to multiply the median absolute deviation by.    
+    MAD_fac : `float`, optional, default=2.
+        The factor which is to be multiplied by the median absolute deviation.
+    poly_max : `float`, optional, default=4
+        The maximum polynomial order to test for the AIC evaluation.        
 
     returns
     -------
     norm_comp : `bool`
-        Determines whether the data should be detrended as one whole component (False) or in parts (True)
+        Determines whether the data should be detrended as one whole component
+        (False) or by individual groups (True, providing the smooth flag is
+        False).
+    f1_at_f2_0 : `list`
+        The extrapolated fluxes from group 1, calculated at the start of group 2.
+    f2_at_f2_0 : `list`
+        The first flux values from group 2
+    f1_MAD : `list`
+        The MAD fluxes from group 1
+    f2_MAD : `list`
+        The MAD fluxes from group 2
     '''
     norm_comp = False
     Ncomp = len(np.unique(lc_part))
+    smooth = smooth_test(t_orig, f_orig)
+
     f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = [], [], [], []
     if Ncomp > 1:
         i = 1
@@ -233,6 +367,8 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
                 f2_MAD.append(MAD(f2_n, scale='normal'))
                 norm_comp = False
                 break
+    if smooth == True:
+        norm_comp = False
     return norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
 
 
@@ -244,9 +380,11 @@ def normalisation_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
 def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
     '''Detrend and normalise the lightcurves.
 
-    | This function runs 3 major operations to detrend the lightcurve, as follows:
-    | 1. Choose whether a zeroth- or first-order polynomial is the best fit to the full light-curve, using the Aikaike Information Criterion, and detrend the full lightcurve.
-    | 2. Decide whether to use the detrended lightcurve from part 1, or to separate the lightcurve into individual components and detrend each one separately.
+    | This function runs 3 operations to detrend the lightcurve, as follows:
+    | 1. Choose whether a zeroth- or first-order polynomial is the best fit to
+         the full light-curve, using AIC, and detrend the full lightcurve.
+    | 2. Decide whether to use the detrended lightcurve from part 1, or to
+         detrend individual groups.
     | 3. Return the detrended flux.
 
     parameters
@@ -266,7 +404,10 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
     returns
     -------
     f_norm : `Iterable'
-        The corrected lightcurve after the detrending procedures. 
+        The corrected lightcurve after the detrending procedures.
+    detr_dict : `dict`
+        "norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD" -> see norm_choice.
+        "s_fit, coeffs" -> see aic_selector
     '''
 
     # 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and
@@ -277,8 +418,7 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
     # 2. Decide whether to use the detrended lightcurve from part 1, or to separate the
     #    lightcurve into individual components and detrend each one separately
     norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
-                    normalisation_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
-
+                    norm_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
     # 3. Detrend the lightcurve following steps 1 and 2.
     s_fit, coeffs = [], []
     if norm_comp:
@@ -318,45 +458,45 @@ def clean_flux_algorithm(g):
     parameters
     ----------
     g : `Iter`
-        The array of boolean results indicating if a condition is met (=1) or not (=0)
+        The outcome for each datapoint, qualified (=1) or not qualified (=0)
     
     returns
     -------
-    start : `int`
-        The trimmed start point of the array
-    fin : `int`
-        The trimmed final part of the array
+    first : `int`
+        The trimmed first point of the array
+    last : `int`
+        The trimmed last point of the array
     '''
     i, j = 0, len(g)-1
     while i < j:
         if g[i] != 1:
             i+=1
         else:
-            start=i
+            first=i
             break
     while j > 0:
         if g[j] != 1:
             j-=1
         else:
-            fin=j
+            last=j
             break
     if j <= i:
-        start, fin = 0, len(g)-1
-        return start, fin
+        first, last = 0, len(g)-1
+        return first, last
     else:
-        return start, fin
+        return first, last
     
     
 
     
 def clean_edges_outlier(f, MAD_fac=2.):
-    '''Remove spurious outliers at the start and end parts of the lightcurve.
+    '''Remove spurious outliers at the start and end parts of groups.
 
-    The start and end point of each data section must have a flux value within
-    a given number of MAD from the median flux in the sector. This is done
-    because often after large time gaps the temperature of the sensors changes,
-    and including these components is likely to just result in a signal from
-    instrumental noise.
+    The start and end point of each group must have a flux value within a given
+    number of MAD from the median flux in the group. This is done because
+    during data downlinks, the temperature of the sensors can change notably.
+    Therefore the outlying flux points at the group edges are probably from
+    temperature instabilities. 
 
     parameters
     ----------
@@ -367,9 +507,9 @@ def clean_edges_outlier(f, MAD_fac=2.):
 
     returns
     -------
-    start : `int`
+    first : `int`
        The start index for the data string.
-    fin : `int`
+    last : `int`
        The end index for the data string.
     '''
     f_med, f_MAD = np.median(f), MAD(f, scale='normal')
@@ -378,28 +518,31 @@ def clean_edges_outlier(f, MAD_fac=2.):
     f_diff_med = np.median(np.absolute(f_diff))
     try: 
         g = (np.abs(f-f_med) < MAD_fac*f_MAD).astype(int)
-        start, fin = clean_flux_algorithm(g)
+        first, last = clean_flux_algorithm(g)
         
     except:
         logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
-        start, fin = 0, len(g)-1
-    return start, fin
+        first, last = 0, len(g)-1
+    return first, last
 
 
-def clean_edges_scatter(f, MAD_fac=2., len_IQR_raw=11, num_data_fac=0.1):
-    '''Remove highly-scattered data at the start and end parts of the lightcurve.
+def clean_edges_scatter(f, MAD_fac=2., len_sub_raw=11, num_data_fac=0.1):
+    '''Remove highly-scattered data at the edges of each group.
 
-    Occasionally there are lightcurves that appear to have very scattered data at the start and end
-    points of the lightcurves. These can degrade the quality of the periodogram analysis, or even return
-    an incorrect period.
+    Some groups have very scattered fluxes at the edges, presumably because the
+    sensors are unstable before and after data downlinks. These can degrade the
+    quality of the periodogram analysis, or even lead to an incorrect period.
     
-    The idea is to group the first "n_IQR" datapoints, and calculate the median absolute deviation (MAD).
-    If this local MAD value is greater (less) than "MAD_fac" times the MAD of the full lightcurve, then
-    we flag this point with 0 (1). The first and last "(n_IQR-1)/2" in the lightcurve are given a constant
-    value. If the first/last MAD comparison yield a "1" value, then we do no extra cleaning to the lightcurve. 
+    The idea is to group the first "n_sub" datapoints, and calculate the median
+    absolute deviation (MAD). If this local MAD value is greater (less) than
+    "MAD_fac" times the MAD of the full lightcurve, then the flag at this point
+    is 0 (1). The first and last "(n_sub-1)/2" in the lightcurve are given a
+    constant value. If the first/last MAD comparison yield a "1" value, then we
+    include the full group, including the datapoints replaced with constant
+    values -- i.e., no cleaning is necessary.
     
-    The number of datapoints used for the IQR is chosen as the minimum value of "len_IQR_raw", or
-    num_data_fac*(the number of data points in the whole set).
+    The value for n_sub is chosen as the minimum value of "len_sub_raw", or
+    num_data_fac*(the number of datapoints in the whole set).
 
     parameters
     ----------
@@ -407,65 +550,69 @@ def clean_edges_scatter(f, MAD_fac=2., len_IQR_raw=11, num_data_fac=0.1):
         The set of normalised flux coordinates
     MAD_fac : `float`, optional, default=2.
         The threshold number of MAD values to allow.
-    len_IQR_raw : `int`, optional, default=11
+    len_sub_raw : `int`, optional, default=11
         The number of data points to be used in the local MAD value.
     num_data_fac : `float`, optional, default=0.1
         The factor to multiply the number of data points by.
 
     returns
     -------
-    start : `int`
+    first : `int`
        The start index for the data string.
-    fin : `int`
+    last : `int`
        The end index for the data string.
     '''
-    n_IQR =min(len_IQR_raw, int(num_data_fac*len(f)))
-    if n_IQR // 2 == 0:
-        n_IQR += 1
-    p_e = int((n_IQR-1)/2)
+    n_sub =min(len_sub_raw, int(num_data_fac*len(f)))
+    if n_sub // 2 == 0:
+        n_sub += 1
+    p_e = int((n_sub-1)/2)
+
     # get the median time and flux, the median absolute deviation in flux
     # and the time difference for each neighbouring point.
     f_med, f_MAD = np.median(f), MAD(f, scale='normal')
     f_diff = np.zeros(len(f))
     f_diff[1:] = np.diff(f)
     f_diff_med = np.median(np.absolute(f_diff))
-#    f_mean = np.array(np.convolve(f_diff, np.ones(n_avg)/n_avg, mode='valid'))
-    f_x = np.array([MAD(f[i:i+n_IQR], scale='normal') for i in range(len(f)-n_IQR+1)])
-#    f_x = np.array([iqr(f[i:i+n_avg]) for i in range(len(f)-n_avg+1)])
+    f_x = np.array([MAD(f[i:i+n_sub], scale='normal') for i in range(len(f)-n_sub+1)])
     f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
+
     try: 
         g = (np.abs(f_diff_run) < MAD_fac*f_diff_med).astype(int)
-        start, fin = clean_flux_algorithm(g)
-        if start <= p_e:
-            start = 0
-        elif start > p_e:
-            start = np.where(g)[0][p_e]
-        if fin >= len(g)-1-(2*p_e+1):
-            fin = len(g)-1
-        elif fin < len(g)-1-(2*p_e+1):
-            fin = np.where(g)[0][-p_e]
+        first, last = clean_flux_algorithm(g)
+        if first <= p_e:
+            first = 0
+        elif first > p_e:
+            first = np.where(g)[0][p_e]
+        if last >= len(g)-1-(2*p_e+1):
+            last = len(g)-1
+        elif last < len(g)-1-(2*p_e+1):
+            last = np.where(g)[0][-p_e]
     except:
         logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
-        start, fin = 0, len(g)-1
-    return start, fin
+        first, last = 0, len(g)-1
+    return first, last
 
 
 
 
 def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
-    '''Produce the lightcurves using the cleaning, normalisation and detrending functions
+    '''Process the lightcurve: cleaning, normalisation and detrending functions
     
-    During each procedure, the function keeps a record of datapoints that are either kept
-    or rejected, allowing users to assess the amount of data loss.
+    | During each procedure, the function keeps a record of datapoints that are
+    | kept or rejected, allowing users to assess the amount of data loss.
     
-    The function makes the following steps...
-    (1) select data points that are within "orig_mad_fac" (MAD) values of the median.
-    (2) clean the lightcurve from (1) using clean_lc algorithm.
-    (3) normalise the flux by dividing by the median value of the lightcurve produced in (2).
-    (4) Include only data from (3) that are within "norm_mad_fac" values of the median.
-    (5) detrend the lightcurve produced in (4) following the normalisation choice and the
-        appropriate AIC-selected polynomials.
-        
+    | The function makes the following steps...
+    | 1. normalise the original flux points
+    | 2. split the lightcurve into 'time segments'
+    | 3. remove very sparse elements from the lightcurve
+    | 4. run the first detrending process to pass to the cleaning function.
+    | 5. clean the lightcurve edges from outliers
+    | 6. clean the lightcurve edges from scattered data
+    | 7. finally cut out data that are extreme outliers.
+    | 8. divide each lightcurve component by the median flux value
+    | of qualifying data points.
+    | 9. return the dictionary
+
     parameters
     ----------
     f_lc : `dict'
@@ -482,35 +629,40 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     min_comp_frac : `float', optional, default=0.1
         The minimum relative size of a flux component when correcting for
         sparse data in the cleaning functions.
-    orig_mad_fac : `float', optional, default=20.
-        The factor of MAD values for the initial flux values (1). For inclusion
-        in the lightcurve the initial flux values must lie within "orig_mad_fac"
-        times the MAD value from the median flux.
-    norm_mad_fac : `float', optional, default=2.
-        The factor of MAD for the cleaned lightcurve flux values (3).
+    outl_mad_fac : `float', optional, default=3.
+        The factor of MAD for the cleaned lightcurve flux values.
         
     returns
     -------
-    f_lc : `dict'
+    f_lc : `dict`
         A dictionary storing the full set of results from the lightcurve analysis.
         As well as the keys from the inputs, the final keys returned are:
-        1: "pass_mad_1" -> datapoints that satisfy (1), boolean
-        2: "pass_clean" -> datapoints that qualify from (2), boolean
-        3: "nflux" -> the normalised flux, which is calculated by dividing the
-           median flux of datapoints that have True "pass_clean" values
-        4: "enflux" -> the normalised errors for nflux
-        5: "lc_part" -> the indexed lightcurve value calculated during the cleaning.
-        6: "pass_mad_2" -> datapoints that qualify from (4), boolean
-        7: "nflux_detrend" -> the normalised, detrended flux values.
+        1: "time" -> the time coordinate.
+        2: "mag" -> the TESS magnitude.
+        3: "(reg/cbv)_oflux" -> the flux calculated from aperture photometry.
+        4: "eflux" -> the error bar on (reg/cbv)_oflux.
+        5: "nflux_ori" -> the normalised fluxes from (3).
+        6: "nflux_err" -> the error bars on (5).
+        7: "nflux_dtr" -> the normalised fluxes after the detrending steps.
+        8: "lc_part" -> an index referring to each group in the lightcurve.
+        9: "pass_sparse" -> boolean from `remove_sparse_data`
+        10: "pass_clean_outlier" -> boolean from clean_edges_outlier.
+        11: "pass_clean_scatter" -> boolean from clean_edges_scatter.
+        12: "pass_full_outlier" -> boolean from the final outlier rejection.
+    detr_dict : `dict`
+        The dictionary returned from `detrend_lc`
     '''
-    
+time,mag,reg_oflux,eflux,nflux_ori,nflux_err,nflux_dtr,lc_part,pass_sparse,pass_clean_outlier,pass_clean_scatter,pass_full_outlier
+
     # (1) normalise the original flux points
     f_lc['nflux_ori'] = f_lc[f'{f_orig}']/np.median(f_lc[f'{f_orig}'])
     f_lc['nflux_err'] = f_lc['eflux']/f_lc[f'{f_orig}']
     logger.info('part1: initial normalisation -> done!')
+
     # (2) split the lightcurve into 'time segments'
     ds1, df1 = get_time_segments(f_lc["time"])
     logger.info('part2: time segmentation -> done!')
+
     # (3) remove very sparse elements from the lightcurve
     comp_lengths = np.array([f-s for s, f in zip(ds1, df1)])
     std_crit_val = int(np.sum(comp_lengths)*min_comp_frac)
@@ -519,6 +671,7 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     for s, f in zip(ds2, df2):
         f_lc["pass_sparse"][s:f] = True
     logger.info('part3: remove sparse data -> done!')
+
     # (4) run the first detrending process to pass to the cleaning function.
     f_lc["lc_part"] = np.zeros(len(f_lc["time"]), dtype=int)
     for i, (s, f) in enumerate(zip(ds2, df2)):
@@ -527,6 +680,7 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     f_lc["nflux_dtr"] = np.full(len(f_lc["time"]), -999.)
     f_lc["nflux_dtr"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
     logger.info('part4: detrending -> done!')
+    
     # (5) clean the lightcurve edges from outliers
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
@@ -538,7 +692,8 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     for s, f in zip(ds3, df3):
         f_lc["pass_clean_outlier"][s:f] = True
     logger.info('part5: clean edges, outliers -> done!')
-    # (5) clean the lightcurve edges from scattered data
+
+    # (6) clean the lightcurve edges from scattered data
     ds4, df4 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
         g = np.where(f_lc["lc_part"] == lc)[0]
@@ -550,12 +705,6 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         f_lc["pass_clean_scatter"][s:f] = True
     logger.info('part6: clean edges, scatter -> done!')
 
-    # (6) detrend the original lightcurve, but only using the data that passed the
-    # the previous criteria
-#    g_cln = f_lc["pass_clean"]
-#    f_lc["nflux_dtr2"] = np.full(len(f_lc["time"]), -999.)
-#    f_lc["nflux_dtr2"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
-
     # (7) finally cut out data that are extreme outliers.
     med_lc = np.median(f_lc["nflux_dtr"][g_cln])
     MAD_lc = MAD(f_lc["nflux_dtr"][g_cln], scale='normal')
@@ -564,8 +713,24 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         if abs(f_lc["nflux_dtr"][f] - med_lc) < outl_mad_fac*MAD_lc:
             f_lc["pass_full_outlier"][f] = True
     logger.info('part7: remove extreme points -> done!')
-    logger.info('FINISHED!')
-    # (8) return the dictionary
+
+    # (8) divide each lightcurve component by the median flux value of qualifying data points.
+    for lc in np.unique(f_lc["lc_part"][g_cln]):
+        g = np.where(f_lc["lc_part"] == lc)[0]
+        gx = np.logical_and.reduce([
+                   f_lc["pass_sparse"][g], 
+                   f_lc["pass_clean_scatter"][g],
+                   f_lc["pass_clean_outlier"][g],
+                   f_lc["pass_full_outlier"][g]
+                   ])
+        flux_vals = f_lc["nflux_dtr"][g[gx]]
+        med_flux = np.median(flux_vals[flux_vals > 0.])
+
+    f_lc["nflux_dtr"][f_lc["nflux_dtr"] < 0] = -999
+    logger.info('part8: write the dictionary -> done!')
+
+    # (9) return the dictionary
+    logger.info('part9: FINISHED!')
     return f_lc, detr_dict
 
 
@@ -597,24 +762,56 @@ def sin_fit(x, y0, A, phi):
 
 
 
+def sin_fit_per(t, y0, A, per, phi):
+    '''
+    Returns the best parameters (y_offset, amplitude, and phase) to a regular
+    sinusoidal function.
+
+    parameters
+    ----------
+    t : `Iterable`
+        list of input values
+    y0 : `float`
+        The midpoint of the sine curve
+    A : `float`
+        The amplitude of the sine curve
+    per : `float`
+        The period of the sine curve
+    phi : `float`
+        The phase angle of the sine curve
+
+    returns
+    -------
+    sin_fit_per : `list`
+        A list of sin curve values.
+    '''
+    sin_fit_per = y0 + A*np.sin((2.*np.pi*t/per) + phi)
+    return sin_fit_per
 
 
 
-def test_cbv_fit(t, of, cf):
-    '''Run a score test to determine whether the cbv-corrected lightcurve should be considered.
+
+
+
+def cbv_fit_test(t, of, cf):
+    '''Determine whether the cbv-corrected lightcurve should be considered.
     
-    Whilst the cbv-corrected flux are designed to eliminate systematic artefacts by identifying
-    features common to many stars (using PCA), the routine can overfit the data, and often the
-    cbv corrections inject too much unwanted noise (particularly for targets with low signal
-    to noise).
+    Whilst the cbv-corrected flux are designed to eliminate systematic
+    artefacts by identifying features common to many stars (using principle 
+    component analysis), the routine can overfit the data, and often the cbv
+    corrections inject too much unwanted noise (particularly for targets with
+    low signal to noise).
     
-    Therefore the plan here is to assess lightcurves produced by the cbv corrections
-    by comparing basic attributes with the non-corrected lightcurves. These scores come down
-    to the number of outliers (test 1), size of the median absolute deviation (test 2), and 
-    which lightcurve provides the lowest chi-squared value to a sinusoidal fit (test 3).
+    Therefore the plan here is to assess lightcurves produced by the cbv
+    corrections by comparing basic attributes with the regular (non-corrected)
+    lightcurves. These scores come down to:
     
-    If the "original lightcurve" scores higher, then the cbv-corrected lightcurve is not
-    considered for further analysis.
+    1: the number of outliers
+    2: the size of the median absolute deviation
+    3: which lightcurve provides the lowest chi-squared value to a sine fit.
+    
+    If the "original lightcurve" scores higher, then the cbv-corrected
+    lightcurve is not considered for further analysis.
     
     parameters
     ----------
@@ -676,19 +873,21 @@ def test_cbv_fit(t, of, cf):
 def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
     '''Construct the normalised, detrended, cleaned TESS lightcurve.
     
-    This is essentially a parent function that performs all the steps in fixing the lightcurve.
+    This is essentially a parent function that performs all the steps in fixing
+    the lightcurve.
     
-    The returned product is an array containing the new tabulated lightcurve data for the
-    original (unfiltered) aperture photometry, and (if necessary) another one for the CBV-corrected
-    fluxes (see the 'test_cbv_fit' function for more information.)
+    The returned product is an array containing the new tabulated lightcurve
+    data for the original (unfiltered) aperture photometry, and (if necessary)
+    another one for the CBV-corrected fluxes (see the 'cbv_fit_test' function
+    for more information.)
 
     parameters
     ----------
     phot_table : `astropy.table.Table` or `dict`
-        | The data table containing aperture photometry returned by aper_run.py. Columns must include:
+        | The data table containing aperture photometry. Columns must include:
         | "time" -> The time coordinate for each image
         | "mag" -> The target magnitude
-        | "reg_oflux" or "cbv_oflux" -> The total flux subtracted by the background flux
+        | "(reg/cbv)_oflux" -> The total flux subtracted by the background flux
         | "flux_err" -> The error on flux_corr
     name_lc : `str`, optional, default='target'
         The name of the file which the lightcurve data will be saved to.
@@ -703,17 +902,16 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
     final_tabs : `list`
         A list of tables containing the lightcurve data
         These are for the original lightcurve, and the cbv-corrected lightcurve
-        if required and it satisfies the criteria from test_cbv_fit.
+        if required and it satisfies the criteria from cbv_fit_test.
     '''
     
     f_labels = ['reg_oflux']
     cbv_ret = False
     if "cbv_oflux" in phot_table.colnames:
         f_labels.append('cbv_oflux')
-        use_cbv = test_cbv_fit(phot_table["time"], phot_table["reg_oflux"], phot_table["cbv_oflux"])
+        use_cbv = cbv_fit_test(phot_table["time"], phot_table["reg_oflux"], phot_table["cbv_oflux"])
         if use_cbv:
             cbv_ret = True
-
     final_tabs = []
     for f_label in f_labels:
         final_lc = {}
@@ -722,8 +920,15 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
         final_lc[f'{f_label}'] = phot_table[f'{f_label}'].data
         final_lc["eflux"] = phot_table["flux_err"].data
         flux_dict, detr_dict = run_make_lc_steps(final_lc, f_label)
+        keyorder = ['time','mag',f_label,'eflux','nflux_ori','nflux_err','nflux_dtr','lc_part','pass_sparse','pass_clean_outlier','pass_clean_scatter','pass_full_outlier']
+        flux_dict = {k: flux_dict[k] for k in keyorder}
+        tab_format = ['.6f','.6f','.6f','.6f',
+                      '.6f','.4e','.6f','%i',
+                      '%s','%s','%s','%s']
         if len(flux_dict["time"]) > 50: 
             flux_tab = Table(flux_dict)
+            for k, f in zip(keyorder, tab_format):
+                flux_tab[k].info.format = f
             if f_label == "reg_oflux":
                 final_tabs.append(flux_tab)
             if (f_label == "cbv_oflux") and (cbv_ret):
@@ -737,3 +942,5 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
                     convert_file.write(json.dumps(detr_dict))
     return final_tabs
 
+
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]

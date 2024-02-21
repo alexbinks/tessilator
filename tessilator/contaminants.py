@@ -1,52 +1,65 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
-This module contains functions to quantify the background flux contamination from
-neighbouring sources in the TESS full-frame images. Each TESS pixel has a length of
-21", therefore targets are highly susceptible to background contamination when they
-(1) are in crowded fields, (2) are faint sources and/or (3) have high contributing
-sky-counts.
+This module contains functions to quantify the background flux contamination
+from neighbouring sources in the TESS full-frame images. Each TESS pixel has
+a length of 21", therefore targets are highly susceptible to background
+contamination when they (1) are in crowded fields, (2) are faint sources
+and/or (3) have high contributing sky-counts.
 
-The background is quanitified by acquistioning RP-band magnitudes in the Gaia DR3
-catalogue for potential contaminants in the surrounding image apertures, and
-then calculating their flux contribution which is incident within the target
-aperture using an analytical formula provided as equation 3b-10 in Biser & Millman
-(1965).
+The background is quanitified by acquistioning RP-band magnitudes in the Gaia
+DR3 catalogue for potential contaminants in the surrounding image apertures,
+and then calculating their flux contribution which is incident within the
+target aperture using an analytical formula provided as equation 3b-10 in
+Biser & Millman (1965).
 
 An additional function can be called which stores the potential neighbouring
-contaminants, and periodogram analyses for these neighbouring sources are perform to
-assess whether the observed periodicity is that of the target, or a neighbour.
+contaminants. Periodogram analyses for these neighbouring sources are then
+performed to help distinguish whether the lightcurve/periodogram signal is
+that of the target, or from neighbouring sources.
 '''
 
- 
-import traceback
-import logging
+###############################################################################
+####################################IMPORTS####################################
+###############################################################################
+#Internal
 import warnings
+import inspect
 import sys
+import traceback
+
 
 # Third party imports
 import numpy as np
 from astroquery.gaia import Gaia
 from astropy.table import Table, Row
 
+
+# Local application
 from .fixedconstants import *
+from .logger import logger_tessilator
+###############################################################################
+###############################################################################
+###############################################################################
 
-__all__ = ['logger', 'run_sql_query_contaminants', 'flux_fraction_contaminant', 'contamination']
 
-logger = logging.getLogger(__name__)
+# initialize the logger object
+logger = logger_tessilator(__name__)
+
+
+
 
 
 def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempts=3):
-    '''Perform an SQL Query to identify neighbouring contaminants.
+    '''Perform an SQL query to identify neighbouring contaminants.
 
-    If an analysis of flux contribution from neighbouring contaminants is
-    required, this function generates the SQL query to identify targets
-    within a specified pixel radius. The function returns a table of Gaia
-    information on the neighbouring sources which is used to quantify the
-    flux contamination within the target aperture.
+    This function generates the SQL query to identify targets within a
+    specified pixel radius. The function returns a table of Gaia
+    information on the neighbouring sources which is used to quantify the flux
+    contamination within the target aperture.
 
     parameters
     ----------
@@ -104,6 +117,11 @@ def run_sql_query_contaminants(t_target, pix_radius=10., mag_lim=3., tot_attempt
         print('Most likely there is a server problem. Try again later.')
         sys.exit()
 
+
+
+
+
+
 def flux_fraction_contaminant(ang_sep, s, d_thr=5.e-6):
     '''Quantify the flux contamination from a neighbouring source.
 
@@ -116,7 +134,7 @@ def flux_fraction_contaminant(ang_sep, s, d_thr=5.e-6):
        f_{\\rm bg} = e^{-t} \sum_{n=0}^{n\\to{\infty}} {\Bigg\{\\frac{t^{n}}{n!}\\bigg[1-e^{-s}\sum_{k=0}^{n}{\\frac{s^{k}}{k!}}} \\bigg]\Bigg\}
 
     To solve the equation computationally, the summation terminates once the
-    difference from the nth iteration is less than a given threshold value.
+    difference from the nth iteration is less than some given threshold value, `d_thr`.
 
     parameters
     ----------
@@ -143,7 +161,7 @@ def flux_fraction_contaminant(ang_sep, s, d_thr=5.e-6):
         n_0 = ((t**n)/np.math.factorial(n))*sx
         n_z += n_0
         if np.abs(n_0) > d_thr:
-            n = n+1
+            n += 1
         if np.abs(n_0) < d_thr:
             break
     frac_flux_in_aperture = n_z*np.exp(-t)
@@ -245,3 +263,6 @@ def contamination(t_targets, Rad=1.0, n_cont=10):
 
     return t_targets, t_cont
 
+
+
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]

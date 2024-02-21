@@ -1,13 +1,20 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
 Generate pixel images, light-curves and periodogram plots
 
 '''
+
+###############################################################################
+####################################IMPORTS####################################
+###############################################################################
+#Internal
 import os
+
+# Third party
 from astropy.table import Table
 import numpy as np
 import matplotlib as mpl
@@ -17,15 +24,23 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from collections.abc import Iterable
 
-__all__ = ['make_plot']
+
+# Local application
+from .logger import logger_tessilator
+###############################################################################
+###############################################################################
+###############################################################################
 
 
-def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./plots', XY_ctr=(10,10),
-              XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0,
-              SkyRad = [6.,8.], nc='nc'):
+
+# initialize the logger object
+logger = logger_tessilator(__name__) 
+
+def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./plots', XY_ctr=(10,10), XY_contam=None, p_min_thresh=0.1, p_max_thresh=50., Rad=1.0, SkyRad = [6.,8.], nc='nc'):
     '''Produce a plot of tessilator results.
 
-    | This module produces a 4-panel plot displaying information from the tessilator analysis. These are:
+    | This module produces a 4-panel plot displaying information from the
+      tessilator analysis. These are:
     | 1) An TESS cut-out image of the target, with aperture and sky annulus.
     | 2) A power vs period plot from the Lomb-Scargle periodogram analysis.
     | 3) A lightcurve of the normalised flux.
@@ -60,10 +75,11 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     SkyRad : `Iterable`, size=2, optional, default=[6.,8.]
         The inner and outer background annuli from aperture photometry  
     nc : `str`, optional, default='nc'
-        A string to describe the type of noise correction applied to the lightcurve.
+        Describes the type of noise correction applied to the lightcurve.
+
     returns
     -------
-    Nothing returned. The plot produced is saved to file.
+    Nothing returned. The resulting plot is saved to file.
     '''
     t_0 = clean["time"][0]
     c_1 = clean["pass_sparse"].data
@@ -82,7 +98,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
         best_fit_type = 'linear'
     else:
         best_fit_type = 'sine'
-
     fsize = 22.
     lsize = 0.9*fsize
     fig, axs = plt.subplots(2,2, figsize=(20,15))
@@ -115,7 +130,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     if isinstance(XY_contam, Iterable):
         axs[0,0].scatter(XY_contam[:, 0], XY_contam[:, 1], marker='X',
                          s=400, color='orange')
-
     divider = make_axes_locatable(axs[0,0])
     cax = divider.new_horizontal(size='5%', pad=0.4)
     fig.add_axes(cax)
@@ -126,7 +140,7 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     axs[0,1].grid(True)
     axs[0,1].set_xlabel("Period (days)", fontsize=fsize)
     axs[0,1].set_ylabel("Power", fontsize=fsize)
-    axs[0,1].semilogx(LS_dict['period'], LS_dict['power'])
+    axs[0,1].semilogx(LS_dict['period_a_1'], LS_dict['power_a_1'])
     [axs[0,1].axhline(y=i, linestyle='--', color='grey', alpha=0.8) \
      for i in LS_dict['FAPs']]
     axs[0,1].text(0.01,0.94, f"Best fit: {best_fit_type}",
@@ -153,8 +167,9 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
                       f"{LS_dict['Gauss_1'][1]:.3f} $\\pm$"
                       f"{LS_dict['Gauss_1'][2]:.3f}",
                       fontsize=lsize, horizontalalignment='right',
-                      transform=axs[0,1].transAxes)        
-                      
+                      transform=axs[0,1].transAxes)    
+    if LS_dict['shuffle_period'] > 0:
+        axs[0,1].axvline(x=LS_dict['period_1'], color='red', linewidth=3, alpha=0.3)
     axs[1,0].set_xlim([0, 30])
     axs[1,0].set_xlabel("Time (days)", fontsize=fsize)
     axs[1,0].set_ylim(
@@ -197,8 +212,9 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
-    ax2.scatter(clean_orig_time, clean_orig_mag, s=0.3, alpha=0.3, color="b", marker="x")
-    ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
+    if not np.all(clean_orig_mag.data == -999.):
+        ax2.scatter(clean_orig_time[clean_orig_mag>-999], clean_orig_mag[clean_orig_mag>-999], s=0.3, alpha=0.3, color="b", marker="x")
+        ax2.set_ylabel("TESS magnitude", c="b",fontsize=fsize)
 
     axs[1,1].set_xlim([0,1])
     axs[1,1].set_xlabel("phase", fontsize=fsize)
@@ -225,3 +241,6 @@ def make_plot(im_plot, clean, LS_dict, scc, t_table, name_target, plot_dir='./pl
                           f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
     plt.savefig(f'{plot_dir}/{plot_name}', bbox_inches='tight')
     plt.close('all')
+    
+    
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]
