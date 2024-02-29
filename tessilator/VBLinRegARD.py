@@ -1,4 +1,3 @@
-import numpy, sys
 import scipy.linalg, scipy.special
 
 '''
@@ -18,7 +17,7 @@ def logdet(a):
     Compute log of determinant of matrix a using Cholesky decomposition
     '''
     # First make sure that matrix is symmetric:
-    if numpy.allclose(a.T,a) == False:
+    if np.allclose(a.T,a) == False:
         print('MATRIX NOT SYMMETRIC')
     # Second make sure that matrix is positive definite:
     eigenvalues = scipy.linalg.eigvalsh(a)
@@ -26,8 +25,8 @@ def logdet(a):
         print('Matrix is NOT positive-definite')
         print('   min eigv = %.16f' % min(eigenvalues))
     step1 = scipy.linalg.cholesky(a)
-    step2 = numpy.diag(step1.T)
-    out = 2. * numpy.sum(numpy.log(step2), axis=0)
+    step2 = np.diag(step1.T)
+    out = 2. * np.sum(np.log(step2), axis=0)
     return out
 
 def bayes_linear_fit_ard(X, y):
@@ -61,28 +60,28 @@ def bayes_linear_fit_ard(X, y):
     # iterate to find hyperparameters
     L_last = -sys.float_info.max
     max_iter = 500
-    E_a = numpy.matrix(numpy.ones(D) * c0 / d0).T
+    E_a = np.matrix(np.ones(D) * c0 / d0).T
     for iter in range(max_iter):
         # covariance and weight of linear model
-        invV = numpy.matrix(numpy.diag(numpy.array(E_a)[:,0])) + X_corr   
-        V = numpy.matrix(scipy.linalg.inv(invV))
+        invV = np.matrix(np.diag(np.array(E_a)[:,0])) + X_corr   
+        V = np.matrix(scipy.linalg.inv(invV))
         logdetV = -logdet(invV)    
-        w = numpy.dot(V, Xy_corr)[:,0]
+        w = np.dot(V, Xy_corr)[:,0]
         # parameters of noise model (an remains constant)
-        sse = numpy.sum(numpy.power(X*w-y, 2), axis=0)
-        if numpy.imag(sse)==0:
-            sse = numpy.real(sse)[0]
+        sse = np.sum(np.power(X*w-y, 2), axis=0)
+        if np.imag(sse)==0:
+            sse = np.real(sse)[0]
         else:
             print('Something went wrong')
-        bn = b0 + 0.5 * (sse + numpy.sum((numpy.array(w)[:,0]**2) * numpy.array(E_a)[:,0], axis=0))
+        bn = b0 + 0.5 * (sse + np.sum((np.array(w)[:,0]**2) * np.array(E_a)[:,0], axis=0))
         E_t = an / bn 
         # hyperparameters of covariance prior (cn remains constant)
-        dn = d0 + 0.5 * (E_t * (numpy.array(w)[:,0]**2) + numpy.diag(V))
-        E_a = numpy.matrix(cn / dn).T
+        dn = d0 + 0.5 * (E_t * (np.array(w)[:,0]**2) + np.diag(V))
+        E_a = np.matrix(cn / dn).T
         # variational bound, ignoring constant terms for now
-        L = -0.5 * (E_t*sse + numpy.sum(scipy.multiply(X,X*V))) + \
+        L = -0.5 * (E_t*sse + np.sum(scipy.multiply(X,X*V))) + \
             0.5 * logdetV - b0 * E_t + gammaln_an - an * scipy.log(bn) + an + \
-            D_gammaln_cn - cn * numpy.sum(scipy.log(dn))
+            D_gammaln_cn - cn * np.sum(scipy.log(dn))
         # variational bound must grow!
         if L_last > L:
             # if this happens, then something has gone wrong....
@@ -99,6 +98,6 @@ def bayes_linear_fit_ard(X, y):
     if iter == max_iter:    
         warnings.warn('Bayes:maxIter ... Bayesian linear regression reached maximum number of iterations.') 
     # augment variational bound with constant terms
-    L = L - 0.5 * (N * numpy.log(2 * numpy.pi) - D) - scipy.special.gammaln(a0) + \
-        a0 * numpy.log(b0) + D * (-scipy.special.gammaln(c0) + c0 * numpy.log(d0))
+    L = L - 0.5 * (N * np.log(2 * np.pi) - D) - scipy.special.gammaln(a0) + \
+        a0 * np.log(b0) + D * (-scipy.special.gammaln(c0) + c0 * np.log(d0))
     return w, V, invV, logdetV, an, bn, E_a, L

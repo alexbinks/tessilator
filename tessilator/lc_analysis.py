@@ -110,7 +110,7 @@ def remove_sparse_data(x_first, x_last, std_crit=50):
         The index values of the first element in each group
     x_last : `Iterable`
         The index values of the last element each group
-    std_crit: `int`
+    std_crit: int
         The minimum number of data points required for a group to qualify.
 
     returns
@@ -389,7 +389,7 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
 
     parameters
     ----------
-    t : `Iterable'
+    t : `Iterable`
         the time component of the lightcurve
     f : `Iterable`
         the flux component of the lightcurve.
@@ -403,7 +403,7 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
 
     returns
     -------
-    f_norm : `Iterable'
+    f_norm : `Iterable`
         The corrected lightcurve after the detrending procedures.
     detr_dict : `dict`
         "norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD" -> see norm_choice.
@@ -615,21 +615,21 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
 
     parameters
     ----------
-    f_lc : `dict'
+    f_lc : `dict`
         The initial lightcurve with the minimum following keys required:
         (1) 'time' -> the time coordinate
         (2) 'eflux' -> the error in the flux
         (3) 'f_orig' -> see the f_orig parameter
-    f_orig : `str'
+    f_orig : `str`
         This string determines which of the original flux values to choose.
         It forms the final part of the f_lc keys.
         It could be either 'reg_oflux' (the regular, original flux) or
         'cbv_oflux' (the original flux corrected using co-trending basis
         vectors)
-    min_comp_frac : `float', optional, default=0.1
+    min_comp_frac : `float`, optional, default=0.1
         The minimum relative size of a flux component when correcting for
         sparse data in the cleaning functions.
-    outl_mad_fac : `float', optional, default=3.
+    outl_mad_fac : `float`, optional, default=3.
         The factor of MAD for the cleaned lightcurve flux values.
         
     returns
@@ -814,16 +814,16 @@ def cbv_fit_test(t, of, cf):
     
     parameters
     ----------
-    t : `Iterable'
+    t : Iterable
         The time component of the lightcurve
-    of : `Iterable'
+    of : Iterable
         The original flux
-    cf : `Iterable'
+    cf : Iterable
         The cbv-corrected flux
     
     returns
     -------
-    use_cbv : `bool'
+    use_cbv : bool
         True if cf score > of score, else False.
     '''
     
