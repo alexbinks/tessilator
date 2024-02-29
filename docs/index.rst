@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: ../lc_movie.gif
+.. image:: ../gif/lc_movie.gif
   :width: 800
   :align: center
   
@@ -60,17 +60,17 @@ which took less than a week to complete. The user can process a list of targets 
 Notes on using the tessilator
 -----------------------------
 Should there be any problems in using this software please contact Alex Binks
-(lead author) at abinks@mit.edu
+(lead author) at binks@astro.uni-tuebingen.de
 
 If this package is useful for research leading to publication we would
 appreciate the following acknowledgement:
 
 "The data from the Transiting Exoplanet Survey Satellite (TESS) was acquired
-using the tessilator software package (Binks et al. 2023)."
+using the tessilator software package (Binks et al. 2024)."
 
 Licence: MIT
 
-Alexander Binks and Moritz Guenther, 2023
+Alexander Binks and Moritz Guenther, 2024
 
 .. toctree::
    :maxdepth: 2
