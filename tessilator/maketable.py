@@ -273,7 +273,7 @@ def table_from_table(input_table, name_is_source_id=False):
     parameters
     ----------
     input_table : `astropy.table.Table`
-        | The columns of table must be in the following order:
+        The columns of table must be in the following order:
         * source_id (data type: `str`)
         * ra (data type: `float`)
         * dec (data type: `float`)

@@ -1,8 +1,8 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2023
+Alexander Binks & Moritz Guenther, 2024
 
-Licence: MIT 2023
+Licence: MIT 2024
 
 Module containing fixed constants for the tessilator
 

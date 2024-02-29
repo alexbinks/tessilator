@@ -1,4 +1,5 @@
 .. _command_line:
+
 Running tessilator from the command line
 ========================================
 
@@ -27,7 +28,7 @@ such that all files in sector 'N' are in a subdirectory named './sectorNN/', whe
 NN represents a two digit integer (i.e., a trailing zero for sectors 1-9). To run
 this program simply enter::
 
-    $ run_tess_sector
+    $ run_tess_sectors
 
 Note that these programs will only run after a set of input parameters are passed.
 This can be done by providing a set of :ref:`command-line arguments<input_parameters>`
@@ -39,10 +40,10 @@ An example of running the tessilator using the supplied shell scripts would be::
 
    $ run_tess_cutouts 1 1 1 cutouts targets.csv
 
-| The command-line arguments here instruct the tessilator to:
-| (a) Calculate the flux from contaminating sources
-| (b) Run the tessilator analysis for neighbouring contaminants
-| (c) Produce a plot for each lightcurve
-| (d) Group the output files by the name ``cutouts``
-| (e) Use ``cutout_targets.csv`` as the input table containing the targets
+The command-line arguments here instruct the tessilator to:
+a. Calculate the flux from contaminating sources
+b. Run the tessilator analysis for neighbouring contaminants
+c. Produce a plot for each lightcurve
+d. Group the output files by the name ``cutouts``
+e. Use ``cutout_targets.csv`` as the input table containing the targets
 
