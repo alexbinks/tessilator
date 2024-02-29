@@ -7,9 +7,8 @@ from astropy.io import ascii
 
 def main(args=None):
     logging.basicConfig(filename="output.log", level=logging.ERROR)
-
     fluxCon, scc, makePlots, fileRef, tFile = tessilator.setup_input_parameters()
-    conFile, periodFile = tessilator.setup_filenames(fileRef, scc=scc)
+    periodFile = tessilator.setup_filenames(fileRef, scc=scc)
     t_large_sec_check = tessilator.test_table_large_sectors(tFile)
 
     if t_large_sec_check is not None:
@@ -22,8 +21,6 @@ def main(args=None):
 
     tTargets = tTargets[tTargets['Sector'] == scc[0]]
     Rad, SkyRad = 1.0, np.array([6.0,8.0])
-
-    tTargets = tessilator.collect_contamination_data(tTargets, fluxCon, 0,
-                                                   conFile, Rad=Rad)
-
-    tessilator.all_sector(tTargets, scc, makePlots, periodFile)
+    tessilator.all_sources_sector(tTargets, scc, makePlots, periodFile,
+                                  fileRef, keep_data=False,
+                                  fix_noise=False, store_lc=False)
