@@ -22,4 +22,4 @@ print("Done reading the table and formatting.")
 
 print("...now iterating over each source.")
 tessilator.all_sources_cutout(tTargets, periodFile, lcCon, fluxCon,
-                              makePlots, fileRef, Rad=Rad, choose_sec=None, save_phot=True, cbv_flag=False, store_lc=True, tot_attempts=2, cap_files=None, fix_noise=False)
+                              makePlots, fileRef, Rad=Rad, choose_sec=None, save_phot=True, cbv_flag=False, store_lc=True, tot_attempts=10, cap_files=10, fix_noise=False)

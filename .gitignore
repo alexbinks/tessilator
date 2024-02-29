@@ -6,6 +6,9 @@ test_for_is_period_cont.txt
 make_gif.py
 personal
 TESS_100pc
+tesssim/**/fits/
+tessilator/tests/sector_tests
+tessilator/tests/test_xypos_sector.py
 
 build/lib/tessilator/lc_analysis.py
 build/lib/tessilator/maketable.py
