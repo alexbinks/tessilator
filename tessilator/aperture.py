@@ -220,7 +220,7 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
                     head_meta = hdul[0].header
                     head_data = hdul[1].header
                     qual_val = [head_data["DQUALITY"]]
-                    time_val = [(head_meta['TSTART']) + (head_meta['TSTOP'])/2.]
+                    time_val = [(head_meta['TSTART'] + head_meta['TSTOP'])/2.]
                     flux_vals = [data]
                     erro_vals = [hdul[2].data]
                     positions = get_xy_pos(targets, head_data)

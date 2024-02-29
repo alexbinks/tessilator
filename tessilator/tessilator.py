@@ -14,6 +14,7 @@ The TESSILATOR
 
 from datetime import datetime
 import sys, os
+import inspect
 from glob import glob
 
 # Third party imports
@@ -28,6 +29,7 @@ import astropy.units as u
 from astroquery.mast import Tesscut
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import math
 
 # Local application imports
 from .aperture import *
@@ -1496,6 +1498,7 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3, c
                 if fits_file:
                      manifest.append(fits_file[0])
                 else:
+                    print(name_target, coord, choose_sec, cutout_size, fits_dir)
                     dl = Tesscut.download_cutouts(coordinates=coord,\
                                                       size=cutout_size,\
                                                       sector=choose_sec,\
@@ -1851,7 +1854,7 @@ def all_sources_cutout(t_targets, period_file, LC_con, flux_con, \
 
 
 
-def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
+def one_cc(t_targets, scc, make_plots, final_table, file_ref, Rad=1.0,
                       SkyRad=[6.,8.], keep_data=False, fix_noise=False):
     '''Run the tessilator for targets in a given Sector/Camera/CCD configuration
 
@@ -1872,6 +1875,8 @@ def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
         Decides is plots are made from the lightcurve analysis.
     final_table : `astropy.table.Table`
         The table to store tessilator results.
+    file_ref : `str`
+        A common string to give all output files the same naming convention
     Rad : `float`, optional, default=1.0
         The pixel radius of the flux collecting area for aperture photometry
     SkyRad: `Iterable`, size=2, optional, default=[6.,8.]
@@ -1892,12 +1897,15 @@ def one_cc(t_targets, scc, make_plots, final_table, Rad=1.0,
     if ind.any() == False:
         return
     print(fits_files)
-    full_run_lc(fits_files, t_targets[ind], make_plots, scc, final_table, keep_data=keep_data, fix_noise=fix_noise, lc_dir=None, pg_dir=None)
+    suffix_file = f'scc_{scc[0]:02d}_{scc[1]}_{scc[2]}'
+    lc_dir = make_dir(f'lc_{suffix_file}', file_ref)
+    pg_dir = make_dir(f'pg_{suffix_file}', file_ref)
+    full_run_lc(fits_files, t_targets[ind], make_plots, scc, final_table, keep_data=keep_data, fix_noise=fix_noise, lc_dir=pg_dir, pg_dir=pg_dir)
 
 
 
 
-def all_sources_sector(t_targets, scc, make_plots, period_file, keep_data=False, fix_noise=False):
+def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref, keep_data=False, fix_noise=False):
     '''Iterate over all cameras and CCDs for a given sector
     
     parameters
@@ -1911,6 +1919,8 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, keep_data=False,
     period_file : `str`
         Name of file for recording parameters measured by the periodogram
         analysis.
+    file_ref : `str`
+        A common string to give all output files the same naming convention
     keep_data : `bool`
         Choose to save the input data to file.
     fix_noise : `bool`, optional, default=False
@@ -1924,7 +1934,7 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, keep_data=False,
     start = datetime.now()
     if len(scc) == 3:
         final_table = create_table_template()
-        one_cc(t_targets, scc, make_plots, final_table, keep_data=keep_data, fix_noise=fix_noise)
+        one_cc(t_targets, scc, make_plots, final_table, file_ref=file_ref, keep_data=keep_data, fix_noise=fix_noise)
         final_table.write(f"{period_file}_{scc[1]}_{scc[2]}.ecsv", overwrite=True)
         finish = datetime.now()
         hrs_mins_secs = print_time_taken(start, finish)
@@ -1935,7 +1945,7 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, keep_data=False,
         for cc in cam_ccd:
             final_table = create_table_template()
             start_ccd = datetime.now()
-            one_cc(t_targets, [scc[0], cc[0], cc[1]], make_plots, final_table, keep_data=keep_data, fix_noise=fix_noise)
+            one_cc(t_targets, [scc[0], cc[0], cc[1]], make_plots, final_table, file_ref=file_ref, keep_data=keep_data, fix_noise=fix_noise)
             final_table.write(f"{period_file}_{cc[0]}_{cc[1]}.ecsv", overwrite=True)
             finish_ccd = datetime.now()
             hrs_mins_secs = print_time_taken(start_ccd, finish_ccd)
