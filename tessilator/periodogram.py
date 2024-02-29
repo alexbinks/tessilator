@@ -17,6 +17,8 @@ import warnings
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import sys
+import inspect
 
 from astropy.table import Table
 from astropy.coordinates import SkyCoord

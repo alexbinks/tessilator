@@ -281,7 +281,7 @@ def smooth_test(time, flux, n_avg=10):
        
 
 
-def norm(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
+def norm_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
     '''Choose whether to detrend the lightcurve as one by individual groups.
     
     There are always at least two data components in a TESS sector because of
@@ -652,7 +652,6 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     detr_dict : `dict`
         The dictionary returned from `detrend_lc`
     '''
-time,mag,reg_oflux,eflux,nflux_ori,nflux_err,nflux_dtr,lc_part,pass_sparse,pass_clean_outlier,pass_clean_scatter,pass_full_outlier
 
     # (1) normalise the original flux points
     f_lc['nflux_ori'] = f_lc[f'{f_orig}']/np.median(f_lc[f'{f_orig}'])

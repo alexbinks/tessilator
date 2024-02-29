@@ -31,6 +31,7 @@ import pylab as pl
 # Local application
 from .VBLinRegARD import bayes_linear_fit_ard as VBF
 from .stats_cbv import cdpp, medransig
+from .logger import logger_tessilator
 ###############################################################################
 ###############################################################################
 ###############################################################################

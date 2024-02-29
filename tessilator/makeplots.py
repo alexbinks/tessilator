@@ -13,6 +13,8 @@ Generate pixel images, light-curves and periodogram plots
 ###############################################################################
 #Internal
 import os
+import sys
+import inspect
 
 # Third party
 from astropy.table import Table

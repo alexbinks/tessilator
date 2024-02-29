@@ -17,6 +17,7 @@ in the tessilator.
 #Internal
 import warnings
 import sys
+import inspect
 
 #Third party
 from astropy.table import Table
