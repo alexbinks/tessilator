@@ -1,4 +1,4 @@
-from ..lc_analysis import aic_selector, clean_edges_outlier, clean_edges_scatter, detrend_lc, get_time_segments, logger, make_lc, normalisation_choice, remove_sparse_data, sin_fit, cbv_fit_test
+from ..lc_analysis import aic_selector, clean_edges_outlier, clean_edges_scatter, detrend_lc, get_time_segments, logger, make_lc, norm_choice, remove_sparse_data, sin_fit, cbv_fit_test
 
 from ..logger import logger_tessilator
 # Third party imports
