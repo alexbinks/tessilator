@@ -107,10 +107,12 @@ def test_multi_peak_fit():
         assert((LS_dict[f'period_{i+1}']/periods[i] > 0.8) and LS_dict[f'period_{i+1}']/periods[i] < 1.2)
         
 def test_real_targets(p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=50):
-    lcs = ['./targets_tests/Gaia_DR3_2314778985026776320_tests/lc_2314778985026776320_0029_1_2_reg_oflux.csv',
-           './targets_tests/BD+20_2465_tests/lc_BD+20_2465_0045_3_4_cbv_oflux.csv',
-           './targets_tests/GESJ08065664-4703000_tests/lc_GESJ08065664-4703000_0061_3_1_reg_oflux.csv',
-           './targets_tests/ABDor_tests/lc_AB_Dor_0036_4_3_reg_oflux.csv']
+    targ_dir = './tessilator/tests/targets_tests'
+
+    lcs = [f'{targ_dir}/Gaia_DR3_2314778985026776320_tests/lc_2314778985026776320_0029_1_2_reg_oflux.csv',
+           f'{targ_dir}/BD+20_2465_tests/lc_BD+20_2465_0045_3_4_cbv_oflux.csv',
+           f'{targ_dir}/GESJ08065664-4703000_tests/lc_GESJ08065664-4703000_0061_3_1_reg_oflux.csv',
+           f'{targ_dir}/ABDor_tests/lc_AB_Dor_0036_4_3_reg_oflux.csv']
     periods = [13.375,6.719,2.492,0.514]
     for i, (lc, period) in enumerate(zip(lcs, periods)):
         converters = {'pass_sparse' : bool,
