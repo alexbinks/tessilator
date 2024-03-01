@@ -21,14 +21,16 @@ from operator import itemgetter
 from astropy.table import Table
 from astropy.io import ascii
 
-aps = ['./targets_tests/Gaia_DR3_2314778985026776320_tests/ap_2314778985026776320_0029_1_2.csv',
-       './targets_tests/BD+20_2465_tests/ap_BD+20_2465_0045_3_4.csv',
-       './targets_tests/GESJ08065664-4703000_tests/ap_GESJ08065664-4703000_0061_3_1.csv',
-       './targets_tests/ABDor_tests/ap_AB_Dor_0036_4_3.csv']
-lcs = ['./targets_tests/Gaia_DR3_2314778985026776320_tests/lc_2314778985026776320_0029_1_2_reg_oflux.csv',
-       './targets_tests/BD+20_2465_tests/lc_BD+20_2465_0045_3_4_reg_oflux.csv',
-       './targets_tests/GESJ08065664-4703000_tests/lc_GESJ08065664-4703000_0061_3_1_reg_oflux.csv',
-       './targets_tests/ABDor_tests/lc_AB_Dor_0036_4_3_reg_oflux.csv']
+targ_dir = './tessilator/tests/targets_tests'
+
+aps = [f'{targ_dir}/Gaia_DR3_2314778985026776320_tests/ap_2314778985026776320_0029_1_2.csv',
+       f'{targ_dir}/BD+20_2465_tests/ap_BD+20_2465_0045_3_4.csv',
+       f'{targ_dir}/GESJ08065664-4703000_tests/ap_GESJ08065664-4703000_0061_3_1.csv',
+       f'{targ_dir}/ABDor_tests/ap_AB_Dor_0036_4_3.csv']
+lcs = [f'{targ_dir}/Gaia_DR3_2314778985026776320_tests/lc_2314778985026776320_0029_1_2_reg_oflux.csv',
+       f'{targ_dir}/BD+20_2465_tests/lc_BD+20_2465_0045_3_4_reg_oflux.csv',
+       f'{targ_dir}/GESJ08065664-4703000_tests/lc_GESJ08065664-4703000_0061_3_1_reg_oflux.csv',
+       f'{targ_dir}/ABDor_tests/lc_AB_Dor_0036_4_3_reg_oflux.csv']
 
 for ap_file, lc_file in zip(aps, lcs): 
     ap_in = ascii.read(ap_file)
