@@ -67,7 +67,7 @@ which took less than a week to complete. The user can process a list of targets 
 Notes on using the tessilator
 -----------------------------
 Should there be any problems in using this software please contact Alex Binks
-(lead author) at abinks@mit.edu
+(lead author) at binks@astro.uni-tuebingen.de
 
 If this package is useful for research leading to publication we would
 appreciate the following acknowledgement:
