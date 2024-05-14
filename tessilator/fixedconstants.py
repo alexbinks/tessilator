@@ -6,7 +6,9 @@ Licence: MIT 2024
 
 Module containing fixed constants for the tessilator
 
-These are the pixel size, the typical full-width half maximum of the pixel response function, the TESS zeropoints and the latest TESS sector available for download.
+These are the pixel size, the typical full-width half maximum of the pixel
+response function, the TESS zeropoints and the latest TESS sector available
+for download.
 '''
 
 pixel_size=21.0
@@ -29,8 +31,8 @@ Zpt, eZpt = 20.44, 0.05
 This is held constant. Do not change.
 '''
 
-sec_max = 72
-'''This is the maximum sector number to be acquisitioned when looking for TESS data
+sec_max = 74
+'''The maximum sector number to be acquisitioned when looking for TESS data
 
 This will change over time as more data is collected.
 '''

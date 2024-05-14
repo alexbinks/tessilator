@@ -1,6 +1,6 @@
 '''
 
-Alexander Binks & Moritz Guenther, December 2024
+Alexander Binks & Moritz Guenther, 2024
 
 Licence: MIT 2024
 
@@ -48,7 +48,7 @@ from operator import itemgetter
 
 
 # Local application
-from .logger import logger_tessilator
+from .file_io import fix_table_format, logger_tessilator
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -85,9 +85,11 @@ def get_time_segments(t, t_fac=10.):
     td     = np.zeros(len(t))
     td[1:] = np.diff(t)
     t_arr = (td <= t_fac*np.median(td)).astype(int)
-    groups = (list(group) for key, group in it.groupby(enumerate(t_arr), key=itemgetter(1))
-                      if key)
-    ss = [[group[0][0], group[-1][0]] for group in groups if group[-1][0] > group[0][0]]
+    groups = (list(group) for key, group in it.groupby(enumerate(t_arr),
+                                                       key=itemgetter(1))
+                                                       if key)
+    ss = [[group[0][0], group[-1][0]] for group in groups
+                                      if group[-1][0] > group[0][0]]
     ss = np.array(ss).T
     ds, df = ss[0,:], ss[1,:]
     ds[1:] = [ds[i]-1 for i in range(1,len(ds))]
@@ -97,7 +99,7 @@ def get_time_segments(t, t_fac=10.):
 
 
     
-def remove_sparse_data(x_first, x_last, std_crit=50):
+def remove_sparse_data(x_first, x_last, min_crit_frac=.05, min_crit_num=50):
     '''Removes very sparse data groups, when there are 3 or more groups.
 
     Calculate the mean (mean_group) and standard deviation (std_group) for the
@@ -110,8 +112,12 @@ def remove_sparse_data(x_first, x_last, std_crit=50):
         The index values of the first element in each group
     x_last : `Iterable`
         The index values of the last element each group
-    std_crit: int
-        The minimum number of data points required for a group to qualify.
+    min_crit_frac : `float`, optional, default=.05
+        The minimum relative size of a flux component when correcting for
+        sparse data in the cleaning functions.
+    min_crit_num : `int`, optional, default=50
+        The minimum number of data points required for a flux component in the
+        sparse data cleaning functions.
 
     returns
     -------
@@ -121,18 +127,21 @@ def remove_sparse_data(x_first, x_last, std_crit=50):
         The index values of the last element of the new arrays
     '''
     try:
+        n_points = np.array([x_last[i] - x_first[i]
+                            for i in range(len(x_first))])
+        n_tot = np.sum(n_points)
+        std_crit = max(min_crit_num, min_crit_frac*n_tot)
         y_first, y_last = np.array(x_first), np.array(x_last)
-        # n_points is an array containing the length of the components
-        n_points = np.array([x_last[i] - x_first[i] for i in range(len(x_first))])
         if len(x_first) > 2:
-            mean_group, std_group = np.mean(n_points), np.std(n_points)
+            std_group = np.std(n_points)
             if std_group > std_crit:
                 g = n_points > std_crit
                 y_first, y_last = y_first[g], y_last[g]
                 return y_first, y_last
         return y_first, y_last
     except:
-        logger.warning("The sparse data removal algorithm failed. Retaining the input indices.")
+        logger.warning("The sparse data removal algorithm failed. Retaining "
+                       "the input indices.")
         return y_first, y_last
 
 
@@ -254,7 +263,9 @@ def smooth_test(time, flux, n_avg=10):
     f_MAD = MAD(f_new, scale='normal')
 
     # 2) make a sine fit to the detrended lightcurve
-    pops, popsc = curve_fit(sin_fit_per, t_new, f_new, bounds=([0.5, 0.0, 0.0, 0.0], [1.5, 0.2, 100., 6.3]))
+    pops, popsc = curve_fit(sin_fit_per, t_new, f_new,
+                            bounds=([0.5, 0.0, 0.0, 0.0],
+                                    [1.5, 0.2, 100., 2.*np.pi]))
     yp = sin_fit_per(t_new, *pops)
     
     # 3) smooth the arrays using a running mean
@@ -269,11 +280,14 @@ def smooth_test(time, flux, n_avg=10):
     # 5) calculate the RRMSE between the detrended flux and the sine fit 
     rrmse = relative_root_mean_squared_error(f_new, yp)
     
-    # 6) if:
+    # 6) false if:
     #       a) the predicted period from the sine fit is > 15. days
     #       b) the RRMSE is < 0.01
-    #       c) the ratio of the MAD between the differential and original flux is < 0.25   
-    if (rrmse < 0.01) & (pops[2] > 15.) & (pops[2] < 99.9) & (d_MAD/f_MAD < 0.25):
+    #       c) the ratio of the MAD between the differential and original flux
+    #          is < 0.25   
+    if (rrmse < 0.01) & \
+       (pops[2] > 15.) & (pops[2] < 99.9) & \
+       (d_MAD/f_MAD < 0.25):
         return True
     else:
         return False
@@ -320,12 +334,16 @@ def norm_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
 
     returns
     -------
-    norm_comp : `bool`
+    norm_flag : `bool`
         Determines whether the data should be detrended as one whole component
         (False) or by individual groups (True, providing the smooth flag is
         False).
+    smooth_flag : `bool`
+         Determines whether any detrending should be performed by testing how
+         smooth the lightcurve is.
     f1_at_f2_0 : `list`
-        The extrapolated fluxes from group 1, calculated at the start of group 2.
+        The extrapolated fluxes from group 1, calculated at the start point of
+        group 2.
     f2_at_f2_0 : `list`
         The first flux values from group 2
     f1_MAD : `list`
@@ -333,9 +351,9 @@ def norm_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
     f2_MAD : `list`
         The MAD fluxes from group 2
     '''
-    norm_comp = False
+    norm_flag = False
     Ncomp = len(np.unique(lc_part))
-    smooth = smooth_test(t_orig, f_orig)
+    smooth_flag = smooth_test(t_orig, f_orig)
 
     f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = [], [], [], []
     if Ncomp > 1:
@@ -344,32 +362,37 @@ def norm_choice(t_orig, f_orig, lc_part, MAD_fac=2., poly_max=4):
             g1 = np.array(lc_part == i)
             g2 = np.array(lc_part == i+1)
             try:
-                s_fit1, coeff1 = aic_selector(t_orig[g1], f_orig[g1], poly_max=poly_max)
-                s_fit2, coeff2 = aic_selector(t_orig[g2], f_orig[g2], poly_max=poly_max)
+                s_fit1, coeff1 = aic_selector(t_orig[g1], f_orig[g1],
+                                              poly_max=poly_max)
+                s_fit2, coeff2 = aic_selector(t_orig[g2], f_orig[g2],
+                                              poly_max=poly_max)
                 f1_at_f2_0.append(np.polyval(coeff1, t_orig[g2][0]))
-                f2_at_f2_0.append(np.polyval(coeff2, t_orig[g2][0])) # YES THIS IS SUPPOSED TO BE AT INDEX "g2"
+ # The line below IS supposed to be at index "g2"
+                f2_at_f2_0.append(np.polyval(coeff2, t_orig[g2][0]))
                 f1_n = f_orig[g1]/np.polyval(coeff1, t_orig[g1])
                 f2_n = f_orig[g2]/np.polyval(coeff2, t_orig[g2])
                 f1_MAD.append(MAD(f1_n, scale='normal'))
                 f2_MAD.append(MAD(f2_n, scale='normal'))
-                if abs(f1_at_f2_0[i-1] - f2_at_f2_0[i-i]) > MAD_fac*((f1_MAD[i-1]+f2_MAD[i-1])/2.):
-                    norm_comp = True
+                if 2.*abs(f1_at_f2_0[i-1] - f2_at_f2_0[i-i]) > \
+                       MAD_fac*((f1_MAD[i-1]+f2_MAD[i-1])/2.):
+                    norm_flag = True
                     break
                 else:
                     i += 1
             except:
-                logger.error('Could not run the AIC selector, probably because of a zero-division.')
+                logger.error('Could not run the AIC selector, '
+                             'probably because of a zero-division.')
                 f1_at_f2_0.append(np.polyval([1], t_orig[g2][0]))
                 f2_at_f2_0.append(np.polyval([1], t_orig[g2][0]))
                 f1_n = f_orig[g1]
                 f2_n = f_orig[g2]
                 f1_MAD.append(MAD(f1_n, scale='normal'))
                 f2_MAD.append(MAD(f2_n, scale='normal'))
-                norm_comp = False
+                norm_flag = False
                 break
-    if smooth == True:
-        norm_comp = False
-    return norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
+    if smooth_flag == True:
+        norm_flag = False
+    return norm_flag, smooth_flag, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD
 
 
 
@@ -406,22 +429,24 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
     f_norm : `Iterable`
         The corrected lightcurve after the detrending procedures.
     detr_dict : `dict`
-        "norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD" -> see norm_choice.
-        "s_fit, coeffs" -> see aic_selector
+        A dictionary containing the parameters: norm_flag, smooth_flag,
+        "f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD" (see norm_choice) and
+        "s_fit, coeffs" (see aic_selector)
     '''
 
-    # 1. Choose the best detrending polynomial using the Aikaike Information Criterion, and
-    #    detrend the lightcurve as a whole.
+    # 1. Choose the best detrending polynomial using the Aikaike Information
+    #    Criterion, and detrend the lightcurve as a whole.
     s_fit_0, coeffs_0 = aic_selector(t, f, poly_max=poly_max)
     f_norm = f/np.polyval(coeffs_0, t)
 
-    # 2. Decide whether to use the detrended lightcurve from part 1, or to separate the
-    #    lightcurve into individual components and detrend each one separately
-    norm_comp, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
+    # 2. Decide whether to use the detrended lightcurve from part 1, or to
+    #    separate the lightcurve into individual components and detrend each
+    #    one separately
+    norm_flag, smooth_flag, f1_at_f2_0, f2_at_f2_0, f1_MAD, f2_MAD = \
                     norm_choice(t, f, lc, MAD_fac=MAD_fac, poly_max=poly_max)
     # 3. Detrend the lightcurve following steps 1 and 2.
     s_fit, coeffs = [], []
-    if norm_comp:
+    if norm_flag:
         # normalise each component separately.
         f_detrend = np.array([])
         for l in np.unique(lc):
@@ -434,8 +459,9 @@ def detrend_lc(t,f,lc, MAD_fac=2., poly_max=3):
         f_norm = f_detrend
     else:
         # normalise the entire lightcurve as a whole
-        f_norm = f_norm
-    detr_dict = {'norm_comp' : norm_comp,
+        f_norm = f# f_norm
+    detr_dict = {'norm_flag' : norm_flag,
+                 'smooth_flag' : smooth_flag,
                  'f1_at_f2_0' : f1_at_f2_0,
                  'f2_at_f2_0' : f2_at_f2_0,
                  'f1_MAD' : f1_MAD,
@@ -513,15 +539,13 @@ def clean_edges_outlier(f, MAD_fac=2.):
        The end index for the data string.
     '''
     f_med, f_MAD = np.median(f), MAD(f, scale='normal')
-    f_diff = np.zeros(len(f))
-    f_diff[1:] = np.diff(f)
-    f_diff_med = np.median(np.absolute(f_diff))
     try: 
         g = (np.abs(f-f_med) < MAD_fac*f_MAD).astype(int)
         first, last = clean_flux_algorithm(g)
         
     except:
-        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        logger.error('Something went wrong with the arrays when doing the '
+                     'lightcurve edge clipping')
         first, last = 0, len(g)-1
     return first, last
 
@@ -566,17 +590,18 @@ def clean_edges_scatter(f, MAD_fac=2., len_sub_raw=11, num_data_fac=0.1):
     if n_sub // 2 == 0:
         n_sub += 1
     p_e = int((n_sub-1)/2)
-
     # get the median time and flux, the median absolute deviation in flux
     # and the time difference for each neighbouring point.
     f_med, f_MAD = np.median(f), MAD(f, scale='normal')
     f_diff = np.zeros(len(f))
     f_diff[1:] = np.diff(f)
     f_diff_med = np.median(np.absolute(f_diff))
-    f_x = np.array([MAD(f[i:i+n_sub], scale='normal') for i in range(len(f)-n_sub+1)])
-    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant', constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
+    f_x = np.array([MAD(f[i:i+n_sub], scale='normal')
+                    for i in range(len(f)-n_sub+1)])
+    f_diff_run = np.pad(f_x, (p_e, p_e), 'constant',
+                        constant_values=(MAD_fac*f_MAD, MAD_fac*f_MAD))
 
-    try: 
+    try:
         g = (np.abs(f_diff_run) < MAD_fac*f_diff_med).astype(int)
         first, last = clean_flux_algorithm(g)
         if first <= p_e:
@@ -588,14 +613,16 @@ def clean_edges_scatter(f, MAD_fac=2., len_sub_raw=11, num_data_fac=0.1):
         elif last < len(g)-1-(2*p_e+1):
             last = np.where(g)[0][-p_e]
     except:
-        logger.error(f'Something went wrong with the arrays when doing the lightcurve edge clipping')
+        logger.error('Something went wrong with the arrays when doing the '
+                     'lightcurve edge clipping')
         first, last = 0, len(g)-1
     return first, last
 
 
 
 
-def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
+def run_make_lc_steps(f_lc, f_orig, min_crit_frac=0.1, min_crit_num=50,
+                      outl_mad_fac=3.):
     '''Process the lightcurve: cleaning, normalisation and detrending functions
     
     | During each procedure, the function keeps a record of datapoints that are
@@ -626,16 +653,20 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         It could be either 'reg_oflux' (the regular, original flux) or
         'cbv_oflux' (the original flux corrected using co-trending basis
         vectors)
-    min_comp_frac : `float`, optional, default=0.1
+    min_crit_frac : `float`, optional, default=0.1
         The minimum relative size of a flux component when correcting for
         sparse data in the cleaning functions.
+    min_crit_num : `int`, optional, default=50
+        The minimum number of data points required for a flux component in the
+        sparse data cleaning functions.
     outl_mad_fac : `float`, optional, default=3.
         The factor of MAD for the cleaned lightcurve flux values.
         
     returns
     -------
     f_lc : `dict`
-        A dictionary storing the full set of results from the lightcurve analysis.
+        A dictionary storing the full set of results from the lightcurve
+        analysis.
         As well as the keys from the inputs, the final keys returned are:
         1: "time" -> the time coordinate.
         2: "mag" -> the TESS magnitude.
@@ -663,9 +694,8 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     logger.info('part2: time segmentation -> done!')
 
     # (3) remove very sparse elements from the lightcurve
-    comp_lengths = np.array([f-s for s, f in zip(ds1, df1)])
-    std_crit_val = int(np.sum(comp_lengths)*min_comp_frac)
-    ds2, df2 = remove_sparse_data(ds1, df1, std_crit=std_crit_val)
+    ds2, df2 = remove_sparse_data(ds1, df1, min_crit_frac=min_crit_frac, 
+                                  min_crit_num=min_crit_num)
     f_lc["pass_sparse"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
     for s, f in zip(ds2, df2):
         f_lc["pass_sparse"][s:f] = True
@@ -677,9 +707,11 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         f_lc["lc_part"][s:f] = int(i+1)
     g_cln = f_lc["pass_sparse"]
     f_lc["nflux_dtr"] = np.full(len(f_lc["time"]), -999.)
-    f_lc["nflux_dtr"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln], f_lc["nflux_ori"][g_cln], f_lc["lc_part"][g_cln], poly_max=1)
+    f_lc["nflux_dtr"][g_cln], detr_dict = detrend_lc(f_lc["time"][g_cln],
+                                                     f_lc["nflux_ori"][g_cln],
+                                                     f_lc["lc_part"][g_cln],
+                                                     poly_max=1)
     logger.info('part4: detrending -> done!')
-    
     # (5) clean the lightcurve edges from outliers
     ds3, df3 = [], []
     for lc in np.unique(f_lc["lc_part"][g_cln]):
@@ -687,7 +719,8 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         s_o, f_o = clean_edges_outlier(f_lc["nflux_dtr"][g])
         ds3.append(g[s_o])
         df3.append(g[f_o])
-    f_lc["pass_clean_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    f_lc["pass_clean_outlier"] = np.array(np.zeros(len(f_lc["time"])),
+                                          dtype='bool')
     for s, f in zip(ds3, df3):
         f_lc["pass_clean_outlier"][s:f] = True
     logger.info('part5: clean edges, outliers -> done!')
@@ -699,7 +732,8 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
         s_s, f_s = clean_edges_scatter(f_lc["nflux_dtr"][g])
         ds4.append(g[s_s])
         df4.append(g[f_s])
-    f_lc["pass_clean_scatter"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    f_lc["pass_clean_scatter"] = np.array(np.zeros(len(f_lc["time"])),
+                                          dtype='bool')
     for s, f in zip(ds4, df4):
         f_lc["pass_clean_scatter"][s:f] = True
     logger.info('part6: clean edges, scatter -> done!')
@@ -707,13 +741,15 @@ def run_make_lc_steps(f_lc, f_orig, min_comp_frac=0.1, outl_mad_fac=3.):
     # (7) finally cut out data that are extreme outliers.
     med_lc = np.median(f_lc["nflux_dtr"][g_cln])
     MAD_lc = MAD(f_lc["nflux_dtr"][g_cln], scale='normal')
-    f_lc["pass_full_outlier"] = np.array(np.zeros(len(f_lc["time"])), dtype='bool')
+    f_lc["pass_full_outlier"] = np.array(np.zeros(len(f_lc["time"])),
+                                         dtype='bool')
     for f in range(len(f_lc["time"])):
         if abs(f_lc["nflux_dtr"][f] - med_lc) < outl_mad_fac*MAD_lc:
             f_lc["pass_full_outlier"][f] = True
     logger.info('part7: remove extreme points -> done!')
 
-    # (8) divide each lightcurve component by the median flux value of qualifying data points.
+    # (8) divide each lightcurve component by the median flux value of
+    #     qualifying data points.
     for lc in np.unique(f_lc["lc_part"][g_cln]):
         g = np.where(f_lc["lc_part"] == lc)[0]
         gx = np.logical_and.reduce([
@@ -830,9 +866,12 @@ def cbv_fit_test(t, of, cf):
     of_score, cf_score = 0, 0
 
 #1) number of outliers test
-    of_nflux, cf_nflux = np.array(of)/np.median(of), np.array(cf)/np.median(cf)
-    of_nMADf, cf_nMADf = MAD(of_nflux, scale='normal'), MAD(cf_nflux, scale='normal')
-    num_of, num_cf = np.sum(abs(of_nflux-1.) > of_nMADf), np.sum(abs(cf_nflux-1.) > cf_nMADf)
+    of_nflux = np.array(of)/np.median(of)
+    cf_nflux = np.array(cf)/np.median(cf)
+    of_nMADf = MAD(of_nflux, scale='normal')
+    cf_nMADf = MAD(cf_nflux, scale='normal')
+    num_of = np.sum(abs(of_nflux-1.) > of_nMADf)
+    num_cf = np.sum(abs(cf_nflux-1.) > cf_nMADf)
     if num_of > num_cf:
         cf_score += 1
     else:
@@ -857,7 +896,8 @@ def cbv_fit_test(t, of, cf):
         else:
             of_score += 1
     except:
-        logger.error('Could not do the sine-fit comparison for ori vs cbv lightcurves')
+        logger.error('Could not do the sine-fit comparison for ori vs cbv '
+                     'lightcurves')
 # get the final score - if cbv wins, then a True statement is returned.    
     if of_score >= cf_score:
         use_cbv = False
@@ -869,7 +909,7 @@ def cbv_fit_test(t, of, cf):
 
 
 
-def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
+def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc', cbv_flag=False):
     '''Construct the normalised, detrended, cleaned TESS lightcurve.
     
     This is essentially a parent function that performs all the steps in fixing
@@ -895,6 +935,8 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
         Choose to save the cleaned lightcurve to file
     lc_dir : `str`, optional, default='lc'
         The directory used to store the lightcurve files if lc_dir==True
+    cbv_flag : `bool`, optional, default=False
+        Choose whether to analyse the lightcurves for CBV-corrected data.
 
     returns
     -------
@@ -902,44 +944,67 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc'):
         A list of tables containing the lightcurve data
         These are for the original lightcurve, and the cbv-corrected lightcurve
         if required and it satisfies the criteria from cbv_fit_test.
+    norm_flags : `list`
+        A list of norm_flag values from the detrending algorithm.
+    smooth_flags : `list`
+        A list of smooth_flag values from the detrending algorithm.
     '''
-    
+    logger.info(f'Running the lightcurve analysis for {name_lc}')
     f_labels = ['reg_oflux']
     cbv_ret = False
-    if "cbv_oflux" in phot_table.colnames:
-        f_labels.append('cbv_oflux')
-        use_cbv = cbv_fit_test(phot_table["time"], phot_table["reg_oflux"], phot_table["cbv_oflux"])
-        if use_cbv:
-            cbv_ret = True
-    final_tabs = []
+    
+    if cbv_flag:
+        if "cbv_oflux" in phot_table.colnames:
+            f_labels.append('cbv_oflux')
+            use_cbv = cbv_fit_test(phot_table["time"], phot_table["reg_oflux"],
+                                   phot_table["cbv_oflux"])
+            if use_cbv:
+                cbv_ret = True
+    final_tabs, norm_flags, smooth_flags = [], [], []
     for f_label in f_labels:
+        logger.info(f'using the flux label: {f_label}')
         final_lc = {}
         final_lc["time"] = phot_table["time"].data
         final_lc["mag"] = phot_table["mag"].data
         final_lc[f'{f_label}'] = phot_table[f'{f_label}'].data
         final_lc["eflux"] = phot_table["flux_err"].data
         flux_dict, detr_dict = run_make_lc_steps(final_lc, f_label)
-        keyorder = ['time','mag',f_label,'eflux','nflux_ori','nflux_err','nflux_dtr','lc_part','pass_sparse','pass_clean_outlier','pass_clean_scatter','pass_full_outlier']
-        flux_dict = {k: flux_dict[k] for k in keyorder}
+        norm_flag = detr_dict["norm_flag"]
+        smooth_flag = detr_dict["smooth_flag"]
+
+        keyorder = ['time','mag',f_label,'eflux','nflux_ori','nflux_err',
+                    'nflux_dtr','lc_part','pass_sparse','pass_clean_outlier',
+                    'pass_clean_scatter','pass_full_outlier']
         tab_format = ['.6f','.6f','.6f','.6f',
                       '.6f','.4e','.6f','%i',
                       '%s','%s','%s','%s']
-        if len(flux_dict["time"]) > 50: 
-            flux_tab = Table(flux_dict)
-            for k, f in zip(keyorder, tab_format):
-                flux_tab[k].info.format = f
-            if f_label == "reg_oflux":
-                final_tabs.append(flux_tab)
-            if (f_label == "cbv_oflux") and (cbv_ret):
-                final_tabs.append(flux_tab)
+        flux_dict = {k: flux_dict[k] for k in keyorder}
+        if len(flux_dict["time"]) > 50:
+            flux_tab = fix_table_format(Table(flux_dict), keyorder, tab_format)
+#            flux_tab = Table(flux_dict)
+#            for k, f in zip(keyorder, tab_format):
+#                flux_tab[k].info.format = f
+#            if f_label == "reg_oflux":
+            final_tabs.append(flux_tab)
+            norm_flags.append(norm_flag)
+            smooth_flags.append(smooth_flag)
+#            if (f_label == "cbv_oflux") and (cbv_ret):
+#                final_tabs.append(flux_tab)
+#                norm_flags.append(norm_flag)
+#                smooth_flags.append(smooth_flag)
             if store_lc:
                 path_exist = os.path.exists(f'./{lc_dir}')
                 if not path_exist:
                     os.makedirs(f'./{lc_dir}')
-                flux_tab.write(f'./{lc_dir}/{name_lc}_{f_label}.csv', format='csv', overwrite=True)
-                with open(f'./{lc_dir}/{name_lc}_{f_label}.json', 'w') as convert_file:
+                flux_tab.write(f'./{lc_dir}/{name_lc}_{f_label}.csv',
+                               format='csv', overwrite=True)
+                with open(f'./{lc_dir}/{name_lc}_{f_label}.json', 'w') \
+                     as convert_file:
                     convert_file.write(json.dumps(detr_dict))
-    return final_tabs
+    return final_tabs, norm_flags, smooth_flags
 
 
-__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]
+
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__],
+           predicate = lambda f: inspect.isfunction(f)
+           and f.__module__ == __name__)]

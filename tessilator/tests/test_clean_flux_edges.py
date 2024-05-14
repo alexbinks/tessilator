@@ -3,7 +3,7 @@ import math
 import matplotlib.pyplot as plt
 from scipy.stats import median_abs_deviation
 from ..lc_analysis import clean_edges_outlier
-from ..logger import logger_tessilator
+from ..file_io import logger_tessilator
 
 start, stop, typical_timestep = 0, 27, 0.007 # in days
 period = 3.5

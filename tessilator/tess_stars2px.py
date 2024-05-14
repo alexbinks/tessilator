@@ -1150,7 +1150,8 @@ def fileOutputHeader(fp, fpgParmFileList=None):
 
 def tess_stars2px_function_entry(starIDs, starRas, starDecs, trySector=None, scInfo=None, \
                               fpgParmFileList=None, combinedFits=False,\
-                              noCollateral=False, aberrate=False, sectorOverrideFile=None):
+                              noCollateral=False, aberrate=False, sectorOverrideFile=None,
+                              ntarg_div=5):
     if scInfo == None:
         # Instantiate Spacecraft position info
         scinfo = TESS_Spacecraft_Pointing_Data(trySector=trySector, fpgParmFileList=fpgParmFileList, \
@@ -1173,7 +1174,7 @@ def tess_stars2px_function_entry(starIDs, starRas, starDecs, trySector=None, scI
     outRowPix = np.array([-1.0], dtype=float)
     print(starList)
     for i, curTarg in enumerate(starList):
-        if i % 5 == 0:
+        if i % ntarg_div == 0:
             print(f'{i+1} out of {len(starList)}')
         for curSec in scinfo.sectors:
             starRas = np.array([curTarg.ra])

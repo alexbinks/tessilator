@@ -6,7 +6,7 @@ from astropy.io import ascii, fits
 from astropy.table import Table
 from ..aperture import aper_run
 from glob import glob
-from ..logger import logger_tessilator
+from ..file_io import logger_tessilator
 
 
 

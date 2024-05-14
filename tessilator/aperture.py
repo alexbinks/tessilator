@@ -9,11 +9,11 @@ This module contains functions to perform aperture photmetry.
 The aperture photometry is defined by a single function 'aper_run', which reads
 the TESS image files, performs aperture phtoometry and returns an astropy table
 containing the timestamps, magnitudes and fluxes derived from aperture
-photometry. Additionally, one can use the function 'calc_radius', which
-evaluates the relative brightness of neighbouring pixels to automatically
-determine the size of the aperture radius. If the full-frame images are used, a
-function named 'get_xy_pos' provides a WCS transformation to convert celestial
-coordinates to image (X-Y) pixels. 
+photometry. Additionally, one can use the function 'calc_rad', which evaluates
+the relative brightness of neighbouring pixels to automatically determine the
+size of the aperture radius. If the full-frame images are used, a function
+named 'get_xy_pos' provides a WCS transformation to convert celestial
+coordinates to image (x-y) pixels. 
 '''
 
 ###############################################################################
@@ -42,8 +42,8 @@ from photutils.aperture import aperture_photometry, ApertureStats
 
 
 # Local application
-from .fixedconstants import *
-from .logger import logger_tessilator
+from .fixedconstants import pixel_size, exprf, Zpt, eZpt, sec_max
+from .file_io import logger_tessilator
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -93,14 +93,15 @@ def get_xy_pos(targets, head):
     except:
         if ("Xpos" in targets.colnames) and ("Ypos" in targets.colnames):
             positions = tuple(zip(targets["Xpos"], targets["Ypos"]))
-            logger.warning("XY positions used directly - the aperture will be offset by a few sub-pixels!")
+            logger.warning("x-y positions used directly - the aperture will be "
+                           "offset by a few sub-pixels!")
         else:
             logger.error("Couldn't get the WCS coordinates to work...")
             return
     
 
 
-def calc_rad(flux_vals, positions, f_lim=0.2, max_rad=3, default_rad=1):
+def calc_rad(flux_vals, positions, f_lim=0.1, max_rad=4, default_rad=1, frame_num=0):
     '''Calculate the appropriate pixel radius for the aperture
     
     This function uses a basic algorithm to calculate the most appropriate
@@ -108,22 +109,26 @@ def calc_rad(flux_vals, positions, f_lim=0.2, max_rad=3, default_rad=1):
     frames. If the ratio of the median value of neighbouring (8, in a square
     surrounding the central pixel) pixels compared to the central pixel is
     greater than 'f_lim', then expand the radius by one pixel, and test the
-    next set of surrounding pixels. If, after 'n_pix' pixels the condition is
-    still satisfied, set the pixel radius equal to 1. The latter constraint is
-    intended to avoid contamination from neighbouring sources.
+    next set of surrounding pixels. The pixel radius is linearly interpolated
+    either side of the f_lim boundary. If, after 'n_pix' pixels the condition
+    is still satisfied, set the pixel radius equal to 1. The latter constraint
+    is intended to avoid contamination from neighbouring sources.
     
     parameters
     ----------
     flux_vals : `np.array`
         The raw flux values from each pixel in the image.
     positions : `tuple`
-        The X,Y position of the central pixel
-    f_lim : `float`, optional, default=0.2
+        The X,Y position of the central pixel.
+    f_lim : `float`, optional, default=0.1
         The limiting threshold flux for the criterion.
-    max_rad : `int`, optional, default=3
+    max_rad : `int`, optional, default=4
         The maximum number of pixels for the aperture radius.
     default_rad : `int`, optional, default=1
         The default aperture radius to be used in case of an error.
+    frame_num : `int`
+        The running number of the image frame of the input fits file.
+        This is only used for logging purposes.
 
     returns
     -------
@@ -132,7 +137,7 @@ def calc_rad(flux_vals, positions, f_lim=0.2, max_rad=3, default_rad=1):
     '''
     try:
         x0, y0 = int(positions[0]), int(positions[1])
-        f_max = flux_vals[x0,y0]
+        f_max, f_old = float(flux_vals[x0,y0]), 1.
         mask_ori = np.zeros([flux_vals.shape[0], flux_vals.shape[1]])
         mask = mask_ori
         i = 1
@@ -141,23 +146,33 @@ def calc_rad(flux_vals, positions, f_lim=0.2, max_rad=3, default_rad=1):
             mask[x0-i:x0+i+1,y0+i] = 1
             mask[x0-i,y0-i:y0+i] = 1
             mask[x0+i,y0-i:y0+i] = 1
-            f_sum = mask*flux_vals
-            f_new = np.median(f_sum[np.where(f_sum > 0)])
-            if f_new/f_max < f_lim:
+            f_sum = flux_vals[np.where(mask==1)]
+            f_new = float(np.median(f_sum))/f_max
+            if (f_new < f_lim) or (f_new > f_old):
                 break
             else:
                 mask = mask_ori
+                f_old = f_new
                 i += 1
-        if i > 3:
-            i = 1
-        aper_rad = i-0.5
+
+        a_old, a_new = i-1, i
+        if f_new < f_lim:
+            z = (f_new-f_lim)/(f_lim-f_old)
+            aper_rad = (a_new + z*a_old)/(1+z)
+        else:
+            aper_rad = a_old
+
+        if (a_new > max_rad) or (a_new == 1):
+            aper_rad = 0.5
     except:
-        logger.warning("The aperture radius could not be calculated with this algorithm. The default value will be used.")
-        aper_rad = default_rad-0.5
+        logger.warning(f"calc_rad ran into a problem for frame {frame_num}. "
+                       f"Aperture radius set to {default_rad} pixel.")
+        aper_rad = default_rad
     return aper_rad
 
 
-def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
+def aper_run(file_in, targets, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
+             fix_rad=False):
     '''Perform aperture photometry for the image data.
 
     This function reads in each fits file, determines the pixel radius for an
@@ -168,40 +183,45 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
     parameters
     ----------
     file_in : `str`
-        Name of the fits file containing image data
+        Name of the fits file containing image data.
     targets : `astropy.table.Table`
-        The table of input data
-    FixRad : `float`, optional, default=1.
-        The pixel radius to define the circular area for the aperture
-    SkyRad : `tuple`, optional, default=(6.,8.)
+        The table of input data.
+    xy_pos : `tuple`, optional, default=(10.,10.)
+        The x-y centroid (in pixels) of the aperture.
+    ap_rad : `float`, optional, default=1.
+        The size of the aperture radius in pixels.
+    sky_ann : `tuple`, optional, default=(6.,8.)
         A 2-element tuple defining the inner and outer annulus to calculate
-        the background flux
-    XY_pos : `tuple`, optional, default=(10.,10.)
-        The X-Y centroid (in pixels) of the aperture.
+        the background flux.
+    fix_rad : `bool`, optional, default=False
+        If True, then set the aperture radius equal to ap_rad, otherwise run the
+        calc_rad algorithm.
 
     returns
     -------
     full_phot_table : `astropy.table.Table`
         The formatted table containing results from the aperture photometry.
+    ap_rad : `float`
+        The size of the aperture radius in pixels.
     '''
     if isinstance(file_in, np.ndarray):
         fits_files = file_in
     else:
         fits_files = [file_in]
 
-    full_phot_table = Table(names=('run_no','id', 'aperture_rad', 'xcenter', 'ycenter', 'flux',
-                                   'flux_err', 'bkg', 'total_bkg',
-                                   'reg_oflux', 'mag', 'mag_err', 'time'),
-                            dtype=(int, str, float, float, float, float, float, float,
-                                   float, float, float, float, float))
-    print(fits_files)
+    full_phot_table = Table(names=('run_no','id', 'aperture_rad', 'xcenter',
+                                   'ycenter', 'flux', 'flux_err', 'bkg', 
+                                   'total_bkg', 'reg_oflux', 'mag', 'mag_err',
+                                   'time'),
+                            dtype=(int, str, float, float, float, float, float,
+                                   float, float, float, float, float, float))
     for f_num, f_file in enumerate(fits_files):
-        print(f'{f_num}, {f_file}, running aperture photometry')
+        logger.info(f'Running aperture photometry for {f_file}, #{f_num+1} of {len(fits_files)}')
+
         try:
             with fits.open(f_file) as hdul:
                 data = hdul[1].data
                 if data.ndim == 1:
-#                    head = hdul[1].header
                     if "FLUX_ERR" in data.names:
                         n_steps = data.shape[0]-1
                         flux_vals = data["FLUX"]
@@ -214,7 +234,7 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
                         qual_val = [data["QUALITY"][0]]
                         time_val = [data["TIME"][0]]
                         erro_vals = 0.001*flux_vals
-                    positions = XY_pos
+                    positions = xy_pos
                 elif data.ndim == 2:
                     n_steps = 1
                     head_meta = hdul[0].header
@@ -224,28 +244,34 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
                     flux_vals = [data]
                     erro_vals = [hdul[2].data]
                     positions = get_xy_pos(targets, head_data)
-
-                if not FixRad:
+                if not fix_rad:
                     rad_val = []
                     for n_step in range(n_steps):
                     #define a circular aperture around all objects
-                        rad_x = calc_rad(flux_vals[n_step], positions)
+                        annulus_aperture = CircularAnnulus(positions,
+                                                           sky_ann[0],
+                                                           sky_ann[1])
+                        aperstats = ApertureStats(flux_vals[n_step],
+                                                  annulus_aperture)
+                        bkg_rad = aperstats.median
+#                        bkg_rad = aperstats.mode
+                        flux_x = flux_vals[n_step]-bkg_rad
+                        rad_x = calc_rad(flux_x, positions, frame_num=n_step)
                         rad_val.append(rad_x)
                     if len(rad_val) > 1:
-                        Rad = stats.mode(np.array(rad_val), keepdims=False)[0]
+#                        Rad = stats.mode(np.array(rad_val), keepdims=False)[0]
+                        ap_rad = np.mean(rad_val)
                     else:
-                        Rad = rad_val[0]
+                        ap_rad = rad_val[0]
                 else:
-                    rad_vel = np.repeat(FixRad, n_steps)
-                    Rad = FixRad
-                 
+                    rad_val = np.repeat(ap_rad, n_steps)
                 for n_step in range(n_steps):
                     if qual_val[n_step] == 0:
-                        aperture = CircularAperture(positions, Rad)
+                        aperture = CircularAperture(positions, ap_rad)
                         #select a background annulus
                         annulus_aperture = CircularAnnulus(positions,
-                                                           SkyRad[0],
-                                                           SkyRad[1])
+                                                           sky_ann[0],
+                                                           sky_ann[1])
                         if flux_vals[:][:][n_step].ndim == 1:
                             flux_ap = flux_vals
                             erro_ap = erro_vals
@@ -274,15 +300,16 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
                         t['mag'] = -999.
                         t['mag_err'] = -999.
                         g = np.where(t['ap_sum_sub'] > 0.)[0]
-                        t['mag'][g] = -2.5*np.log10(t['ap_sum_sub'][g].data)+Zpt
+                        t['mag'][g] = -2.5*np.log10(t['ap_sum_sub'][g].data)+\
+                                      Zpt
                         t['mag_err'][g] = np.abs((-2.5/np.log(10))*\
                             t['aperture_sum_err'][g].data/\
                             t['aperture_sum'][g].data)
                         t['time'] = time_val[n_step]
-                        fix_cols = ['run_no', 'id', 'aperture_rad', 'xcenter', 'ycenter',
-                                    'aperture_sum', 'aperture_sum_err', 'bkg',
-                                    'tot_bkg', 'ap_sum_sub', 'mag',
-                                    'mag_err', 'time']
+                        fix_cols = ['run_no', 'id', 'aperture_rad', 'xcenter',
+                                    'ycenter', 'aperture_sum',
+                                    'aperture_sum_err', 'bkg', 'tot_bkg',
+                                    'ap_sum_sub', 'mag', 'mag_err', 'time']
                         t = t[fix_cols]
                         for r in range(len(t)):
                             full_phot_table.add_row(t[r])
@@ -290,8 +317,10 @@ def aper_run(file_in, targets, FixRad=None, SkyRad=(6.,8.), XY_pos=(10.,10.)):
             print(f"There is a problem opening the file {f_file}")
             logger.error(f"There is a problem opening the file {f_file}")
             continue
-    return full_phot_table, Rad
+    return full_phot_table, ap_rad
     
     
 
-__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], predicate = lambda f: inspect.isfunction(f) and f.__module__ == __name__)]
+__all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__], 
+           predicate = lambda f: inspect.isfunction(f) 
+           and f.__module__ == __name__)]

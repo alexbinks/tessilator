@@ -4,7 +4,8 @@ Alexander Binks & Moritz Guenther, 2024
 
 Licence: MIT 2024
 
-A set of functions to perform a Lomb-Scargle periodogram analysis to the TESS lightcurves.
+A set of functions to perform a Lomb-Scargle periodogram analysis to the TESS
+lightcurves.
 
 '''
 ###############################################################################
@@ -39,9 +40,8 @@ from collections.abc import Iterable
 
 
 # Local application imports
-from .fixedconstants import *
-from .logger import logger_tessilator
-
+from .file_io import logger_tessilator
+from .lc_analysis import sin_fit
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -107,7 +107,6 @@ def check_for_jumps(time, flux, lc_part, n_avg=10, thresh_diff=10.):
     return jump_flag
 
 
-
 def gauss_fit(x, a0, x_mean, sigma):
     '''Construct a simple Gaussian.
 
@@ -162,13 +161,14 @@ def gauss_fit_peak(period, power, max_power=1):
     '''
     if len(period) > 3:
         try:
+            period_diff = period[-1]-period[0]
             popt, _ = curve_fit(gauss_fit, period, power,
                                 bounds=([0, period[0], 0],
-                                        [max_power, period[-1], period[-1]-period[0]]))
+                                        [max_power, period[-1], period_diff]))
             ym = gauss_fit(period, *popt)
         except:
-            print(f"Couldn't find the optimal parameters for the Gaussian fit!")
-            logger.error(f"Couldn't find the optimal parameters for the Gaussian fit!")
+            logger.error(f"Couldn't find the optimal parameters for the "
+                         f"Gaussian fit!")
             p_m = np.argmax(power)
             peak_vals = [p_m-1, p_m, p_m+1]
             x = period[peak_vals]
@@ -190,7 +190,6 @@ def gauss_fit_peak(period, power, max_power=1):
                             bounds=(0, [1., np.inf, np.inf]))
         ym = gauss_fit(xvals, *popt)        
     return popt, ym
-    
     
     
 def get_next_peak(power, frac_peak=0.85, option=None):
@@ -254,56 +253,13 @@ def get_next_peak(power, frac_peak=0.85, option=None):
     elif x == len(power)-1:
         p_r = x
 
-    #return the indices that do not constitute part of the specific periodogram peak.
+    #return the indices that do not constitute part of the specific periodogram
+    #peak.
     a_g = a[p_l:p_r+2]
     a_o = a[np.setdiff1d(np.arange(a.shape[0]), a_g)] 
     return a_o
 
 
-def is_period_cont(d_target, d_cont, t_cont, frac_amp_cont=0.5):
-    '''Identify neighbouring contaminants that may cause the periodicity.
-
-    If the user selects to measure periods for the neighbouring contaminants
-    this function returns a flag to assess if a contaminant may actually be
-    the source causing the observed periodicity.
-
-    parameters
-    ----------
-    d_target : `dict`
-        A dictionary containing periodogram data of the target star.
-    d_cont : `dict`
-        A dictionary containing periodogram data of the contaminant star.
-    t_cont : `astropy.table.Table`
-        A table containing Gaia data for the contaminant star
-    frac_amp_cont : `float`, optional, default=0.5
-        The threshold factor to account for the difference in amplitude
-        of the two stars. If this is high, then the contaminants will be
-        less likely to be flagged as the potential source
-    
-    returns
-    -------
-    output : `str`
-        | Either ``a``, ``b`` or ``c``.
-        | (a) The contaminant is probably the source causing the periodicity
-        | (b) The contaminant might be the source causing the periodicity
-        | (c) The contaminant is not the source causing the periodicity
-        
-    '''
-    per_targ = d_target["period_1"]
-    per_cont = d_cont["period_1"]
-    err_targ = d_target["Gauss_1"][2]
-    err_cont = d_cont["Gauss_1"][2]
-    amp_targ = d_target["pops_vals"][1]
-    amp_cont = d_cont["pops_vals"][1]
-    flux_frac = 10**(t_cont["log_flux_frac"])
-
-    if abs(per_targ - per_cont) < (err_targ + err_cont):
-        output = 'a'
-    else:
-        output = 'b'
-    return output
-    
-    
 def mean_of_arrays(arr, num):
     '''Calculate the mean and standard deviation of an array which is split
     into N components.
@@ -324,12 +280,15 @@ def mean_of_arrays(arr, num):
     '''
     x = np.array_split(arr, num)
     ar = np.array(list(it.zip_longest(*x, fillvalue=np.nan)))
-    mean_out, std_out = np.nanmean(ar, axis=0), np.nanstd(ar, axis=0) 
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning) 
+        mean_out, std_out = np.nanmean(ar, axis=0), np.nanstd(ar, axis=0) 
     return mean_out, std_out
     
 
-
-def get_Gauss_params_pg(period, power, indices=None, max_power=1, p_min_thresh=0.05, gauss_min_frac=0.05, p_max_thresh=100.):
+def get_Gauss_params_pg(period, power, indices=None, max_power=1,
+                        gauss_min_frac=0.05, p_min_thresh=0.05,
+                        p_max_thresh=100.):
     '''Calculate the best Gaussian-fit parameters to the periodogram output.
     
     parameters
@@ -342,6 +301,8 @@ def get_Gauss_params_pg(period, power, indices=None, max_power=1, p_min_thresh=0
         The specific indices of the period/power array to be used.
     max_power : `float`, optional, default=1
         The maximum value for the power output.
+    gauss_min_frac : `float`, optional, default=0.05
+        The minimum ratio between the the Gaussian fit and max_power.
     p_min_thresh : `float`, optional, default=0.05
         The minimum period (in days) to be calculated.
     p_max_thresh : `float`, optional, default=100.
@@ -396,36 +357,8 @@ def get_Gauss_params_pg(period, power, indices=None, max_power=1, p_min_thresh=0
     return popt, ym
 
 
-
-
-def sin_fit(x, y0, A, phi):
-    '''
-    Returns the best parameters (y_offset, amplitude, and phase) to a regular
-    sinusoidal function.
-
-    parameters
-    ----------
-    x : `Iterable`
-        list of input values
-    y0 : `float`
-        The midpoint of the sine curve
-    A : `float`
-        The amplitude of the sine curve
-    phi : `float`
-        The phase angle of the sine curve
-
-    returns
-    -------
-    sin_fit : `list`
-        A list of sin curve values.
-    '''
-    sin_fit = y0 + A*np.sin(2.*np.pi*x + phi)
-    return sin_fit 
-
-
-
-
-def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=50):
+def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05,
+                       p_max_thresh=100., samples_per_peak=50):
     '''Run the periodogram analysis and store initial results to a dictionary.
     
     parameters
@@ -435,10 +368,11 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05, p_max_thres
         | "time" -> The time coordinate relative to the first data point
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The uncertainty for each value of nflux
-        | "lc_part" -> An running index describing the various contiguous sections
+        | "lc_part" -> An running index describing the various contiguous
+                       sections
     check_jump : `bool`, optional, default=False
-        Choose to check the lightcurve for jumpy data, using the "check_for_jumps"
-        function.
+        Choose to check the lightcurve for jumpy data, using the
+        "check_for_jumps" function.
     p_min_thresh : `float`, optional, default=0.05
         The minimum period (in days) to be calculated.
     p_max_thresh : `float`, optional, default=100.
@@ -475,13 +409,15 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05, p_max_thres
     LS_dict["lc_part"] = np.array(cln_lc["lc_part"])
 
     # calculate the median and MAD flux
-    LS_dict['median_MAD_nLC'] = [np.median(LS_dict["nflux"]), MAD(LS_dict["nflux"], scale='normal')]
+    LS_dict['median_MAD_nLC'] = [np.median(LS_dict["nflux"]),
+                                 MAD(LS_dict["nflux"], scale='normal')]
 
     # calculate the TESS magnitude (median and MAD value) 
     # note that this is from the "ORIGINAL LIGHTCURVE"
     try:
         mag = lc_data["mag"]
-        LS_dict['Tmag_MED'], LS_dict['Tmag_MAD'] = np.median(mag[mag > -999]), MAD(mag[mag > -999])
+        LS_dict['Tmag_MED'] = np.median(mag[mag > -999])
+        LS_dict['Tmag_MAD'] = MAD(mag[mag > -999])
     except:
         LS_dict['Tmag_MED'], LS_dict['Tmag_MAD'] = -999, -999    
 
@@ -489,7 +425,9 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05, p_max_thres
     # assess the jump flag
     LS_dict['jump_flag'] = -999
     if check_jump:
-        LS_dict['jump_flag'] = check_for_jumps(LS_dict["time"], LS_dict["nflux"], LS_dict["lc_part"])
+        LS_dict['jump_flag'] = int(check_for_jumps(LS_dict["time"],
+                                                   LS_dict["nflux"],
+                                                   LS_dict["lc_part"]))
 
 
     # run the LS periodogram
@@ -514,11 +452,12 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05, p_max_thres
         probabilities = [0.1, 0.05, 0.01]
         LS_dict['FAPs'] = ls.false_alarm_level(probabilities)
     except:
-        logger.error(f'Something went wrong with the FAP test, maybe division by 0.')
+        logger.error('Something went wrong with the FAP test, maybe division '
+                     'by 0.')
         LS_dict['FAPs'] = np.array([0.3, 0.2, 0.1])
 
 
-    LS_dict['shuffle_period'] = 0
+    LS_dict['shuffle_flag'] = 0
     LS_dict['period_shuffle'] = -999
     LS_dict['period_shuffle_err'] = -999
 
@@ -552,7 +491,6 @@ def write_periodogram(LS_dict, name_pg='', pg_dir='', lc_type=''):
         res_table.write(f'{pg_dir}/{name_pg}_{lc_type}.csv', overwrite=True)
 
 
-
 def get_periodogram_peaks(LS_dict, n_peaks=4):
     '''Calculate parameters for a given number of periodogram peaks
     
@@ -572,21 +510,32 @@ def get_periodogram_peaks(LS_dict, n_peaks=4):
     '''
     for i in 1+np.arange(n_peaks):
         try:
-            # get the indices of all the peaks that were not part of the last peak
+            # get the indices of all the peaks that were not part of the last
+            # peak
             LS_dict[f'a_{i+1}'] = get_next_peak(LS_dict[f'power_a_{i}'])
             # all the indices that 'are' part of the peak
-            LS_dict[f'a_g_{i}'] = np.delete(np.array(LS_dict[f'a_{i}']), np.array(LS_dict[f'a_{i+1}']))
-            LS_dict[f'Gauss_{i}'], LS_dict[f'Gauss_y_{i}'] = get_Gauss_params_pg(LS_dict["period_a_1"], LS_dict["power_a_1"], indices=LS_dict[f'a_g_{i}'])
+            LS_dict[f'a_g_{i}'] = np.delete(np.array(LS_dict[f'a_{i}']),
+                                            np.array(LS_dict[f'a_{i+1}']))
+            x1, x2 = get_Gauss_params_pg(LS_dict["period_a_1"],
+                                         LS_dict["power_a_1"],
+                                         indices=LS_dict[f'a_g_{i}'])
+            LS_dict[f'Gauss_{i}'], LS_dict[f'Gauss_y_{i}'] = x1, x2 
            # find all the new period values in the new array
-            LS_dict[f'period_a_{i+1}'] = LS_dict[f'period_a_{i}'][LS_dict[f'a_{i+1}']]
+            x3 = LS_dict[f'period_a_{i}'][LS_dict[f'a_{i+1}']]
+            LS_dict[f'period_a_{i+1}'] = x3
             # find all the new power values in the new array
-            LS_dict[f'power_a_{i+1}'] = LS_dict[f'power_a_{i}'][LS_dict[f'a_{i+1}']]
+            x4 = LS_dict[f'power_a_{i}'][LS_dict[f'a_{i+1}']]
+            LS_dict[f'power_a_{i+1}'] = x4
             # calculate the period of the maximum power peak
-            LS_dict[f'period_{i+1}'] = LS_dict[f'period_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+            x5 = LS_dict[f'period_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+            LS_dict[f'period_{i+1}'] = x5
             # return the maximum power peak value
-            LS_dict[f'power_{i+1}'] = LS_dict[f'power_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+            x6 = LS_dict[f'power_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
+            LS_dict[f'power_{i+1}'] = x6
         except:
-            logger.error(f'Something went wrong with the periods/powers of subsequent peaks. Probably an empty array of values.')
+            logger.error('Something went wrong with the periods/powers of '
+                         'subsequent peaks. Probably an empty array of '
+                         'values.')
             LS_dict[f'Gauss_{i}'] = [-999, -999, -999]
             LS_dict[f'period_a_{i+1}'] = -999
             LS_dict[f'power_a_{i+1}'] = -999
@@ -606,10 +555,8 @@ def get_periodogram_peaks(LS_dict, n_peaks=4):
         LS_dict['power_around_1'] = -999
 
 
-
-
-
-def shuffle_periodogram(lc_data, n_shuf_runs=100, p_min=0.1, p_max=100., n_min=0.1, n_max=1.0):
+def shuffle_periodogram(lc_data, n_shuf_runs=100, p_min=0.1, p_max=100.,
+                        n_min=0.1, n_max=1.0):
     '''Generate period measurements by sampling subsets of the lightcurve.
     
     parameters
@@ -619,7 +566,8 @@ def shuffle_periodogram(lc_data, n_shuf_runs=100, p_min=0.1, p_max=100., n_min=0
         | "time" -> The time coordinate relative to the first data point
         | "nflux" -> The detrended, cleaned, normalised flux values
         | "enflux" -> The uncertainty for each value of nflux
-        | "lc_part" -> An running index describing the various contiguous sections
+        | "lc_part" -> An running index describing the various contiguous
+                       sections
     n_shuf_runs : `int`, optional, default=100
         The number of measurements to be made
     p_min : `float`, optional, default=0.1
@@ -670,32 +618,39 @@ def shuffle_periodogram(lc_data, n_shuf_runs=100, p_min=0.1, p_max=100., n_min=0
     return periods_out
     
 
-def relative_root_mean_squared_error(true, pred):
-    '''Return the relative root mean squared error (RRMSE)
-    
-    Given a list of predicted and true values, calculate the RRMSE
-    
+def plotticks_shuffle(crit, xpos, ypos, ax):
+    '''Simple function for plotting tick marks on the shuffle plots
+
     parameters
     ----------
-    true : `Iter`
-        The set of true (measured) values
-    pred : `Iter`
-        The set of predicted (model) values
+    crit : `bool`
+        True or False according to a given criteria
+    xpos : `float`
+        x-position for the text (in normalised coordinates)
+    ypos : `float`
+        y-position for the text (in normalised coordinates)
+    ax : `matplotlib.pyplot.axes`
+        the axes object to apply the tickmarks to.
         
     returns
     -------
-    rrmse : `float`
-        The RRMSE value
+    ax : `matplotlib.pyplot.axes`
+        the axes object to apply the tickmarks to (after the tickmarks)  
     '''
-    num = np.sum(np.square(true - pred))
-    den = np.sum(np.square(pred))
-    squared_error = num/den
-    rrmse = np.sqrt(squared_error)
-    return rrmse
+    if crit:
+        ax.text(xpos, ypos, "\u2714", fontsize=30, color='green',
+                transform=ax.transAxes, horizontalalignment='right')
+    else:
+        ax.text(xpos, ypos, "\u2718", fontsize=30, color='red',
+                transform=ax.transAxes, horizontalalignment='right')
+    return ax
 
 
-
-def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_min=0.05, p_max=100., n_min=.1, n_max=1., bin1=50, bin2=1000, n_peaks=4, make_plot_shuf=True, name_plot_shuf='example_plot_shuf.png'):
+def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
+                  p_min=0.05, p_max=100., n_min=.1, n_max=1., bin1=50,
+                  bin2_fac=10, n_peaks=4, make_shuf_plot=False,
+                  shuf_dir='plot_shuf',
+                  name_shuf_plot='example_shuf_plot.png'):
     '''Choose the period from original periodogram, or from the shuffled method
 
     In the case of low signal to noise, the original periodogram analysis
@@ -711,15 +666,29 @@ def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_m
     The algorithm works as follows:
     | 1. run the shuffle_periodogram function.
     | 2. construct the period histogram from the results.
-    | 3. find the highest population bin, and select all neighbouring (period) values either side until this value becomes less than the median.
-    | 4. calculate the number of periods that lie within and outside the period range found in part (2)
-    | 5. construct another histogram for all periods that are within the range calculated in part (2)
+    | 3. find the highest population bin, and select all neighbouring (period)
+         values either side until this value becomes less than the median.
+    | 4. calculate the number of periods that lie within and outside the period
+         range found in part (2)
+    | 5. construct another histogram for all periods that are within the range
+         calculated in part (2)
     | 6. normalise the histogram so the whole distribution integrates to 1.0.
-    | 7. ensure that the number of bins in the new histogram must be greater than 3, the number of periods outside the range is less than 0.5, and that the histogram must not peak at the start or end of the distribution. The process only continues if these conditions pass. Otherwise the shuffled periodogram value is not returned.
+    | 7. ensure that the number of bins in the new histogram must be greater
+         than 3, the number of periods outside the range is less than 0.5, and
+         that the histogram must not peak at the start or end points.
+         The process only continues if these conditions pass. Otherwise the
+         shuffled periodogram value is not returned.
     | 8. fit a Gaussian to the new histogram.
     | 9. calculate "rrmse", the relative root mean square error.
-    | 10. if rrmse < 0.5, the FWHM to the Gaussian fit is < 0.05, and the final shuffled period (centroid of the Gaussian) differs from the original period measurement by more than 10%, then return the shuffled periodogram result as the determined period. We set the power output=1.0, and the uncertainty is given by the sigma-value calculated in the Gaussian fit.
-    | 11. finally, replace each set of nth "period, power and error" with the (n+1)th set, so the output set from the shuffled periodogram values take the highest significance. 
+    | 10. if rrmse < 0.5, the FWHM to the Gaussian fit is < 0.05, and the final
+          shuffled period (centroid of the Gaussian) differs from the original
+          period measurement by more than 10%, then return the shuffled
+          periodogram result as the determined period. We set the power
+          output=1.0, and the uncertainty is given by the sigma-value
+          calculated in the Gaussian fit.
+    | 11. finally, replace each set of nth "period, power and error" with the
+          (n+1)th set, so the output set from the shuffled periodogram values
+          take the highest significance. 
 
     parameters
     ----------
@@ -728,7 +697,7 @@ def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_m
     LS_dict : `dict`
         The dictionary of periodogram results produced in initialise_LS_dict
         and modified by get_periodogram_peaks
-    shuffle_sections : `bool`, optional, default=False
+    shuf_per : `bool`, optional, default=False
         Choose to run the shuffled period analysis (True=yes, False=no)
     n_shuf_runs : `int`, optional, default=5000
         The number of measurements to be made in shuffle_periodogram
@@ -744,12 +713,18 @@ def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_m
         in shuffle_periodogram
     bin1 : `int`, optional, default=50
         The number of histogram bins for the initial period distribution
-    bin2 : `int`, optional, default=1000
-        The number of histogram bins for the refined period distribution
+    bin2_fac : `int`, optional, default=10
+        The factor to use in calculating the number of histogram bins for the
+        refined period distribution. The total number is the product of
+        bin2_fac and the number of bins from the initial period distribution
+        that are within the region surrounding the maximum bin occupancy.
     n_peaks : `int`, optional, default=4
         The number of peaks calculated in get_periodogram_peaks
-    make_plot_shuf : `bool`, optional, default=False
+    make_shuf_plot : `bool`, optional, default=False
         Choose to plot the outputs of the period distribution.
+    shuf_dir : `str`, optional, default='plot_shuf'
+        The name of the directory to save the plots of the shuffled period
+        analysis. 
     name_plot_shuf : `str`, optional, default='example_plot_shuf.png'
         Choose the file name to save the period distribution plot.
 
@@ -757,44 +732,83 @@ def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_m
     -------
     Nothing returned, the LS_dict dictionary is updated with new parameters.
     '''
-    if shuffle_sections:
+    if shuf_per:
+        logger.info(f'Running the shuffle period algorithm.')
         try:
-            period_arr = shuffle_periodogram(cln_lc, n_shuf_runs=n_shuf_runs, p_min=p_min, p_max=p_max, n_min=n_min, n_max=n_max)
-            num_log10_per1, log10_per1 = np.histogram(np.log10(period_arr), bins=bin1)
+#1) run the shuffle_periodogram function.
+            period_arr = shuffle_periodogram(cln_lc, n_shuf_runs=n_shuf_runs,
+                                             p_min=p_min, p_max=p_max,
+                                             n_min=n_min, n_max=n_max)
 
-            ind_others = get_next_peak(num_log10_per1, option=np.median(num_log10_per1))
+#2) construct the period histogram from the results.
+            num_log10_per1, log10_per1 = np.histogram(np.log10(period_arr),
+                                                      bins=bin1)
+            diff_log10_per1 = np.diff(log10_per1)[0]
+
+#3) find the highest population bin, and select all neighbouring (period) 
+#   values either side until this value becomes less than the median.
+            ind_others = get_next_peak(num_log10_per1,
+                                       option=5.*np.median(num_log10_per1))
             ind_log10_per = np.delete(np.arange(len(log10_per1)-1), ind_others)
+
+#4) calculate the number of periods that lie within and outside the period
+#   range found in part (2)
             n_others = np.sum(num_log10_per1[ind_others])
             n_log10 = np.sum(num_log10_per1[ind_log10_per])
 
-            x_l, x_u = log10_per1[ind_log10_per[0]], log10_per1[ind_log10_per[-1]]
+            x_l = log10_per1[ind_log10_per[0]]
+            x_u = log10_per1[ind_log10_per[-1]]
+            n_bin = (log10_per1 > (x_l - diff_log10_per1)) & \
+                    (log10_per1 < (x_u + diff_log10_per1))
 
-            num_log10_per2, log10_per2 = np.histogram(np.log10(period_arr), bins=bin2, range=(x_l, x_u))
-            log10_per2 = np.array([(log10_per2[i]+log10_per2[i+1])/2. for i in range(len(log10_per2)-1)])
+#5) construct another histogram for all periods that are within the range
+#   calculated in part (2)
+            num_log10_per2, log10_per2 = np.histogram(np.log10(period_arr),
+                                                      bins=bin2_fac*np.sum(n_bin),
+                                                      range=(x_l, x_u))
+            log10_per2 = np.array([(log10_per2[i]+log10_per2[i+1])/2.
+                                  for i in range(len(log10_per2)-1)])
+
+#6) normalise the histogram so the whole distribution integrates to 1.0.
             num_log10_per2 = num_log10_per2/np.sum(num_log10_per2)
 
-            gauss_plot = False
-            if (len(ind_log10_per) > 3) & \
-               (n_log10/(n_log10+n_others) > 0.5) & \
-               (np.argmax(num_log10_per2) != 0) & \
-               (np.argmax(num_log10_per2) != len(num_log10_per2)-1):
-                Gauss_param_log10_per, Gauss_log10_per = get_Gauss_params_pg(log10_per2, num_log10_per2, max_power=1.2*max(num_log10_per2))
-                if len(Gauss_param_log10_per) != 0:
-                    gauss_plot = True
-                obs, exp, n_df = num_log10_per2, Gauss_log10_per, len(Gauss_log10_per)-len(Gauss_param_log10_per)-1
+#7) ensure that the number of bins in the new histogram must be greater than 3,
+#   the number of periods outside the range is less than 0.5, and that the
+#   histogram must not peak at the start or end of the distribution. The 
+#   process only continues if these conditions pass. Otherwise the shuffled
+#   periodogram value is not returned.
+            crit_1, crit_2 = False, False
+            crit_1a = (len(ind_log10_per) > 3)
+            crit_1b = (n_log10/(n_log10+n_others) > 0.5)
+            crit_1c = (np.argmax(num_log10_per2) != 0) & \
+                      (np.argmax(num_log10_per2) != len(num_log10_per2)-1)
+            crit_2a, crit_2b, crit_2c = False, False, False
+            
+            if crit_1a & crit_1b & crit_1c:
+                crit_1 = True
 
-                rrmse = relative_root_mean_squared_error(obs, exp)
+#8) fit a Gaussian to the new histogram.
+                Gauss_param_log10_per, Gauss_log10_per = get_Gauss_params_pg(log10_per2, num_log10_per2, max_power=1.2*max(num_log10_per2))
+
+#9) calculate "rrmse", the relative root mean square error.
+                rrmse = relative_root_mean_squared_error(num_log10_per2,
+                                                         Gauss_log10_per)
 
                 p_shuf = 10**(Gauss_param_log10_per[1])
                 p_shufu = 10**(Gauss_param_log10_per[1] + Gauss_param_log10_per[2])
                 p_shufl = 10**(Gauss_param_log10_per[1] - Gauss_param_log10_per[2])
                 p_shuf_err = 0.5*(p_shufu-p_shufl)
-                
-                if (rrmse < 0.5) & \
-                   (Gauss_param_log10_per[2] < 0.05) & \
-                   (((p_shuf/LS_dict['period_1'])<0.9) | ((p_shuf/LS_dict['period_1'])>1.1)):
 
-                    LS_dict['shuffle_period'] = 1
+#10) if rrmse < 0.5, the FWHM to the Gaussian fit is < 0.05, and the final shuffled period (centroid of the Gaussian) differs from the original period measurement by more than 10%, then return the shuffled periodogram result as the determined period. We set the power output=1.0, and the uncertainty is given by the sigma-value calculated in the Gaussian fit.
+                crit_2a = (rrmse < 0.5)
+                crit_2b = (Gauss_param_log10_per[2] < 0.05)
+                crit_2c = (((p_shuf/LS_dict['period_1'])<0.9) | \
+                          ((p_shuf/LS_dict['period_1'])>1.1))
+
+                if crit_2a & crit_2b & crit_2c:
+                    crit_2 = True
+#11) finally, replace each set of nth "period, power and error" with the (n+1)th set, so the output set from the shuffled periodogram values take the highest significance.
+                    LS_dict['shuffle_flag'] = 1
                     LS_dict['period_shuffle'] = p_shuf
                     LS_dict['period_shuffle_err'] = p_shuf_err
                     for i in range(2,n_peaks+1):
@@ -803,25 +817,35 @@ def shuffle_check(cln_lc, LS_dict, shuffle_sections=False, n_shuf_runs=5000, p_m
                     LS_dict['period_1'] = p_shuf
                     LS_dict['power_1'] = 1.0
                     LS_dict['Gauss_1'] = [1.0, p_shuf, p_shuf_err]
+                else:
+                     logger.warning(f'failed second set of criteria: 2a={crit_2a}, 2b={crit_2b}, 2c={crit_2c}')
+            else:
+                logger.warning(f'failed first set of criteria: 1a={crit_1a}, 1b={crit_1b}, 1c={crit_1c}')            
 
-            if make_plot_shuf:
-                fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12,3))
+            if make_shuf_plot:
+                fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(9,3))
                 ax[0].set_xlabel('$\log_{10}$period [d]')
                 ax[0].set_ylabel('number of trials')
                 ax[0].hist(np.log10(period_arr), bins=bin1)
-                ax[0].axhline(np.median(num_log10_per1), color='darkorange')
+                ax[0].axhline(5.*np.median(num_log10_per1), linestyle='--',
+                              color='darkorange', linewidth=0.5)
+                ax[0].axvline(x_l, color='darkorange', linewidth=0.5)
+                ax[0].axvline(x_u, color='darkorange', linewidth=0.5)
                 ax[1].set_xlabel('$\log_{10}$period [d]')
                 ax[1].set_ylabel('normalised PDF')
                 ax[1].plot(log10_per2, num_log10_per2)
-                if gauss_plot:
-                    ax[1].plot(log10_per2, Gauss_log10_per, color='darkorange')
+                
+                plotticks_shuffle(crit_1a, 0.94, 0.60, ax[1])
+                plotticks_shuffle(crit_1b, 0.94, 0.50, ax[1])
+                plotticks_shuffle(crit_1c, 0.94, 0.40, ax[1])
+                plotticks_shuffle(crit_2a, 0.99, 0.60, ax[1])
+                plotticks_shuffle(crit_2b, 0.99, 0.50, ax[1])
+                plotticks_shuffle(crit_2c, 0.99, 0.40, ax[1])
+                if crit_2:
+                    ax[1].plot(log10_per2, Gauss_log10_per, linestyle='--', color='darkorange')
                     nl = '\n'
                     ax[1].text(0.99, 0.85, f"$P_{{\\rm rot}}$ (shuf) [d]{nl}{p_shuf:.3f}+/-{p_shuf_err:.3f}", transform=ax[1].transAxes, horizontalalignment='right')
-                    ax[1].text(0.99, 0.20, "\u2714", fontsize=30, color='green', transform=ax[1].transAxes, horizontalalignment='right')
-                else:
-                    ax[1].text(0.99, 0.2, "\u2718", fontsize=30, color='red', transform=ax[1].transAxes, horizontalalignment='right')
-                plt.savefig(name_plot_shuf, bbox_inches='tight')
-
+                plt.savefig(f'{shuf_dir}/{name_shuf_plot}', bbox_inches='tight')
         except:
             logger.error(f'An error occured with the the period shuffling method.')
             LS_dict['period_shuffle'] = -9
@@ -872,6 +896,7 @@ def make_phase_curve(LS_dict, ls, n_sca=10):
     pha, cyc = np.array(pha), np.array(cyc)
     f = np.argsort(pha)
     p = np.argsort(tdiff/LS_dict['period_1'])
+
     pha_fit, nf_fit, ef_fit, cyc_fit = pha[f], nflux[f], enflux[f], cyc[f].astype(int)
     pha_plt, nf_plt, ef_plt, cyc_plt = pha[p], nflux[p], enflux[p], cyc[p].astype(int)
     try:
@@ -913,9 +938,7 @@ def make_phase_curve(LS_dict, ls, n_sca=10):
     LS_dict['Ndata'] = Ndata
 
 
-
-
-def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, check_jump=False, shuffle_sections=False, n_shuf_runs=5000, n_peaks=4):
+def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_target', n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_peaks=4, check_jump=False, shuf_per=False, n_shuf_runs=5000, make_shuf_plot=False, shuf_dir='shuf_plots', name_shuf_plot='example_shuf_plot.png'):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
 
     parameters
@@ -928,10 +951,13 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
         | "lc_part" -> An running index describing the various contiguous sections
     lc_type : `str`, optional, default='reg'
         A label designating whether the lightcurve uses the original or CBV-corrected flux.
-    name_pg : `string`, optional, default='pg_target'
-        A file name which the periodogram output will be saved to.
+    ref_name : `str`, optional, default='targets'
+        The reference name for each subdirectory which will connect all output
+        files.
     pg_dir : `string`, optional, default='pg'
         The name of the directory to store the periodogram data
+    name_pg : `string`, optional, default='pg_target'
+        A file name which the periodogram output will be saved to.
     n_sca : `int`, optional, default=10
         The number of evenly-split lightcurve parts used to measure the flux scatter.
     p_min_thresh : `float`, optional, default=0.05
@@ -940,15 +966,21 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
         The maximum period (in days) to be calculated.
     samples_per_peak : `int`, optional, default=10
         The number of samples to measure in each periodogram peak.
+    n_peaks : `int`, optional, default=4
+        The number of peaks calculated in get_periodogram_peaks
     check_jump : `bool`, optional, default=False
         Choose to check the lightcurve for jumpy data, using the "check_for_jumps"
         function.
-    shuffle_sections : `bool`, optional, default=False
+    shuf_per : `bool`, optional, default=False
         Choose to run the shuffled period analysis (True=yes, False=no)
     n_shuf_runs : `int`, optional, default=5000
         The number of measurements to be made in shuffle_periodogram
-    n_peaks : `int`, optional, default=4
-        The number of peaks calculated in get_periodogram_peaks
+    make_shuf_plot : `bool`, optional, default=False
+        Choose to make a plot for the shuffled period analysis
+    shuf_dir : `str`, optional, default='shuf_plots'
+        The name of the directory to save the plots of the shuffled period analysis. 
+    name_shuf_plot : `str`, optional, default='example_shuf_plot.png'
+        A file name which the plots of the shuffled period analysis will be saved to.
 
     returns
     -------
@@ -993,19 +1025,19 @@ def run_ls(lc_data, lc_type='reg', name_pg='pg_target', pg_dir='pg', n_sca=10, p
     '''
 
     LS_dict, cln_lc, ls = initialise_LS_dict(lc_data, check_jump=check_jump)
-    logger.info('LS dictionary successfully initialised.')
+    logger.info(f'LS dictionary successfully initialised: {name_pg}, {lc_type}.')
 
     write_periodogram(LS_dict, name_pg=name_pg, lc_type=lc_type, pg_dir=pg_dir)
-    logger.info('Periodogram results written to file.')
+    logger.info(f'Periodogram results written to file.')
         
     get_periodogram_peaks(LS_dict, n_peaks=n_peaks)
     logger.info(f'Top {n_peaks} peaks recorded to dictionary.')
 
-    shuffle_check(cln_lc, LS_dict, shuffle_sections=shuffle_sections, n_shuf_runs=n_shuf_runs, p_min=p_min_thresh, p_max=p_max_thresh, n_min=1./10., n_max=1., bin1=50, bin2=1000, n_peaks=n_peaks, make_plot_shuf=False)
+    shuffle_check(cln_lc, LS_dict, shuf_per=shuf_per, n_shuf_runs=n_shuf_runs, p_min=p_min_thresh, p_max=p_max_thresh, n_min=1./10., n_max=1., bin1=50, bin2_fac=10, n_peaks=n_peaks, make_shuf_plot=make_shuf_plot, shuf_dir=shuf_dir, name_shuf_plot=name_shuf_plot)
     logger.info('Periodogram successfully shuffled.')
 
     make_phase_curve(LS_dict, ls, n_sca=n_sca)
-    logger.info('Phase curve details stored to dictionary.')
+    logger.info(f'Phase curve details stored to dictionary.')
     return LS_dict
 
 

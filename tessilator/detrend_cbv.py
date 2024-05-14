@@ -4,7 +4,10 @@ Alexander Binks & Moritz Guenther, December 2024
 
 Licence: MIT 2024
 
-This module contains the functions needed to perform the co-trending basis vector corrections to the TESS lightcurves, if required. The functions were originally designed for Kepler-data analysis, and written by Suzanne Aigrain -> https://github.com/saigrain/CBVshrink
+This module contains the functions needed to perform the co-trending basis
+vector corrections to the TESS lightcurves, if required. The functions were
+originally designed for Kepler-data analysis, and written by Suzanne Aigrain
+-> https://github.com/saigrain/CBVshrink
 '''
 
 ###############################################################################
@@ -30,7 +33,7 @@ import pylab as pl
 
 # Local application
 import scipy.linalg, scipy.special
-from .logger import logger_tessilator
+from .file_io import logger_tessilator
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -39,11 +42,6 @@ from .logger import logger_tessilator
 
 # initialize the logger object
 logger = logger_tessilator(__name__)
-
-
-
-
-
 
 
 
@@ -73,6 +71,7 @@ def logdet(a):
     step2 = np.diag(step1.T)
     out = 2. * np.sum(np.log(step2), axis=0)
     return out
+
 
 def bayes_linear_fit_ard(X, y):
     '''
@@ -223,6 +222,7 @@ def cdpp(time, flux, dfilt = 2.0, bl_sz = 13, exclude=None, plot = False):
 
     return cdpp
 
+
 def medransig(array):
     '''calculate the medransig'''
     l = np.isfinite(array)
@@ -235,27 +235,6 @@ def medransig(array):
     l = np.isfinite(diff)
     sig = 1.48 * np.median(np.abs(diff[l]))
     return med, ran * 1e6, sig * 1e6
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def fit_basis(flux, basis, scl=None):
@@ -301,7 +280,6 @@ def fit_basis(flux, basis, scl=None):
     return weights
 
 
-
 def apply_basis(weights, basis):
     '''Calculate the dot product between the weights and the CBVs.
     
@@ -321,7 +299,6 @@ def apply_basis(weights, basis):
 
     dot_prod_res = np.dot(weights, basis)
     return dot_prod_res
-
 
 
 def fixed_nb(flux, cbv, nB=4, use=None, doPlot=True):
@@ -366,7 +343,6 @@ def fixed_nb(flux, cbv, nB=4, use=None, doPlot=True):
         pl.xlabel('Observation number')
         pl.xlabel('Flux')
     return corrected_flux, weights
-
 
 
 def sel_nb(flux, cbv, nBmax=None, use=None):
@@ -437,10 +413,8 @@ def sel_nb(flux, cbv, nBmax=None, use=None):
     sig_opt = sig_multi[jj]
     return (nb_opt, flux_opt, weights_opt), \
       (corr_flux_multi, weights_multi)
-      
-      
-      
-      
+
+
 def interpolate_cbv(cbv_file, lc, type_cbv='Single'):
     '''Selects the type of CBV correction and applies them to the lightcurve
     
@@ -480,7 +454,6 @@ def interpolate_cbv(cbv_file, lc, type_cbv='Single'):
             v_new[:,i] = np.interp(lc["time"], time, data[f'{v}'])
     v_fin = v_new.T
     return v_fin
-
 
 
 def get_cbv_scc(scc, lc):

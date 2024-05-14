@@ -4,7 +4,7 @@ import math
 import matplotlib.pyplot as plt
 from scipy.stats import median_abs_deviation
 from ..lc_analysis import aic_selector
-from ..logger import logger_tessilator
+from ..file_io import logger_tessilator
 
 
 logger = logger_tessilator('aic_tests')
@@ -12,7 +12,7 @@ logger = logger_tessilator('aic_tests')
 start, stop, typical_timestep = 0, 27, 0.007 # in days
 period = 3.5
 times = np.linspace(start=start+typical_timestep, stop=stop, num=int(stop/typical_timestep), endpoint=True)
-y_err = 0.0005
+y_err = 0.000000000005
 
 text_x, text_y = 0.05, 0.95
 
@@ -45,8 +45,10 @@ def get_coords(curve, err=False):
 
 def run_aic_tests(coeff_type, err, def_name='aic_test'):
     x, y = get_coords(coeff_type, err=err)
-    poly_ord, coeffs = aic_selector(x, y, poly_max=3)
+    print('len: ', len(coeff_type))
+    poly_ord, coeffs = aic_selector(x, y, poly_max=len(coeff_type))
     makeplot(x, y, def_name, coeffs)
+    print(len(coeff_type))
     for i in range(len(coeff_type)):
         assert(np.isclose(coeffs[i], coeff_type[i], rtol=1e-01))
     assert(len(coeffs) == len(coeff_type))
