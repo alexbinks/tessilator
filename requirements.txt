@@ -1,0 +1,2 @@
+astroquery : conda
+pyinputplus : pip
