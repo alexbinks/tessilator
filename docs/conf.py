@@ -58,7 +58,7 @@ release = package.__version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'pyramid'
-html_static_path = ['_static']
+#html_static_path = ["_static"]
 html_sidebars = {
     '**': [
         'globaltoc.html',
