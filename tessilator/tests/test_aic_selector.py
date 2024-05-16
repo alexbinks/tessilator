@@ -25,7 +25,7 @@ para_coeffs = [1.5, 0.75, 3.]
 #########################################
 ######FUNCTIONS NEEDED TO RUN TESTS######
 #########################################
-def makeplot(x, y, def_name, coeffs):
+def make_plot(x, y, def_name, coeffs):
     fig, ax = plt.subplots(figsize=(10,3))    
     ax.scatter(x, y)
     ax.text(text_x, text_y, coeffs, transform=ax.transAxes)
@@ -43,12 +43,11 @@ def get_coords(curve, err=False):
 
 
 
-def run_aic_tests(coeff_type, err, def_name='aic_test'):
+def run_aic_tests(coeff_type, err, def_name='aic_test', makeplot=False):
     x, y = get_coords(coeff_type, err=err)
-    print('len: ', len(coeff_type))
     poly_ord, coeffs = aic_selector(x, y, poly_max=len(coeff_type))
-    makeplot(x, y, def_name, coeffs)
-    print(len(coeff_type))
+    if makeplot:
+        make_plot(x, y, def_name, coeffs)
     for i in range(len(coeff_type)):
         assert(np.isclose(coeffs[i], coeff_type[i], rtol=1e-01))
     assert(len(coeffs) == len(coeff_type))
@@ -68,24 +67,24 @@ def test_aic_parabola_fail():
 
 def test_aic_flat_no_err():
     '''TRY A COMPLETELY FLAT LIGHTCURVE'''
-    run_aic_tests(flat_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(flat_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
 
 def test_aic_flat_with_err():
     '''TRY A FLAT LIGHTCURVE WITH RANDOM GAUSSIAN Y-ERRORS'''
-    run_aic_tests(flat_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(flat_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
 
 def test_aic_linear_no_err():
     '''TRY A COMPLETELY LINEAR LIGHTCURVE'''
-    run_aic_tests(line_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(line_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
 
 def test_aic_linear_with_err():
     '''TRY A LINEAR LIGHTCURVE WITH RANDOM GAUSSIAN Y-ERRORS'''
-    run_aic_tests(line_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(line_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
 
 def test_aic_parabola_no_err():
     '''TRY A COMPLETELY PARABOLIC LIGHTCURVE'''
-    run_aic_tests(para_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(para_coeffs, err=False, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
 
 def test_aic_parabola_with_err():
     '''TRY A PARABOLIC LIGHTCURVE WITH RANDOM GAUSSIAN Y-ERRORS'''
-    run_aic_tests(para_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name)
+    run_aic_tests(para_coeffs, err=True, def_name=inspect.stack()[0][0].f_code.co_name, makeplot=False)
