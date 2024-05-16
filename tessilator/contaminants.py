@@ -30,7 +30,7 @@ import warnings
 import inspect
 import sys
 import traceback
-
+import math
 
 # Third party imports
 import numpy as np
@@ -166,9 +166,9 @@ def flux_fraction_contaminant(pix_sep, s, d_thr=5.e-6):
         while True:
             n_old = n_0
             n_sign_old = n_sign
-            sk = np.sum([(s**(k)/np.math.factorial(k)) for k in range(0,n+1)])
+            sk = np.sum([(s**(k)/math.factorial(k)) for k in range(0,n+1)])
             sx = 1.0 - (np.exp(-s)*sk)
-            n_0 = ((t**n)/np.math.factorial(n))*sx
+            n_0 = ((t**n)/math.factorial(n))*sx
             n_sign = np.sign(n_0-n_old)
             n_z += n_0
 
