@@ -824,14 +824,14 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
 
             if make_shuf_plot:
                 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(9,3))
-                ax[0].set_xlabel('$\log_{10}$period [d]')
+                ax[0].set_xlabel(r"$\log_{10}$period [d]")
                 ax[0].set_ylabel('number of trials')
                 ax[0].hist(np.log10(period_arr), bins=bin1)
                 ax[0].axhline(5.*np.median(num_log10_per1), linestyle='--',
                               color='darkorange', linewidth=0.5)
                 ax[0].axvline(x_l, color='darkorange', linewidth=0.5)
                 ax[0].axvline(x_u, color='darkorange', linewidth=0.5)
-                ax[1].set_xlabel('$\log_{10}$period [d]')
+                ax[1].set_xlabel(r"$\log_{10}$period [d]")
                 ax[1].set_ylabel('normalised PDF')
                 ax[1].plot(log10_per2, num_log10_per2)
                 

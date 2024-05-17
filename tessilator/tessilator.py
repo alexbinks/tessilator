@@ -69,26 +69,28 @@ from .tess_stars2px import tess_stars2px_function_entry
 logger = logger_tessilator(__name__)
 
 
+STARTUP_STRING = r"""
+**********************************************************************
+****|******_*********_*********_*********_*********_*********_********
+****|*****/*\*******/*\*******/*\*******/*\*******/*\*******/*\*******
+****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******
+****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****
+****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****
+****|_____________________________________________________________****
+**********************************************************************
+**********************WELCOME TO THE TESSILATOR***********************
+********The one-stop shop for measuring TESS rotation periods*********
+**********************************************************************
+**********************************************************************
+If this package is useful for research leading to publication we
+would appreciate the following acknowledgement:
+'The data from the Transiting Exoplanet Survey Satellite (TESS) was
+acquired using the tessilator software package (Binks et al. 2024).'
+"""
 
+print(STARTUP_STRING)
 start = datetime.now()
-print("\n")
-print("**********************************************************************")
-print("****|******_*********_*********_*********_*********_*********_********")
-print("****|*****/*\*******/*\*******/*\*******/*\*******/*\*******/*\*******")
-print("****|****/***\*****/***\*****/***\*****/***\*****/***\*****/***\******")
-print("****|***/*****\***/*****\***/*****\***/*****\***/*****\***/*****\*****")
-print("****|**/*******\_/*******\_/*******\_/*******\_/*******\_/*******\****")
-print("****|_____________________________________________________________****")
-print("**********************************************************************")
-print("**********************WELCOME TO THE TESSILATOR***********************")
-print("********The one-stop shop for measuring TESS rotation periods*********")
-print("**********************************************************************")
-print("**********************************************************************")
-print("\n")
-print("If this package is useful for research leading to publication we")
-print("would appreciate the following acknowledgement:")
-print("'The data from the Transiting Exoplanet Survey Satellite (TESS) was")
-print("acquired using the tessilator software package (Binks et al. 2024).'")
+
 print("\n")
 print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
