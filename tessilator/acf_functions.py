@@ -6,8 +6,6 @@
 # imports
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import lightkurve as lk
 from statsmodels.tsa.stattools import acf
 from scipy.signal import find_peaks, peak_prominences
 from scipy.optimize import curve_fit
@@ -477,19 +475,25 @@ def process_LightCurve(lc, bs=cadence, precleaned=False,
         lc (:obj:`LightCurve obj`): the cleaned lightcurve.
         bs (:obj:`float`): the size of the bins, in units of seconds.
         precleaned (:obj:`bool`, optional): set to True if the provided `lc` argument has already been cleaned and normalized.
-        transit (:obj:`array`, optional): array of transit paramters like [period, epoch, duration] in units of days each entry can be an array if there are multiple planets. Also used by `default_cleaning_func`.
+        transit (:obj:`array`, optional): array of transit parameters like [period, epoch, duration] in units of days each entry can be an array if there are multiple planets. Also used by `default_cleaning_func`.
         max_lag (:obj:`float`, optional): the maximum lag to which to calculate the ACF in units of days.
         smooth (:obj:`int`, optional): if supplied, will apply smoothing to the LC before fitting parabolas by convolving with a gaussian with a FWHM equal to this value.
         sector_label (:obj:`int` or :obj:`str`, optional): tallows you to set a custom sector label, must be castable to a string.
-        prot_prior_func (:obj:`func`, optional): the function to be used to idntify the period_guess_index (pgi) for the rotation period. Defaults to `calc_fft_pgi()`
+        prot_prior_func (:obj:`func`, optional): the function to be used to identify the period_guess_index (pgi) for the rotation period. Defaults to `calc_fft_pgi()`
         prot_prior_func_kwargs (:obj:`dict`, optional): keyword arguments for the `prot_prior_func` function.
 
-    Returns:
-    Two parameters
-
-        - fits_result (:obj:`dict`): dictionary containing information on the LC and ACF.
-        - process_result (:obj:`dict`): dictionary containing information on the parabola fits.
+    Returns
+    --------
+    fits_result : dict
+        dictionary containing information on the LC and ACF.
+     process_result : dict
+         dictionary containing information on the parabola fits.
     """
+    if (prot_prior not in ["fft", "custom"]) and not isinstance(prot_prior, int):
+        raise ValueError(
+            r"Invalid argument passed to prot_prior. Please use 'fft', 'custom', or an int number."
+        )
+
     lc_clean = lc
     
     # calculate the acf
@@ -499,19 +503,17 @@ def process_LightCurve(lc, bs=cadence, precleaned=False,
     fits_result['time_raw'] = lc['time']
     fits_result['flux_raw'] = lc['nflux_dtr']
     fits_result['flux_err_raw'] = lc['nflux_err']
-    
+
     # calculate parabola fits
-    # first, check what kind of prior was passed
     if prot_prior == 'fft':
         process_result = calc_parabolas(fits_result['acf'], bs=bs, prot_prior_func=calc_fft_pgi)
     elif prot_prior == 'custom':
         process_result = calc_parabolas(fits_result['acf'], bs=bs, prot_prior_func=prot_prior_func, 
                                 prot_prior_func_kwargs=prot_prior_func_kwargs)
-    elif type(prot_prior)==int :
-        process_result = calc_parabolas(fits_result['acf'], bs=bs, prot_prior_func=prot_prior)
-    else:
-        process_resutl = {}
-        print('Invalid argument passed to prot_prior. Please use \'fft\', \'custom\', or a float.')
+    else:  # it's an int. The check above only allows 'fft', 'custom', or an int
+        process_result = calc_parabolas(
+            fits_result["acf"], bs=bs, prot_prior_func=prot_prior
+        )
 
     return fits_result, process_result
 
