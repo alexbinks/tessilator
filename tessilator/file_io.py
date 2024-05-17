@@ -1,5 +1,11 @@
+"""
+
+Alexander Binks & Moritz Guenther, December 2024
+
+Licence: MIT 2024
+"""
+
 import os
-from astropy.table import Table
 import logging
 import sys
 

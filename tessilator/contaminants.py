@@ -25,17 +25,15 @@ that of the target, or from neighbouring sources.
 ###############################################################################
 ####################################IMPORTS####################################
 ###############################################################################
-#Internal
-import warnings
+# Internal
 import inspect
 import sys
-import traceback
 import math
 
 # Third party imports
 import numpy as np
 from astroquery.gaia import Gaia
-from astropy.table import Table, Row
+from astropy.table import Table
 
 
 # Local application
