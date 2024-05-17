@@ -8,7 +8,9 @@ from ..aperture import aper_run
 from glob import glob
 from ..file_io import logger_tessilator
 
-
+makelog=False
+if makelog:
+    logger = logger_tessilator('aper_run_tests')
 
 def test_aper_run():
 

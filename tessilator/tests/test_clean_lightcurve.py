@@ -22,6 +22,11 @@ from astropy.table import Table
 from astropy.io import ascii
 from glob import glob
 
+makelog=False
+if makelog:
+    logger = logger_tessilator('clean_lightcurve_tests')
+
+
 targ_dir = './targets_tests'
 
 target_roots = glob('./targets_tests/*')

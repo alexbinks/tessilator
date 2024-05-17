@@ -6,8 +6,9 @@ from scipy.stats import median_abs_deviation
 from ..lc_analysis import aic_selector
 from ..file_io import logger_tessilator
 
-
-logger = logger_tessilator('aic_tests')
+makelog=False
+if makelog:
+    logger = logger_tessilator('aic_tests')
 
 start, stop, typical_timestep = 0, 27, 0.007 # in days
 period = 3.5

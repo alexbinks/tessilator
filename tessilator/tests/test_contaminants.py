@@ -6,6 +6,11 @@ sys.path.append('..')
 from ..contaminants import flux_fraction_contaminant
 from ..file_io import logger_tessilator
 
+makelog=False
+if makelog:
+    logger = logger_tessilator('contaminants_tests')
+
+
 def test_biser_millman():
     t_targ0 = 0.0**2/(2.0*0.65**(2))
     t_targ4 = 0.0**2/(2.0*0.65**(2))

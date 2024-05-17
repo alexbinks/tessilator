@@ -13,7 +13,6 @@ from astropy.io import ascii, fits
 import astropy.units as u
 from astropy.stats import akaike_info_criterion_lsq
 from glob import glob
-from ..file_io import logger_tessilator
 
 
 from scipy.stats import median_abs_deviation as MAD
@@ -28,6 +27,13 @@ from ..fixedconstants import pixel_size, exprf, Zpt, eZpt, sec_max
 from ..periodogram import check_for_jumps, gauss_fit, gauss_fit_peak, get_next_peak, get_Gauss_params_pg, logger, mean_of_arrays, run_ls
 from ..contaminants import is_period_cont
 from ..lc_analysis import sin_fit
+from ..file_io import logger_tessilator
+
+makelog=False
+if makelog:
+    logger = logger_tessilator('periodogram_tests')
+
+
 
 start, stop, typical_timestep = 0, 27, 0.007 # in days
 t = np.linspace(start=start+typical_timestep, stop=stop, num=int(stop/typical_timestep), endpoint=True)
@@ -143,3 +149,6 @@ def test_real_targets(p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10)
             assert(period_1 > 5.)
         else:
             assert((period_1/period > 0.8) and (period_1/period < 1.2))
+            
+#if not makelog:
+

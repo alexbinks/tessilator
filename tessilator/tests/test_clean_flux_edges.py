@@ -9,6 +9,10 @@ start, stop, typical_timestep = 0, 27, 0.007 # in days
 period = 3.5
 times = np.linspace(start=start+typical_timestep, stop=stop, num=int(stop/typical_timestep), endpoint=True)
 
+makelog=False
+if makelog:
+    logger = logger_tessilator('clean_flux_edges_tests')
+
 
 def test_flat():
     '''TRY A COMPLETELY FLAT LIGHTCURVE'''
