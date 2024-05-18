@@ -2169,9 +2169,17 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
     suffix_file = f'scc_{scc[0]:02d}_{scc[1]}_{scc[2]}'
     lc_dir = make_dir(f'lc_{suffix_file}', file_ref)
     pg_dir = make_dir(f'pg_{suffix_file}', file_ref)
-    full_run_lc(fits_files, t_targets[ind], make_plots, scc, res_table,
-                keep_data=keep_data, fix_noise=fix_noise, lc_dir=pg_dir,
-                pg_dir=pg_dir)
+    full_run_lc(
+        fits_files,
+        t_targets[ind],
+        make_plots,
+        scc,
+        res_table,
+        keep_data=keep_data,
+        fix_noise=fix_noise,
+        lc_dir=lc_dir,
+        pg_dir=pg_dir,
+    )
 
 
 
