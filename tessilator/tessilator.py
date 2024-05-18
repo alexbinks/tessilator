@@ -26,36 +26,20 @@ from collections.abc import Iterable
 from astropy.table import Table
 from astropy.io import ascii, fits
 from astropy.coordinates import SkyCoord
-import astropy.units as u
 from astroquery.mast import Tesscut
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 
 # Local application imports
-from .aperture import get_xy_pos, calc_rad, aper_run
-from .lc_analysis import get_time_segments, remove_sparse_data, aic_selector,\
-                         relative_root_mean_squared_error, smooth_test,\
-                         norm_choice, detrend_lc, clean_flux_algorithm,\
-                         clean_edges_outlier, clean_edges_scatter,\
-                         run_make_lc_steps, sin_fit, sin_fit_per,\
-                         cbv_fit_test, make_lc
-from .periodogram import check_for_jumps, gauss_fit, gauss_fit_peak,\
-                         get_next_peak, mean_of_arrays, get_Gauss_params_pg,\
-                         initialise_LS_dict, write_periodogram,\
-                         get_periodogram_peaks, shuffle_periodogram,\
-                         plotticks_shuffle, shuffle_check, make_phase_curve,\
-                         run_ls
-from .detrend_cbv import logdet, bayes_linear_fit_ard, savgol_filter,\
-                         block_mean, cdpp, medransig, fit_basis, apply_basis,\
-                         fixed_nb, sel_nb, interpolate_cbv, get_cbv_scc
-from .contaminants import run_sql_query_contaminants,\
-                          flux_fraction_contaminant, contamination,\
-                          is_period_cont
-from .maketable import table_from_simbad, get_twomass_like_name,\
-                       table_from_coords, table_from_table, get_gaia_data
+from .aperture import aper_run
+from .lc_analysis import make_lc
+from .periodogram import run_ls
+from .detrend_cbv import get_cbv_scc
+from .contaminants import contamination, is_period_cont
+from .maketable import get_gaia_data
 from .makeplots import make_plot
-from .fixedconstants import pixel_size, exprf, Zpt, eZpt, sec_max
+from .fixedconstants import sec_max
 from .file_io import logger_tessilator, make_dir, fix_table_format
 from .tess_stars2px import tess_stars2px_function_entry
 

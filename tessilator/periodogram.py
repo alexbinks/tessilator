@@ -16,22 +16,14 @@ import warnings
 
 # Third party imports
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 import sys
 import inspect
 
 from astropy.table import Table
-from astropy.coordinates import SkyCoord
 from astropy.timeseries import LombScargle
-from astropy.wcs import WCS
-from astropy.io import fits
-import astropy.units as u
-from astropy.stats import akaike_info_criterion_lsq
 
 from scipy.stats import median_abs_deviation as MAD
-from scipy.stats import mode
-from scipy.stats import chi2
 
 from scipy.optimize import curve_fit
 import itertools as it

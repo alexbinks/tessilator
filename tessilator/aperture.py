@@ -20,15 +20,12 @@ coordinates to image (x-y) pixels.
 ####################################IMPORTS####################################
 ###############################################################################
 # Internal
-import warnings
 import inspect
 import sys
 
 # Third party
 import numpy as np
-import json
 
-from scipy import stats
 
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
@@ -42,7 +39,7 @@ from photutils.aperture import aperture_photometry, ApertureStats
 
 
 # Local application
-from .fixedconstants import pixel_size, exprf, Zpt, eZpt, sec_max
+from .fixedconstants import Zpt
 from .file_io import logger_tessilator
 ###############################################################################
 ###############################################################################

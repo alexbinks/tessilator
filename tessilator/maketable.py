@@ -21,7 +21,6 @@ import inspect
 
 #Third party
 from astropy.table import Table
-from astropy.io import ascii
 from astroquery.simbad import Simbad
 from astroquery.gaia import Gaia
 from astropy.coordinates import SkyCoord, ICRS

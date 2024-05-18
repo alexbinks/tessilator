@@ -131,18 +131,10 @@ from astropy.time import Time
 import sys
 import datetime
 import json
-try: # Python 3.x
-    from urllib.parse import quote as urlencode
-    from urllib.request import urlretrieve
-    from urllib.parse import urlparse
-except ImportError:  # Python 2.x
-    from urllib import pathname2url as urlencode
-    from urllib import urlretrieve
-    from urlparse import urlparse
-try: # Python 3.x
-    import http.client as httplib 
-except ImportError:  # Python 2.x
-    import httplib
+
+from urllib.parse import quote as urlencode
+from urllib.parse import urlparse
+import http.client as httplib
 import scipy.optimize as opt
 import base64
 

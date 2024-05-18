@@ -11,13 +11,11 @@ Generate pixel images, light-curves and periodogram plots
 ###############################################################################
 ####################################IMPORTS####################################
 ###############################################################################
-#Internal
-import os
+# Internal
 import sys
 import inspect
 
 # Third party
-from astropy.table import Table
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt

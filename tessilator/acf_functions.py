@@ -7,9 +7,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.tsa.stattools import acf
-from scipy.signal import find_peaks, peak_prominences
+from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
-from scipy import stats
 
 # UNIVERSAL VARIABLES
 

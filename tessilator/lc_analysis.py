@@ -24,8 +24,7 @@ which are called by the parent function 'run_make_lc_steps'. The steps are:
 ###############################################################################
 ####################################IMPORTS####################################
 ###############################################################################
-#Internal
-import warnings
+# Internal
 import inspect
 import sys
 
@@ -36,12 +35,10 @@ import os
 import json
 
 from astropy.table import Table
-import astropy.units as u
 from astropy.stats import akaike_info_criterion_lsq
 
 from scipy.stats import median_abs_deviation as MAD
 from scipy.optimize import curve_fit
-from scipy.stats import iqr
 
 import itertools as it
 from operator import itemgetter

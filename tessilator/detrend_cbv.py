@@ -24,9 +24,7 @@ import numpy as np
 import os
 import subprocess
 
-from astropy.table import Table
 from astropy.io import fits
-import astropy.units as u
 
 import pylab as pl
 
