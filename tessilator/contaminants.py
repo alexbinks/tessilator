@@ -122,19 +122,19 @@ def run_sql_query_contaminants(t_target, cont_rad=10., mag_lim=3.,
 
 
 def flux_fraction_contaminant(pix_sep, s, d_thr=5.e-6):
-    '''Quantify the flux contamination from a neighbouring source.
+    r"""Quantify the flux contamination from a neighbouring source.
 
     Calculates the fraction of flux from a neighbouring contaminating source
     that gets scattered into the aperture. The analytic function uses equation
     3b-10 from `Biser & Millman (1965)
     <https://books.google.co.uk/books?id=5XBGAAAAYAAJ>`_, which is a double
     converging sum with infinite limits, given by
-    
+
     .. math::
 
-       f_{\\rm bg} = e^{-t} \sum_{n=0}^{n\\to{\infty}}
-       {\Bigg\{\\frac{t^{n}}{n!}\\bigg[1-e^{-s}\sum_{k=0}^{n}
-       {\\frac{s^{k}}{k!}}} \\bigg]\Bigg\}
+       f_{\rm bg} = e^{-t} \sum_{n=0}^{n\to{\infty}}
+       {\Bigg\{\frac{t^{n}}{n!}\bigg[1-e^{-s}\sum_{k=0}^{n}
+       {\frac{s^{k}}{k!}}} \bigg]\Bigg\}
 
     To solve the equation computationally, the summation terminates once the
     difference from the nth iteration is less than some given threshold value,
@@ -143,20 +143,20 @@ def flux_fraction_contaminant(pix_sep, s, d_thr=5.e-6):
     parameters
     ----------
     pix_sep : `float`
-        The pixel distance between a contaminant and the aperture centre. 
+        The pixel distance between a contaminant and the aperture centre.
     s : `float`
         For a given aperture size, rad (in pixels)
         and an FWHM of the TESS PSF, exprf (set at 0.65 pixels),
-        :math:`s = {\\rm rad}^2/(2.0*{\\rm exprf}^2)`
+        :math:`s = {\rm rad}^2/(2.0*{\rm exprf}^2)`
     d_thr : `float`, optional, default=5.e-6
         The threshold value to stop the summations. When the next component
-        contributes a value which is less than d_thr, the summation ends. 
+        contributes a value which is less than d_thr, the summation ends.
 
     returns
     -------
     frac_flux_in_aperture : `float`
         Fraction of contaminant flux that gets scattered into the aperture.
-    '''
+    """
     n, n_z, n_0, n_sign = 0, 0, 0, 1.
     n_sign_lim = 0
     t = pix_sep**2/(2.0*exprf**(2))
