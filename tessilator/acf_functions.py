@@ -1,7 +1,9 @@
+# Copyright (c) 2022, rae-holcomb
+# Licensed under a 3-clause BSD style license - see other_licenses/acf_functions_license
+# https://github.com/rae-holcomb/SpinSpotter/blob/main/spinspotter/function_library.py
 # Core SpinSpotter Library
-# Created: April 5, 2021
-# Last updated: June 2022 
-# (or possibly more recently, I honestly forget to update this line often)
+# Modified by the Tesslilater team - see git history for details
+
 
 # imports
 import matplotlib.pyplot as plt
