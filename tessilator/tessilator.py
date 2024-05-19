@@ -610,12 +610,12 @@ def make_datarow(t, scc, r, d):
 
 
 
-def make_failrow(t, r, scc):
-    '''Print a line with input data if tessilator fails for a given target
+def make_failrow(t_targets, r, scc):
+    """Print a line with input data if tessilator fails for a given target
 
     parameters
     ----------
-    t : `astropy.table.Table`
+    t_targets : `astropy.table.Table`
         Table of input data for the tessilator, with the following columns:
 
         * name: name of the target (`str`)
@@ -641,7 +641,7 @@ def make_failrow(t, r, scc):
           contaminant and target (optional).
 
         * n_contaminants: number of contaminant sources (optional).
-        
+
         Note that if the contaminantion is not calculated, the final three
         columns are automatically filled with -999 values.
     r : `float`
@@ -651,19 +651,39 @@ def make_failrow(t, r, scc):
 
     returns
     -------
-    dr : `dict`
+    dr : list
         A dictionary entry for the target star containing input data
-    '''
-    if 'log_tot_bg' not in t_target.colnames:
+    """
+    if "log_tot_bg" not in t_targets.colnames:
         t_targets.add_column(-999, name='log_tot_bg')
         t_targets.add_column(-999, name='log_max_bg')
         t_targets.add_column(0,    name='n_contaminants')
 
-    dr = [t["name"], t["source_id"], t["ra"], t["dec"], t["parallax"],
-          t["Gmag"], t["BPmag"], t["RPmag"], 0, 0,
-          scc[0], scc[1], scc[2], t["log_tot_bg"], t["log_max_bg"],
-          t["num_tot_bg"], r,
-          '4','4','9','9','9','9']
+    dr = [
+        t_targets["name"],
+        t_targets["source_id"],
+        t_targets["ra"],
+        t_targets["dec"],
+        t_targets["parallax"],
+        t_targets["Gmag"],
+        t_targets["BPmag"],
+        t_targets["RPmag"],
+        0,
+        0,
+        scc[0],
+        scc[1],
+        scc[2],
+        t_targets["log_tot_bg"],
+        t_targets["log_max_bg"],
+        t_targets["num_tot_bg"],
+        r,
+        "4",
+        "4",
+        "9",
+        "9",
+        "9",
+        "9",
+    ]
 
     for i in range(22):
         dr.append(np.nan)
@@ -2047,18 +2067,21 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
     )
 
 
-
-
 def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
                        keep_data=False, fix_noise=False):
-    '''Iterate over all cameras and CCDs for a given sector.
-    
-    parameters
+    """Iterate over all cameras and CCDs for a given sector.
+
+    This routine iterates over all cameras and CCDs for a given sector and
+    performs the tessilator analysis for each camera/CCD configuration.
+
+    Parameters
     ----------
     t_targets : `astropy.table.Table`
         Input data for the targets to be analysed.
-    scc : `list`, size=3
-        List containing the sector number, camera and CCD.
+    scc : tuple or int
+        This can be a single integer or a tuple of size 3. If a single integer
+        is given, then all cameras and CCDs for that sector are analysed. If a
+        tuple is given, is has the format `(sector, camera, CCD)`.
     make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
     period_file : `str`
@@ -2071,42 +2094,40 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
     fix_noise : `bool`, optional, default=False
         Choose to apply the noise correction to the cleaned lightcurve.
 
-    returns
+    Returns
     -------
     Nothing returned. The Tessilator data for each camera/CCD configuration
     is saved to file.
-    ''' 
-    start = datetime.now()
+    """
     if len(scc) == 3:
+        sector = scc[0]
+        cameras = [scc[1]]
+        ccds = [scc[2]]
+    elif isinstance(scc, int):
+        sector = scc
+        cameras, ccds = np.mgrid[1:5, 1:5]
+        cameras = cameras.flatten()
+        ccds = ccds.flatten()
+    for cam, ccd in zip(cameras, ccds):
+        start = datetime.now()
         res_table, names, formats = create_table_template()
-        one_cc(t_targets, scc, make_plots, res_table, file_ref=file_ref,
-               keep_data=keep_data, fix_noise=fix_noise)
+        one_cc(
+            t_targets,
+            [sector, cam, ccd],
+            make_plots,
+            res_table,
+            file_ref=file_ref,
+            keep_data=keep_data,
+            fix_noise=fix_noise,
+        )
         res_table = fix_table_format(res_table, names, formats)
-        res_table.write(f"{period_file}_{scc[1]}_{scc[2]}.csv",
-                          overwrite=True)
+        res_table.write(f"{period_file}_{cam}_{ccd}.csv", overwrite=True)
         finish = datetime.now()
         hrs_mins_secs = print_time_taken(start, finish)
-        print(f"Finished {len(res_table)} targets for Sector {scc[0]},"
-              f" Camera {scc[1]}, CCD {scc[2]} in {hrs_mins_secs}")
-    else:
-        cam_ccd = np.array([[i,j] for i in range(1,5) for j in range(1,5)])
-        for cc in cam_ccd:
-            res_table = create_table_template()
-            start_ccd = datetime.now()
-            one_cc(t_targets, [scc[0], cc[0], cc[1]], make_plots, res_table,
-                   file_ref=file_ref, keep_data=keep_data,
-                   fix_noise=fix_noise)
-            res_table = fix_table_format(res_table, names, formats)
-            res_table.write(f"{period_file}_{cc[0]}_{cc[1]}.csv",
-                              overwrite=True)
-            finish_ccd = datetime.now()
-            hrs_mins_secs = print_time_taken(start_ccd, finish_ccd)
-            print(f"Finished {len(res_table)} targets for Sector {scc[0]}, "
-                  f"Camera {cc[0]}, CCD {cc[1]} in {hrs_mins_secs}")
-
-        finish = datetime.now()
-        hrs_mins_secs = print_time_taken(start, finish)
-        print(f"Finished the whole of Sector {scc[0]} in {hrs_mins_secs}")
+        print(
+            f"Finished {len(res_table)} targets for Sector {scc[0]},"
+            f" Camera {scc[1]}, CCD {scc[2]} in {hrs_mins_secs}"
+        )
 
 
 __all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__],
