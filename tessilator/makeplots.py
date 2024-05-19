@@ -204,14 +204,23 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
                       horizontalalignment='left',
                       transform=axs[1,0].transAxes)
     if LS["CBV_flag"] == 1:
-        axs[1,0].text(0.01,0.01, f'best fit: original flux', fontsize=lsize,
-                      horizontalalignment='left',
-                      transform=axs[1,0].transAxes)
+        axs[1, 0].text(
+            0.01,
+            0.01,
+            "best fit: original flux",
+            fontsize=lsize,
+            horizontalalignment="left",
+            transform=axs[1, 0].transAxes,
+        )
     if LS["CBV_flag"] == 2:
-        axs[1,0].text(0.01,0.01, f'best fit: CBV corrected flux',
-                      fontsize=lsize,
-                      horizontalalignment='left',
-                      transform=axs[1,0].transAxes)
+        axs[1, 0].text(
+            0.01,
+            0.01,
+            "best fit: CBV corrected flux",
+            fontsize=lsize,
+            horizontalalignment="left",
+            transform=axs[1, 0].transAxes,
+        )
     axs[1,0].text(0.99,0.90, Gaia_name, fontsize=lsize,
                   horizontalalignment='right',
                   transform=axs[1,0].transAxes)

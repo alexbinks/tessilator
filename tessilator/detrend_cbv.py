@@ -30,7 +30,8 @@ import pylab as pl
 
 
 # Local application
-import scipy.linalg, scipy.special
+import scipy.linalg
+import scipy.special
 from .file_io import logger_tessilator
 ###############################################################################
 ###############################################################################
@@ -42,23 +43,12 @@ from .file_io import logger_tessilator
 logger = logger_tessilator(__name__)
 
 
-
-
-
-
-
-
-
-
-
-
-
 def logdet(a):
     '''
     Compute log of determinant of matrix a using Cholesky decomposition
     '''
     # First make sure that matrix is symmetric:
-    if np.allclose(a.T,a) == False:
+    if not np.allclose(a.T, a):
         print('MATRIX NOT SYMMETRIC')
     # Second make sure that matrix is positive definite:
     eigenvalues = scipy.linalg.eigvalsh(a)
@@ -151,7 +141,8 @@ def savgol_filter(t, f, window = 2.0, order = 2):
     f_sm = np.zeros(n) + np.nan
     for i in np.arange(n):
         l = (abs(t-t[i]) <= window/2.)
-        if l.sum() == 0: continue
+        if l.sum() == 0:
+            continue
         tt = t[l]
         ff = f[l]
         p = np.polyval(np.polyfit(tt, ff, order), t[l])
@@ -163,7 +154,7 @@ def savgol_filter(t, f, window = 2.0, order = 2):
 def block_mean(t, f, block_size = 13, block_size_min = None):
     '''calculate the block mean'''
     block_size = int(block_size)
-    if block_size_min == None:
+    if block_size_min is None:
         block_size_min = block_size / 2 + 1
     n = len(t)
     dt = np.median(t[1:]-t[:-1])
@@ -174,12 +165,14 @@ def block_mean(t, f, block_size = 13, block_size_min = None):
         j = np.copy(i)
         while (t[j] - t[i]) < (block_size * dt):
             j+=1
-            if j >= n: break
+            if j >= n:
+                break
         if j >= (i + block_size_min):
             t_blocks.append(t[i:j].mean())
             f_blocks.append(f[i:j].mean())
         i = np.copy(j)
-        if i >= n: break
+        if i >= n:
+            break
     t_blocks = np.array(t_blocks)
     f_blocks = np.array(f_blocks)
     return t_blocks, f_blocks
@@ -257,7 +250,8 @@ def fit_basis(flux, basis, scl=None):
     # pre-process basis
     nb,nobs = basis.shape
     B = np.matrix(basis.T)
-    if scl == None: scl = np.ones(nb)
+    if scl is None:
+        scl = np.ones(nb)
     Bnorm = np.multiply(B, scl)
     Bs = Bnorm.std()
     Bnorm /= Bs
@@ -322,16 +316,19 @@ def fixed_nb(flux, cbv, nB=4, use=None, doPlot=True):
     weights : `Iter`
         An nB-sized array containing the basis vector coefficients
     '''
-    nobs = len(flux)    
-    if cbv.shape[1] == nobs: cbv_ = cbv[:nB,:]
-    else: cbv_ = cbv[:,:nB].T
+    nobs = len(flux)
+    if cbv.shape[1] == nobs:
+        cbv_ = cbv[:nB, :]
+    else:
+        cbv_ = cbv[:, :nB].T
     corrected_flux = np.copy(flux)
     l = np.isfinite(flux)
-    if not use is None: l *= use
+    if use is not None:
+        l *= use
     weights = fit_basis(flux[l].reshape((1,l.sum())), cbv_[:,l])
     corr = apply_basis(weights, cbv_).reshape(flux.shape)
     corrected_flux = flux - corr
-    if doPlot == True:
+    if doPlot:
         pl.clf()
         x = np.arange(nobs)
         pl.plot(x, flux, '-', c = 'grey')
@@ -367,11 +364,15 @@ def sel_nb(flux, cbv, nBmax=None, use=None):
         The co-trending basis vector coefficients (same shape as nBopt).
     '''
     nobs = len(flux)
-    if cbv.shape[1] == nobs: cbv_ = np.copy(cbv)
-    else: cbv_ = cbv.T
-    if nBmax is None: nBmax = cbv.shape[0]
-    else: cbv_ = cbv_[:nBmax,:]
-        
+    if cbv.shape[1] == nobs:
+        cbv_ = np.copy(cbv)
+    else:
+        cbv_ = cbv.T
+    if nBmax is None:
+        nBmax = cbv.shape[0]
+    else:
+        cbv_ = cbv_[:nBmax, :]
+
     corr_flux = np.zeros(nobs)
     corr_flux_multi = np.zeros((nBmax,nobs))
     weights_multi = np.zeros((nBmax,nBmax))
@@ -379,7 +380,8 @@ def sel_nb(flux, cbv, nBmax=None, use=None):
     sig_multi = np.zeros(nBmax)
 
     l = np.isfinite(flux)
-    if not use is None: l *= use
+    if use is not None:
+        l *= use
 
     med_raw, ran_raw, sig_raw = medransig(flux[l])
 
