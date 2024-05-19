@@ -65,25 +65,3 @@ def make_dir(extn, ref):
         os.makedirs(dir_name)
     return dir_name
 
-
-def fix_table_format(tab, names, formats):
-    '''A simple function to convert the column formats for an astropy table
-    
-    parameters
-    ----------
-    tab : `astropy.table.Table`
-        The input astropy table.
-    names : `list`
-        A list of names for each column.
-    formats : `list`
-        A list of formats for each column.
-        
-    returns
-    -------
-    tab : `astropy.table.Table`
-        The newly-formatted astropy table.
-    '''
-    for n, f in zip(names, formats):
-        tab[n].info.format = f
-    return tab
-

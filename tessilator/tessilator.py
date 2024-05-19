@@ -1,12 +1,12 @@
-'''
+"""
 
-Alexander Binks & Moritz Guenther, 2024
+Alexander Binks', r'Moritz Guenther, 2024
 
 Licence: MIT 2024
 
 The TESSILATOR
 
-'''
+"""
 ###############################################################################
 ####################################IMPORTS####################################
 ###############################################################################
@@ -23,7 +23,7 @@ import numpy as np
 import pyinputplus as pyip
 import time
 from astropy.nddata.utils import Cutout2D
-from astropy.table import Table
+from astropy.table import Table, MaskedColumn
 from astropy.io import ascii, fits
 from astropy.coordinates import SkyCoord
 from astroquery.mast import Tesscut
@@ -39,8 +39,7 @@ from .detrend_cbv import get_cbv_scc
 from .contaminants import contamination, is_period_cont
 from .maketable import get_gaia_data
 from .makeplots import make_plot
-#from .fixedconstants import sec_max
-from .file_io import logger_tessilator, make_dir, fix_table_format
+from .file_io import logger_tessilator, make_dir
 from .tess_stars2px import tess_stars2px_function_entry
 
 ###############################################################################
@@ -79,6 +78,7 @@ print("\n")
 print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
 
+
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -88,6 +88,60 @@ soup = BeautifulSoup(tess_web.text, 'html.parser')
 tess_para = soup(text=re.compile("TESS is in Orbit"))
 sec_max = int(tess_para[0].split(',')[1].split(' ')[2].split('.')[0])
 
+_Template_table_format = [
+    ("original_id", r"Target identifier", str, None),
+    ("source_id", r"Gaia DR3 source identifier", str, None),
+    ("ra", r"Right ascension (epoch J2000)", float, ".12f"),
+    ("dec", r"Declination (epoch J2000)", float, ".12f"),
+    ("parallax", r"Gaia DR3 parallax", float, ".6f"),
+    ("Gmag", r"Gaia DR3 $G$-band magnitude", float, ".6f"),
+    ("BPmag", r"Gaia DR3 $G_{\rm BP}$-band magnitude", float, ".6f"),
+    ("RPmag", r"Gaia DR3 $G_{\rm RP}$-band magnitude", float, ".6f"),
+    ("Tmag_MED", r"Median TESS $T$-band magnitude", float, ".6f"),
+    ("Tmag_MAD", r"MAD TESS $T$-band magnitude", float, ".6f"),
+    ("Sector", r"TESS sector number", int, None),
+    ("Camera", r"TESS camera number", int, None),
+    ("CCD", r"TESS CCD number", int, None),
+    ("log_tot_bg_star", r"$\Sigma\eta$", float, ".6f"),
+    ("log_max_bg_star", r"$\eta_{\rm max}$", float, ".6f"),
+    ("n_conts", r"Number of contaminating sources", int),
+    ("ap_rad", r"Aperture radius (pixels)", float, ".3f"),
+    ("false_flag", r"Test if a contaminant is the $P_{\rm rot}$ source", int, None),
+    ("reliable_flag", r"Test if the $P_{\rm rot}$ source is reliable", int, None),
+    ("CBV_flag", r"The CBV-correction category", int, None),
+    ("smooth_flag", r"Flag for detrending step 1", int, None),
+    ("norm_flag", r"Flag for detrending step 2$", int, None),
+    ("jump_flag", r"Test for jumps in the lightcurve", int, None),
+    ("AIC_line", r"AIC score: linear fit to the lightcurve", float, ".6f"),
+    ("AIC_sine", r"AIC score: sine fit to the lightcurve", float, ".6f"),
+    ("Ndata", r"Number of datapoints in the periodogram analysis", int),
+    ("FAP_001", r"1\% False Alarm Probability power", float, ".6f"),
+    ("period_1", r"Primary $P_{\rm rot}$ (peak)", float, ".6f"),
+    ("period_1_fit", r"Primary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
+    ("period_1_err", r"Primary $P_{\rm rot}$ uncertainty", float, ".6f"),
+    ("power_1", r"Power output of the primary $P_{\rm rot}$", float, ".6f"),
+    ("period_2", r"Secondary $P_{\rm rot}$ (peak)", float, ".6f"),
+    ("period_2_fit", r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
+    ("period_2_err", r"Secondary $P_{\rm rot}$ uncertainty", float, ".6f"),
+    ("power_2", r"Power output of the secondary $P_{\rm rot}$", float, ".6f"),
+    ("period_3", r"Tertiary $P_{\rm rot}$ (peak)", float, ".6f"),
+    ("period_3_fit", r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
+    ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f"),
+    ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f"),
+    ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f"),
+    ("period_4_fit", r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
+    ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f"),
+    ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f"),
+    ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f"),
+    ("period_shuffle_err", r"Uncertainty in $P_{\rm shuff}$", float, ".6f"),
+    ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None),
+    ("amp", r"Amplitude of the PFL", float, ".6f"),
+    ("scatter", r"Scatter of the PFL", float, ".6f"),
+    ("chisq_phase", r"$\chi^{2}$ value of the sinusoidal fit to the PFL", float, ".6f"),
+    ("fdev", r"Number of extreme outliers in the PFL", float, ".6f"),
+]
+
+
 def create_table_template():
     '''Create a template astropy table to store tessilator results.
 
@@ -96,56 +150,12 @@ def create_table_template():
     res_table : `astropy.table.Table`
         A template table to store tessilator results.
     '''
-    names = ('original_id','source_id','ra','dec','parallax',\
-             'Gmag','BPmag','RPmag','Tmag_MED','Tmag_MAD',\
-             'Sector','Camera','CCD',\
-             'log_tot_bg_star','log_max_bg_star','n_conts',\
-             'ap_rad','false_flag','reliable_flag',\
-             'CBV_flag','smooth_flag','norm_flag','jump_flag',\
-             'AIC_line','AIC_sine',\
-             'Ndata','FAP_001',\
-             'period_1','period_1_fit','period_1_err','power_1',\
-             'period_2','period_2_fit','period_2_err','power_2',\
-             'period_3','period_3_fit','period_3_err','power_3',\
-             'period_4','period_4_fit','period_4_err','power_4',\
-             'period_shuffle','period_shuffle_err', 'shuffle_flag',\
-             'amp','scatter','chisq_phase','fdev')
-
-
-    f_start=(str,str,float,float,float,\
-             float,float,float,float,float,\
-             int,int,int,\
-             float,float,int,\
-             float,int,int,\
-             int,int,int,int,\
-             float,float,\
-             int,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,int,\
-             float,float,float,float)
-
-
-    formats = ['%s','%s','.12f','.12f','.6f',
-               '.6f','.6f','.6f','.6f','.6f',
-               '%i','%i','%i',
-               '.6f','.6f','%i',
-               '.3f','%i','%i',
-               '%i','%i','%i','%i',
-               '.6f','.6f',
-               '%i','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','%i',
-               '.6f','.6f','.4f','.3f']
-
-    res_table = Table(names=names, dtype=f_start)
-    return res_table, names, formats
-
+    cols = []
+    for name, description, dtype, format in _Template_table_format:
+        cols.append(
+            MaskedColumn(name=name, description=description, dtype=dtype, format=format)
+        )
+    return Table(cols)
 
 
 def setup_input_parameters():
@@ -1169,11 +1179,26 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     keyorder = ['run_no','id','aperture_rad','time','xcenter','ycenter',
                 'flux','flux_err','bkg','total_bkg','mag','mag_err',
                 'reg_oflux','cbv_oflux']
-    tab_format = ['%i','%s','.2f','.6f','.1f','.1f',
-                  '.6f','.6f','.6f','.6f',
-                  '.6f','.4e','.6f', '.6f']
+    tab_format = [
+        "%i",
+        "%s",
+        ".2f",
+        ".6f",
+        ".1f",
+        ".1f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".4e",
+        ".6f",
+        r".6f",
+    ]
     tpf = tpf[keyorder]
-    tpf = fix_table_format(tpf, keyorder, tab_format)
+    for n, f in zip(keyorder, tab_format):
+        tpf[n].info.format = f
+
     phot_targets = tpf.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
@@ -1924,7 +1949,7 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     shuf_dir = make_dir(shuf_ext, ref_name)
     res_dir = make_dir(res_ext, ref_name)
 
-    res_table, names, formats = create_table_template()
+    res_table = create_table_template()
     if 'log_tot_bg' not in t_targets.colnames:
         t_targets.add_column(-999, name='log_tot_bg')
         t_targets.add_column(-999, name='log_max_bg')
@@ -1964,8 +1989,7 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
         )
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
-    
-    res_table = fix_table_format(res_table, names, formats)
+
     res_table.write(f'{res_dir}/{period_file}_{dt_string}.csv')
 
     hrs_mins_secs = print_time_taken(start, finish)
@@ -2110,7 +2134,7 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
         ccds = ccds.flatten()
     for cam, ccd in zip(cameras, ccds):
         start = datetime.now()
-        res_table, names, formats = create_table_template()
+        res_table = create_table_template()
         one_cc(
             t_targets,
             [sector, cam, ccd],
@@ -2120,7 +2144,6 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
             keep_data=keep_data,
             fix_noise=fix_noise,
         )
-        res_table = fix_table_format(res_table, names, formats)
         res_table.write(f"{period_file}_{cam}_{ccd}.csv", overwrite=True)
         finish = datetime.now()
         hrs_mins_secs = print_time_taken(start, finish)

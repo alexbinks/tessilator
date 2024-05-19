@@ -45,7 +45,7 @@ from operator import itemgetter
 
 
 # Local application
-from .file_io import fix_table_format, logger_tessilator
+from .file_io import logger_tessilator
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -977,11 +977,12 @@ def make_lc(phot_table, name_lc='target', store_lc=False, lc_dir='lc', cbv_flag=
                       '%s','%s','%s','%s']
         flux_dict = {k: flux_dict[k] for k in keyorder}
         if len(flux_dict["time"]) > 50:
-            flux_tab = fix_table_format(Table(flux_dict), keyorder, tab_format)
-#            flux_tab = Table(flux_dict)
-#            for k, f in zip(keyorder, tab_format):
-#                flux_tab[k].info.format = f
-#            if f_label == "reg_oflux":
+            flux_tab = Table(flux_dict)
+            for n, f in zip(keyorder, tab_format):
+                flux_tab[n].info.format = f
+            #            for k, f in zip(keyorder, tab_format):
+            #                flux_tab[k].info.format =x f
+            #            if f_label == "reg_oflux":
             final_tabs.append(flux_tab)
             norm_flags.append(norm_flag)
             smooth_flags.append(smooth_flag)
