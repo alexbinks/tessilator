@@ -22,7 +22,6 @@ import numpy as np
 import pyinputplus as pyip
 import time
 from astropy.nddata.utils import Cutout2D
-from collections.abc import Iterable
 from astropy.table import Table
 from astropy.io import ascii, fits
 from astropy.coordinates import SkyCoord
@@ -1366,9 +1365,18 @@ def find_xy_cont(f_file, t_cont, cutout_size):
         return cont_positions
         
 
-def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
-                             store_lc=True, lc_cont_dir='lc_cont'):
-    '''Run the periodogram analyses for neighbouring contaminants if required.
+def run_test_for_contaminant(
+    xy_arr,
+    file_in,
+    t_cont,
+    d_target,
+    scc,
+    aper_rad=1.0,
+    sky_ann=(6.0, 8.0),
+    store_lc=True,
+    lc_cont_dir="lc_cont",
+):
+    """Run the periodogram analyses for neighbouring contaminants if required.
 
     parameters
     ----------
@@ -1385,12 +1393,17 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
         the target star.
     scc : `list`, size=3
         List containing the sector number, camera and CCD.
+    aper_rad : `float`, optional, default=1.
+        The size of the aperture radius in pixels.
+    sky_ann : `tuple`, optional, default=(6.,8.)
+        A 2-element tuple defining the inner and outer annulus to calculate
+        the background flux.
     store_lc : `bool`, optional, default=False
         Choose to save the cleaned lightcurve to file
     lc_cont_dir : `str`, optional, default='lc'
         The directory used to store the lightcurve files for contaminants if
         store_lc==True.
-    
+
     returns
     -------
     name_lc : `str`
@@ -1398,7 +1411,7 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
     labels_cont : `str` (a, b, c or d)
         A single character which assess if the calculated period for the target
         could actually come from the contaminant.
-        
+
         a. At least 1 contaminant has a similar period to the target.
 
         b. No contaminants with similar periods
@@ -1411,7 +1424,7 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
     d_cont : `dict`
         The dictionary returned from the periodogram analysis of the
         contaminant star.
-    '''
+    """
 
     clean_norm_lc_cont, name_lc, d_cont = None, None, None
     try:
@@ -1420,7 +1433,9 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
         if phot_cont is not None:
             name_lc = f'lc_{t_cont["source_id_target"]}_{t_cont["source_id"]}'\
                       f'_{scc[0]:04d}_{scc[1]}_{scc[2]}.csv'
-            clean_norm_lc_cont, _, _ = make_lc(phot_cont, store_lc=False)[0]
+            clean_norm_lc_cont, _, _ = make_lc(
+                phot_cont, store_lc=store_lc, lc_dir=lc_cont_dir
+            )[0]
             if len(clean_norm_lc_cont) != 0:
                 d_cont = run_ls(clean_norm_lc_cont, name_pg=None)
                 false_flag, reliable_flag = is_period_cont(d_target, d_cont, t_cont)
@@ -1430,7 +1445,7 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
         logger.error(f"something went wrong with measuring the period for"
                      f"{name_lc}")
         false_flag, reliable_flag = 2, 2
-    logger.info(f"label for this contaminant: {labels_cont}")
+    logger.info(f"label for this contaminant: {name_lc}")
     return name_lc, false_flag, reliable_flag, clean_norm_lc_cont, d_cont
 
 
@@ -1918,20 +1933,36 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     for i, target in enumerate(t_targets):
         logger.info(f"{target['name']} (Gaia DR3 {target['source_id']}), star #{i+1}"
                     f" of {len(t_targets)}")
-        one_source_cutout(target, lc_con, flux_con, 
-                          make_plots, res_table, ref_name, gaia_sys=gaia_sys,
-                          xy_pos=xy_pos,
-                          ap_rad=ap_rad,
-                          sky_ann=sky_ann,
-                          fix_rad=fix_rad,
-                          n_cont=n_cont, cont_rad=cont_rad, mag_lim=mag_lim,
-                          save_phot=save_phot,
-                          cbv_flag=cbv_flag, store_lc=store_lc,
-                          choose_sec=choose_sec, tot_attempts=tot_attempts,
-                          cap_files=cap_files, fits_dir=fits_dir,
-                          lc_dir=lc_dir, pg_dir=pg_dir, fix_noise=fix_noise,
-                          shuf_per=shuf_per, shuf_dir=shuf_dir,
-                          make_shuf_plot=make_shuf_plot)
+        one_source_cutout(
+            target,
+            lc_con,
+            flux_con,
+            make_plots,
+            res_table,
+            ref_name,
+            gaia_sys=gaia_sys,
+            xy_pos=xy_pos,
+            ap_rad=ap_rad,
+            sky_ann=sky_ann,
+            fix_rad=fix_rad,
+            keep_data=keep_data,
+            n_cont=n_cont,
+            cont_rad=cont_rad,
+            mag_lim=mag_lim,
+            save_phot=save_phot,
+            cbv_flag=cbv_flag,
+            store_lc=store_lc,
+            choose_sec=choose_sec,
+            tot_attempts=tot_attempts,
+            cap_files=cap_files,
+            fits_dir=fits_dir,
+            lc_dir=lc_dir,
+            pg_dir=pg_dir,
+            fix_noise=fix_noise,
+            shuf_per=shuf_per,
+            shuf_dir=shuf_dir,
+            make_shuf_plot=make_shuf_plot,
+        )
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
     
