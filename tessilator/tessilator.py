@@ -78,7 +78,6 @@ print("\n")
 print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
 
-
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -89,56 +88,93 @@ tess_para = soup(text=re.compile("TESS is in Orbit"))
 sec_max = int(tess_para[0].split(',')[1].split(' ')[2].split('.')[0])
 
 _Template_table_format = [
-    ("original_id", r"Target identifier", str, None),
-    ("source_id", r"Gaia DR3 source identifier", str, None),
-    ("ra", r"Right ascension (epoch J2000)", float, ".12f"),
-    ("dec", r"Declination (epoch J2000)", float, ".12f"),
-    ("parallax", r"Gaia DR3 parallax", float, ".6f"),
-    ("Gmag", r"Gaia DR3 $G$-band magnitude", float, ".6f"),
-    ("BPmag", r"Gaia DR3 $G_{\rm BP}$-band magnitude", float, ".6f"),
-    ("RPmag", r"Gaia DR3 $G_{\rm RP}$-band magnitude", float, ".6f"),
-    ("Tmag_MED", r"Median TESS $T$-band magnitude", float, ".6f"),
-    ("Tmag_MAD", r"MAD TESS $T$-band magnitude", float, ".6f"),
-    ("Sector", r"TESS sector number", int, None),
-    ("Camera", r"TESS camera number", int, None),
-    ("CCD", r"TESS CCD number", int, None),
-    ("log_tot_bg_star", r"$\Sigma\eta$", float, ".6f"),
-    ("log_max_bg_star", r"$\eta_{\rm max}$", float, ".6f"),
-    ("n_conts", r"Number of contaminating sources", int),
-    ("ap_rad", r"Aperture radius (pixels)", float, ".3f"),
-    ("false_flag", r"Test if a contaminant is the $P_{\rm rot}$ source", int, None),
-    ("reliable_flag", r"Test if the $P_{\rm rot}$ source is reliable", int, None),
-    ("CBV_flag", r"The CBV-correction category", int, None),
-    ("smooth_flag", r"Flag for detrending step 1", int, None),
-    ("norm_flag", r"Flag for detrending step 2$", int, None),
-    ("jump_flag", r"Test for jumps in the lightcurve", int, None),
-    ("AIC_line", r"AIC score: linear fit to the lightcurve", float, ".6f"),
-    ("AIC_sine", r"AIC score: sine fit to the lightcurve", float, ".6f"),
-    ("Ndata", r"Number of datapoints in the periodogram analysis", int),
-    ("FAP_001", r"1\% False Alarm Probability power", float, ".6f"),
-    ("period_1", r"Primary $P_{\rm rot}$ (peak)", float, ".6f"),
-    ("period_1_fit", r"Primary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
-    ("period_1_err", r"Primary $P_{\rm rot}$ uncertainty", float, ".6f"),
-    ("power_1", r"Power output of the primary $P_{\rm rot}$", float, ".6f"),
-    ("period_2", r"Secondary $P_{\rm rot}$ (peak)", float, ".6f"),
-    ("period_2_fit", r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
-    ("period_2_err", r"Secondary $P_{\rm rot}$ uncertainty", float, ".6f"),
-    ("power_2", r"Power output of the secondary $P_{\rm rot}$", float, ".6f"),
-    ("period_3", r"Tertiary $P_{\rm rot}$ (peak)", float, ".6f"),
-    ("period_3_fit", r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
-    ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f"),
-    ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f"),
-    ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f"),
-    ("period_4_fit", r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f"),
-    ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f"),
-    ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f"),
-    ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f"),
-    ("period_shuffle_err", r"Uncertainty in $P_{\rm shuff}$", float, ".6f"),
-    ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None),
-    ("amp", r"Amplitude of the PFL", float, ".6f"),
-    ("scatter", r"Scatter of the PFL", float, ".6f"),
-    ("chisq_phase", r"$\chi^{2}$ value of the sinusoidal fit to the PFL", float, ".6f"),
-    ("fdev", r"Number of extreme outliers in the PFL", float, ".6f"),
+    # column name, description, data type, format, fill_value
+    ("original_id", r"Target identifier", str, None, "N/A"),
+    ("source_id", r"Gaia DR3 source identifier", str, None, "N/A"),
+    ("ra", r"Right ascension (epoch J2000)", float, ".12f", np.nan),
+    ("dec", r"Declination (epoch J2000)", float, ".12f", np.nan),
+    ("parallax", r"Gaia DR3 parallax", float, ".6f", np.nan),
+    (
+        "Gmag",
+        r"Gaia DR3 $G$-band magnitude",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("BPmag", r"Gaia DR3 $G_{\rm BP}$-band magnitude", float, ".6f", np.nan),
+    ("RPmag", r"Gaia DR3 $G_{\rm RP}$-band magnitude", float, ".6f", np.nan),
+    ("Tmag_MED", r"Median TESS $T$-band magnitude", float, ".6f", 0),
+    ("Tmag_MAD", r"MAD TESS $T$-band magnitude", float, ".6f", 0),
+    ("Sector", r"TESS sector number", int, None, 0),
+    ("Camera", r"TESS camera number", int, None, 0),
+    ("CCD", r"TESS CCD number", int, None, 0),
+    ("log_tot_bg_star", r"$\Sigma\eta$", float, ".6f", -999),
+    ("log_max_bg_star", r"$\eta_{\rm max}$", float, ".6f", -999),
+    ("n_conts", r"Number of contaminating sources", int, None, 0),
+    ("ap_rad", r"Aperture radius (pixels)", float, ".3f", -np.inf),
+    ("false_flag", r"Test if a contaminant is the $P_{\rm rot}$ source", int, None, 4),
+    ("reliable_flag", r"Test if the $P_{\rm rot}$ source is reliable", int, None, 4),
+    ("CBV_flag", r"The CBV-correction category", int, None, 9),
+    ("smooth_flag", r"Flag for detrending step 1", int, None, 9),
+    ("norm_flag", r"Flag for detrending step 2$", int, None, 9),
+    ("jump_flag", r"Test for jumps in the lightcurve", int, None, 9),
+    ("AIC_line", r"AIC score: linear fit to the lightcurve", float, ".6f", np.nan),
+    ("AIC_sine", r"AIC score: sine fit to the lightcurve", float, ".6f", np.nan),
+    ("Ndata", r"Number of datapoints in the periodogram analysis", int, None, 0),
+    ("FAP_001", r"1\% False Alarm Probability power", float, ".6f", np.nan),
+    ("period_1", r"Primary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_1_fit",
+        r"Primary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_1_err", r"Primary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_1", r"Power output of the primary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_2", r"Secondary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_2_fit",
+        r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_2_err", r"Secondary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_2", r"Power output of the secondary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_3", r"Tertiary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_3_fit",
+        r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_4_fit",
+        r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f", np.nan),
+    ("period_shuffle_err", r"Uncertainty in $P_{\rm shuff}$", float, ".6f", np.nan),
+    ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None, 9),
+    ("amp", r"Amplitude of the PFL", float, ".6f", np.nan),
+    ("scatter", r"Scatter of the PFL", float, ".6f", np.nan),
+    (
+        "chisq_phase",
+        r"$\chi^{2}$ value of the sinusoidal fit to the PFL",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("fdev", r"Number of extreme outliers in the PFL", float, ".6f", np.nan),
 ]
 
 
@@ -151,9 +187,15 @@ def create_table_template():
         A template table to store tessilator results.
     '''
     cols = []
-    for name, description, dtype, format in _Template_table_format:
+    for name, description, dtype, format, fill_value in _Template_table_format:
         cols.append(
-            MaskedColumn(name=name, description=description, dtype=dtype, format=format)
+            MaskedColumn(
+                name=name,
+                description=description,
+                dtype=dtype,
+                format=format,
+                fill_value=fill_value,
+            )
         )
     return Table(cols)
 
@@ -621,12 +663,12 @@ def make_datarow(t, scc, r, d):
 
 
 def make_failrow(t_targets, r, scc):
-    """Print a line with input data if tessilator fails for a given target
+    """Construct table row if tessilator fails for a given target
 
     parameters
     ----------
-    t_targets : `astropy.table.Table`
-        Table of input data for the tessilator, with the following columns:
+    t_targets : `astropy.table.Row`
+        One row of input data for the tessilator, with the following columns:
 
         * name: name of the target (`str`)
 
@@ -661,45 +703,29 @@ def make_failrow(t_targets, r, scc):
 
     returns
     -------
-    dr : list
-        A dictionary entry for the target star containing input data
+    dr : dict
+        A dicty for the target star containing input data
     """
-    if "log_tot_bg" not in t_targets.colnames:
-        t_targets.add_column(-999, name='log_tot_bg')
-        t_targets.add_column(-999, name='log_max_bg')
-        t_targets.add_column(0,    name='n_contaminants')
-
-    dr = [
-        t_targets["name"],
-        t_targets["source_id"],
-        t_targets["ra"],
-        t_targets["dec"],
-        t_targets["parallax"],
-        t_targets["Gmag"],
-        t_targets["BPmag"],
-        t_targets["RPmag"],
-        0,
-        0,
-        scc[0],
-        scc[1],
-        scc[2],
-        t_targets["log_tot_bg"],
-        t_targets["log_max_bg"],
-        t_targets["num_tot_bg"],
-        r,
-        "4",
-        "4",
-        "9",
-        "9",
-        "9",
-        "9",
+    copycols = [
+        "name",
+        "source_id",
+        "ra",
+        "dec",
+        "parallax",
+        "Gmag",
+        "BPmag",
+        "RPmag",
+        "log_tot_bg_star",
+        "log_max_bg_star",
+        "n_conts",
     ]
-
-    for i in range(22):
-        dr.append(np.nan)
-    dr.append(9)
-    for i in range(4):
-        dr.append(np.nan)
+    dr = {col: t_targets[col] for col in copycols}
+    dr["Sector"] = scc[0]
+    dr["Camera"] = scc[1]
+    dr["CCD"] = scc[2]
+    dr["ap_rad"] = r
+    # All other lines we leave on default, so they will be maksed,
+    # can can be filled if needed.
     return dr
 
 
