@@ -619,53 +619,12 @@ def collect_contamination_data(t_targets, ref_name, targ_name,
     return t_targets, t_cont, cont_dir
 
 
+def make_target_row(t_targets, r, scc):
+    """Construct table row with the input target data.
 
-def make_datarow(t, scc, r, d):
-    '''Once the tessilator has analysed a target, the results are printed line
-    by line to a table.
+    If tessilator fails to run on a target, that's all you get.
 
-    parameters
-    ----------
-    t : `astropy.table.Table`
-        The table containing information on Gaia properties and contamination.
-        See the header names below in the code.
-    d : `dict`
-        The dictionary containing details of the periodogram analysis.
-        See the header names below in the code.
-    r : `float`
-        The pixel size of the aperture radius
-    scc : `list`, size=3
-        A list containing the Sector, Camera and CCD.
-        
-    returns
-    -------
-    dr : `list`
-        A list for the target star containing tessilator data.
-    '''
-    dr = [t["name"], t["source_id"], t["ra"], t["dec"], t["parallax"],
-          t["Gmag"], t["BPmag"], t["RPmag"], d["Tmag_MED"], d["Tmag_MAD"],
-          scc[0], scc[1], scc[2], t["log_tot_bg"], t["log_max_bg"],
-          t["num_tot_bg"], r, d["false_flag"], d["reliable_flag"],
-          d['CBV_flag'], d["smooth_flag"], d["norm_flag"],
-          d['jump_flag'], d['AIC_line'], d['AIC_sine'],
-          d['Ndata'], d['FAPs'][2],
-          d['period_1'], d['Gauss_1'][1], d['Gauss_1'][2], d['power_1'],
-          d['period_2'], d['Gauss_2'][1], d['Gauss_2'][2], d['power_2'],
-          d['period_3'], d['Gauss_3'][1], d['Gauss_3'][2], d['power_3'],
-          d['period_4'], d['Gauss_4'][1], d['Gauss_4'][2], d['power_4'],
-          d['period_shuffle'], d['period_shuffle_err'],d['shuffle_flag'],
-          d['pops_vals'][1], d['phase_scatter'], d['phase_chisq'],
-          d['frac_phase_outliers']
-          ]
-    return dr
-
-
-
-
-def make_failrow(t_targets, r, scc):
-    """Construct table row if tessilator fails for a given target
-
-    parameters
+    Parameters
     ----------
     t_targets : `astropy.table.Row`
         One row of input data for the tessilator, with the following columns:
@@ -686,19 +645,9 @@ def make_failrow(t_targets, r, scc):
 
         * RPmag: Gaia DR3 apparent RP-band magnitude
 
-        * log_tot_bg_star: log-10 value of the flux ratio between contaminants
-          and target (optional).
-
-        * log_max_bg_star: log-10 value of the flux ratio between the largest
-          contaminant and target (optional).
-
-        * n_contaminants: number of contaminant sources (optional).
-
-        Note that if the contaminantion is not calculated, the final three
-        columns are automatically filled with -999 values.
     r : `float`
         The pixel size of the aperture radius
-    scc : `list`, size=3
+    scc : tuple, size=3
         A list containing the Sector, Camera and CCD.
 
     returns
@@ -1195,7 +1144,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         logger.error(f"aperture photometry: failed to produce enough data "
                      f"points for {t_target['source_id']}")
         for t in t_target:
-            res_table.add_row(make_failrow(t, rad_calc, scc))
+            res_table.add_row(make_target_row(t, rad_calc, scc))
         return None
     if cbv_flag:
         corrected_flux, weights = get_cbv_scc(scc, tpf)
@@ -1255,13 +1204,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                                     lc_dir=lc_dir,
                                                     cbv_flag=cbv_flag)
         else:
-            logger.error("No photometry was recorded for this group.")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            logger.error(f"No photometry was recorded for this group.")
+            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
             continue
         if len(lcs) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
             continue
         if fix_noise and not lc_con:
             logger.info('fixing the noise!')
@@ -1293,7 +1242,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         if d_target['period_1'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
             continue
 
         false_flag, reliable_flag = 4, 4        
@@ -1365,8 +1314,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             make_plot(im_plot, lc, d_target, scc, t_targets, name_target,
                       plot_dir, xy_contam=xy_con, p_min_thresh=0.1,
                       p_max_thresh=50., ap_rad=rad_calc, sky_ann=sky_ann, nc=nc)
-                      
-        res_table.add_row(make_datarow(t_targets, scc, rad_calc, d_target))
+        res_table.add_row(make_target_row(t_targets, scc, rad_calc) | d_target)
         temp_dir = make_dir("temp_results", ref_name)
         res_table.write(f'{temp_dir}/{ref_name}_periods.csv', overwrite=True)
         if not keep_data:
