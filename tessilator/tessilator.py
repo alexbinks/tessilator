@@ -1616,14 +1616,15 @@ def cutout_allsecs(coord, cutout_size, name_target, tot_attempts=3,
 
 
 
-def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3,
-                  cap_files=None, fits_dir='fits'):
-    '''Download TESS cutouts and store to a list for lightcurve analysis.
+def cutout_onesec(
+    coord, cutout_size, name_target, choose_sec, tot_attempts=3, fits_dir="fits"
+):
+    """Download TESS cutouts and store to a list for lightcurve analysis.
 
     The TESScut function will save fits files to the working directory.
 
     This function in particular will return just one selected sector of data.
-    
+
     parameters
     ----------
     coord : `astropy.coordinates.SkyCoord`
@@ -1636,8 +1637,6 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3,
         The number of the TESS sector required for download.
     tot_attempts : `int`, optional, default=3
         The number of sql queries in case of request or server errors.
-    cap_files : `int`, optional, default=None
-        The maximum number of sectors for each target.
     fits_dir : `str`, optional, default='fits'
         The name of the directory to store the fits files.
 
@@ -1645,7 +1644,7 @@ def cutout_onesec(coord, cutout_size, name_target, choose_sec, tot_attempts=3,
     -------
     manifest : `list`
         A list of the fits files for lightcurve analysis.
-    '''
+    """
     manifest = []
     if (choose_sec < 1 or choose_sec > sec_max):
         print(f"Sector {choose_sec} is out of range.")
