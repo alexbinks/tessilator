@@ -1324,9 +1324,6 @@ def print_time_taken(start, finish):
     return time_taken
 
 
-
-
-
 def find_xy_cont(f_file, t_cont, cutout_size):
     '''Identify the pixel x-y positions for contaminant sources.
 
@@ -1437,11 +1434,6 @@ def run_test_for_contaminant(xy_arr, file_in, t_cont, d_target, scc,
     return name_lc, false_flag, reliable_flag, clean_norm_lc_cont, d_cont
 
 
-
-
-
-
-
 def get_tess_pixel_xy(t_targets):
     '''Get the pixel x-y positions for all targets in a Sector/Camera/CCD mode.
 
@@ -1548,217 +1540,19 @@ def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
     return cutout, ctr_pt
 
 
-
-
-def cutout_allsecs(coord, cutout_size, name_target, tot_attempts=3,
-                   cap_files=None, fits_dir='fits'):
-    '''Download TESS cutouts and store to a list for lightcurve analysis.
-
-    The TESScut function will save fits files to the working directory.
-    
-    This function in particular will return all available sectors of data.
-    
-    parameters
-    ----------
-    coord : `astropy.coordinates.SkyCoord`
-        A set of coordinates in the SkyCoord format.
-    cutout_size : `float`
-        The pixel length of the downloaded cutout.
-    name_target : `str`
-        Name of the target.
-    tot_attempts : `int`, optional, default=3
-        The number of sql queries in case of request or server errors.
-    cap_files : `int`, optional, default=None
-        The maximum number of sectors for each target.
-    fits_dir : `str`, optional, default='fits'
-        The name of the directory to store the fits files.
-
-    returns
-    -------
-    manifest : `list`
-        A list of the fits files for lightcurve analysis.
-    '''
-    num_attempts, manifest = 0, []
-    while num_attempts < tot_attempts:
-        logger.info(f'attempting download request {num_attempts+1} of '
-                    f'{tot_attempts}...')
-        try:
-            sectors = Tesscut.get_sectors(coordinates=coord)['sector'].data
-            logger.info(f'There are {len(sectors)} in total: {sectors}') 
-            if len(sectors) == 0:
-                logger.error(f'Sorry, no TESS data available for '
-                             f'{name_target}')
-                break
-            np.random.shuffle(sectors)
-            if cap_files:
-                sectors=sectors[:cap_files]
-            for n_s, sec in enumerate(sectors):
-                logger.info(f'getting sector {sec}, {n_s+1} of {len(sectors)}')
-                s = f'{sec:04d}'
-                fits_file = glob(f'{fits_dir}/{name_target}_{s}*')
-                if fits_file:
-                    manifest.append(fits_file[0])
-                else:
-                    dl = Tesscut.download_cutouts(coordinates=coord,\
-                                                  size=cutout_size,\
-                                                  sector=s,\
-                                                  path=fits_dir)
-                    manifest.append(dl['Local Path'][0])
-            if manifest:
-                logger.info(f'...completed data retrieval for {name_target}.')
-                break
-        except:
-            num_attempts += 1
-            time.sleep(5)
-    if num_attempts == tot_attempts:
-        logger.error(f"Timeout error for {name_target}")
-    return manifest
-
-
-
-def cutout_onesec(
-    coord, cutout_size, name_target, choose_sec, tot_attempts=3, fits_dir="fits"
+def get_cutouts(
+    coord,
+    cutout_size,
+    name_target,
+    choose_sec=None,
+    tot_attempts=3,
+    cap_files=None,
+    fits_dir="fits",
 ):
     """Download TESS cutouts and store to a list for lightcurve analysis.
 
     The TESScut function will save fits files to the working directory.
 
-    This function in particular will return just one selected sector of data.
-
-    parameters
-    ----------
-    coord : `astropy.coordinates.SkyCoord`
-        A set of coordinates in the SkyCoord format.
-    cutout_size : `float`
-        The pixel length of the downloaded cutout.
-    name_target : `str`
-        Name of the target.
-    choose_sec : `int`
-        The number of the TESS sector required for download.
-    tot_attempts : `int`, optional, default=3
-        The number of sql queries in case of request or server errors.
-    fits_dir : `str`, optional, default='fits'
-        The name of the directory to store the fits files.
-
-    returns
-    -------
-    manifest : `list`
-        A list of the fits files for lightcurve analysis.
-    """
-    manifest = []
-    if (choose_sec < 1 or choose_sec > sec_max):
-        print(f"Sector {choose_sec} is out of range.")
-        logger.error(f"Sector {choose_sec} is out of range.")
-        return manifest
-    else:
-        num_attempts = 0
-        while num_attempts < tot_attempts:
-            try:
-                fits_file = glob(f'{fits_dir}/{name_target}_{choose_sec:04d}*')
-                if fits_file:
-                     manifest.append(fits_file[0])
-                else:
-                    dl = Tesscut.download_cutouts(coordinates=coord,
-                                                      size=cutout_size,
-                                                      sector=choose_sec,
-                                                      path=fits_dir)
-                    manifest.append(dl["Local Path"][0])
-                return manifest
-            except:
-                print(f"Didn't get data for {name_target} in {choose_sec}, "
-                      f"attempt {num_attempts+1}/{tot_attempts}")
-                logger.error(f"Didn't get data for {name_target} in "
-                             f"{choose_sec}, attempt {num_attempts+1}/"
-                             f"{tot_attempts}")
-                num_attempts += 1
-        if num_attempts == tot_attempts:
-            print(f"No data found for {name_target} in Sector {choose_sec}")
-            logger.error(f"No data found for {name_target} in Sector "
-                         f"{choose_sec}")
-            return manifest
-
-
-def cutout_chosensecs(coord, cutout_size, name_target, choose_sec,
-                      tot_attempts=3, cap_files=None, fits_dir='fits'):
-    '''Download TESS cutouts and store to a list for lightcurve analysis.
-
-    The TESScut function will save fits files to the working directory.
-    
-    This function in particular will return the sectors of data defined from a
-    list of integers.
-    
-    parameters
-    ----------
-    coord : `astropy.coordinates.SkyCoord`
-        A set of coordinates in the SkyCoord format.
-    cutout_size : `float`
-        The pixel length of the downloaded cutout.
-    name_target : `str`
-        Name of the target.
-    choose_sec : `Iterable`
-        The TESS sectors required for download.
-    tot_attempts : `int`, optional, default=3
-        The number of sql queries in case of request or server errors.
-    cap_files : `int`, optional, default=None
-        The maximum number of sectors for each target.
-    fits_dir : `str`, optional, default='fits'
-        The name of the directory to store the fits files.
-
-    returns
-    -------
-    manifest : `list`
-        A list of the fits files for lightcurve analysis.
-    '''
-    manifest = []
-    cs = np.array(list(set(choose_sec)))
-    if all(isinstance(x, np.int64) for x in cs):
-        cs_g = cs[np.where((cs > 0) & (cs <= sec_max))[0]]
-        if len(cs) != len(cs_g):
-            logger.warning(f"Sectors {np.setdiff1d(cs, cs_g)} are out of "
-                           f"range.")
-        if cap_files:
-            cs_g = cs_g[:cap_files]
-
-        c_fail = []
-        for c in cs_g:
-            num_attempts = 0
-            while num_attempts < tot_attempts:
-                try:
-                    fits_file = glob(f'{fits_dir}/{name_target}_{c:04d}*')
-                    if fits_file:
-                        manifest.append(fits_file[0])
-                        num_attempts = tot_attempts+1
-                    else:
-                        dl = Tesscut.download_cutouts(coordinates=coord,\
-                                                      size=cutout_size,\
-                                                      sector=c,\
-                                                      path=fits_dir)
-                        manifest.append(dl["Local Path"][0])
-                        num_attempts = tot_attempts+1
-                except:
-                    print(f"Didn't get Sector {c} data for {name_target}, "
-                          f"attempt {num_attempts+1} of {tot_attempts}")
-                    logger.error(f"Didn't get Sector {c} data for "
-                                 f"{name_target}, attempt {num_attempts+1} of "
-                                 f"{tot_attempts}")
-                    num_attempts += 1
-                if num_attempts == tot_attempts:
-                    print(f"No data for {name_target} in Sector {c}")
-                    logger.error(f"No data for {name_target} in Sector {c}")
-                    c_fail.append(c)
-        return manifest
-    else:
-        print("Some sectors not of type `int'. Fix and try again.")
-        logger.error("Some sectors not of type `int'. Fix and try again.")
-        return manifest
-
-
-def get_cutouts(coord, cutout_size, name_target, choose_sec=None,
-                tot_attempts=3, cap_files=None, fits_dir='fits'):
-    '''Download TESS cutouts and store to a list for lightcurve analysis.
-
-    The TESScut function will save fits files to the working directory.
-    
     parameters
     ----------
     coord : `astropy.coordinates.SkyCoord`
@@ -1784,31 +1578,59 @@ def get_cutouts(coord, cutout_size, name_target, choose_sec=None,
     fits_dir : `str`, optional, default='fits'
         The name of the directory to store the fits files.
 
-    returns
+    Returns
     -------
     manifest : `list`
         A list of the fits files for lightcurve analysis.
-    '''
-    name_target = get_name_target(name_target)
+    """
     if choose_sec is None:
-        manifest = cutout_allsecs(coord, cutout_size, name_target,
-                                  tot_attempts=tot_attempts,
-                                  cap_files=cap_files, fits_dir=fits_dir)
-    elif isinstance(choose_sec, int):
-        manifest = cutout_onesec(coord, cutout_size, name_target, choose_sec,
-                                 tot_attempts=tot_attempts,
-                                 cap_files=cap_files, fits_dir=fits_dir)
-    elif isinstance(choose_sec, Iterable):
-        manifest = cutout_chosensecs(coord, cutout_size, name_target,
-                                     choose_sec, tot_attempts=tot_attempts,
-                                     cap_files=cap_files, fits_dir=fits_dir)
-    else:
-        print(f"The choose_sec parameter has an invalid format type: "
-              f"{type(choose_sec)}")
-        logger.error(f"The choose_sec parameter has an invalid format type: "
-                     f"{type(choose_sec)}")
-        manifest = []
+        choose_sec = Tesscut.get_sectors(coordinates=coord)["sector"].data
+        logger.info(f"There are {len(choose_sec)} in total: {v}")
+        if len(choose_sec) == 0:
+            logger.error(f"Sorry, no TESS data available for {name_target}")
+            return []
+        np.random.shuffle(choose_sec)
+    if isinstance(choose_sec, int):
+        choose_sec = [choose_sec]
+
+    choose_sec = choose_sec[:cap_files]
+    if not np.all(np.isin(choose_sec, np.arange(1, sec_max + 1))):
+        raise ValueError(
+            f"Invalid sector numbers: {choose_sec}, sectors are 1-{sec_max}."
+        )
+
+    manifest = []
+    for c in choose_sec:
+        num_attempts = 0
+
+        while num_attempts < tot_attempts:
+            filename = f"{fits_dir}/{name_target}_{c:04d}*"
+            if os.path.exists(filename):
+                manifest.append(filename)
+                continue
+
+            try:
+                dl = Tesscut.download_cutouts(
+                    coordinates=coord, size=cutout_size, sector=c, path=fits_dir
+                )
+                manifest.append(dl["Local Path"][0])
+            except:
+                print(
+                    f"Didn't get Sector {c} data for {name_target}, "
+                    f"attempt {num_attempts+1} of {tot_attempts}"
+                )
+                logger.error(
+                    f"Didn't get Sector {c} data for "
+                    f"{name_target}, attempt {num_attempts+1} of "
+                    f"{tot_attempts}"
+                )
+            num_attempts += 1
+
+            if num_attempts == tot_attempts:
+                print(f"No data for {name_target} in Sector {c}")
+                logger.error(f"No data for {name_target} in Sector {c}")
     return manifest
+
 
 def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
                       ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False,
