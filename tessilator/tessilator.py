@@ -1,8 +1,8 @@
 """
 
-Alexander Binks', r'Moritz Guenther, 2024
+Alexander Binks, Moritz Guenther, 2024
 
-Licence: MIT 2024
+License: MIT 2024
 
 The TESSILATOR
 
@@ -21,7 +21,6 @@ from glob import glob
 # Third party imports
 import numpy as np
 import pyinputplus as pyip
-import time
 from astropy.nddata.utils import Cutout2D
 from astropy.table import Table, MaskedColumn
 from astropy.io import ascii, fits
@@ -197,7 +196,7 @@ def create_table_template():
                 fill_value=fill_value,
             )
         )
-    return Table(cols)
+    return Table(cols, masked=True)
 
 
 def setup_input_parameters():
@@ -653,10 +652,9 @@ def make_target_row(t_targets, r, scc):
     returns
     -------
     dr : dict
-        A dicty for the target star containing input data
+        A dictionary for the target star containing input data
     """
     copycols = [
-        "name",
         "source_id",
         "ra",
         "dec",
@@ -664,11 +662,9 @@ def make_target_row(t_targets, r, scc):
         "Gmag",
         "BPmag",
         "RPmag",
-        "log_tot_bg_star",
-        "log_max_bg_star",
-        "n_conts",
     ]
     dr = {col: t_targets[col] for col in copycols}
+    dr["original_id"] = t_targets["name"]
     dr["Sector"] = scc[0]
     dr["Camera"] = scc[1]
     dr["CCD"] = scc[2]

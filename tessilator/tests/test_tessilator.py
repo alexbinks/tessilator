@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from astropy.table import Table, join
 from tessilator import tessilator
+from contextlib import chdir
 
 ABDor = Table(
     {
@@ -35,20 +36,31 @@ def test_xy_pixel_data():
 
 
 @pytest.mark.remote_data
-def test_all_sources_sector():
+def test_all_sources_sector_no_data(tmpdir):
     """Test the all_sources_sector function."""
     xy_pixel_data = tessilator.get_tess_pixel_xy(ABDor)
     # For GAIA numbers, the source_id comes out as int64
     xy_pixel_data["source_id"] = np.asarray(xy_pixel_data["source_id"], dtype=str)
     tTargets = join(ABDor, xy_pixel_data, keys="source_id")
-    tessilator.all_sources_sector(
-        tTargets,
-        scc=[34, 4, 3],
-        make_plots=True,
-        period_file="temp/period",
-        file_ref="ABDor",
-        keep_data=True,
-    )
-    # Put some real tests here. But that requires me to be able to run
-    # it first...
-    assert False
+    with chdir(tmpdir):
+        tessilator.all_sources_sector(
+            tTargets,
+            scc=[34, 4, 3],
+            make_plots=True,
+            period_file="period",
+            file_ref="ABDor",
+            keep_data=True,
+        )
+    out = Table.read(f"{tmpdir}/period_4_3.csv")
+    assert len(out) == 1
+
+    for col in ABDor.colnames[2:]:
+        assert out[col] == pytest.approx(ABDor[col])
+    # This is special, because it uses a different column name
+    assert out["original_id"][0] == ABDor["name"]
+    # Just test a few representative columns
+    assert out["Sector"][0] == 34
+    assert out["n_conts"].mask[0]
+    assert out["ap_rad"][0] == 1.0
+    assert out["power_4"].mask[0]
+    assert out["period_shuffle"].mask[0]
