@@ -1,7 +1,9 @@
+# Copyright (c) 2022, rae-holcomb
+# Licensed under a 3-clause BSD style license - see other_licenses/acf_functions_license
+# https://github.com/rae-holcomb/SpinSpotter/blob/main/spinspotter/function_library.py
 # Core SpinSpotter Library
-# Created: April 5, 2021
-# Last updated: June 2022 
-# (or possibly more recently, I honestly forget to update this line often)
+# Modified by the Tessilator team - see git history for details
+
 
 # imports
 import matplotlib.pyplot as plt
@@ -476,7 +478,7 @@ def process_LightCurve(lc, bs=cadence, precleaned=False,
         precleaned (:obj:`bool`, optional): set to True if the provided `lc` argument has already been cleaned and normalized.
         transit (:obj:`array`, optional): array of transit parameters like [period, epoch, duration] in units of days each entry can be an array if there are multiple planets. Also used by `default_cleaning_func`.
         max_lag (:obj:`float`, optional): the maximum lag to which to calculate the ACF in units of days.
-        smooth (:obj:`int`, optional): if supplied, will apply smoothing to the LC before fitting parabolas by convolving with a gaussian with a FWHM equal to this value.
+        smooth (:obj:`int`, optional): if supplißed, will apply smoothing to the LC before fitting parabolas by convolving with a gaussian with a FWHM equal to this value.
         sector_label (:obj:`int` or :obj:`str`, optional): tallows you to set a custom sector label, must be castable to a string.
         prot_prior_func (:obj:`func`, optional): the function to be used to identify the period_guess_index (pgi) for the rotation period. Defaults to `calc_fft_pgi()`
         prot_prior_func_kwargs (:obj:`dict`, optional): keyword arguments for the `prot_prior_func` function.
@@ -519,38 +521,21 @@ def process_LightCurve(lc, bs=cadence, precleaned=False,
 
 # # PLOTTING FUNCTIONS
 
-def custom_plot(x, y, ax=None, **plt_kwargs):
-    """
-    (Under construction) Custom plotting function.
-
-    Args:
-        x (:obj:`arr`): the x array.
-        y (:obj:`array`): the y array.
-        ax (:obj:`axis object`, optional): the axis object on which to plot.
-        peak_num (:obj:`int`): which alias you are trying to fit (1 being the original peak, 2 being the first alias.)
-        **plt_kwargs (:obj:`dict`): keyword arguments.
-
-    Returns:
-        ax (:obj:`obj`): the plotted function.
-    """
-    if ax is None:
-        ax = plt.gca()
-    ax.plot(x, y, **plt_kwargs) ## example plot here
-    return(ax)
-
-def plot_fft(fits_result,process_result, plot_peaks=True, **plt_kwargs):
+def plot_fft(process_result, plot_peaks=True, **plt_kwargs):
     """
     Given the result dictionaries from process_LightCurve, plots the FFT of the ACF. Returns a figure object.
 
-    Args:
-        fits_result (:obj:`dict`): dictionary containing information on the LC and ACF, as returned by `process_LightCurve()`.
-        process_result (:obj:`dict`): dictionary containing information on the parabola fits, as returned by `process_LightCurve()`.
-        plot_peaks (:obj:`dict`):  if True, places a marker on the five tallest peaks in the FFT.
-        plt_kwargs (:obj:`dict`):  keyword arguments for `matplotlib.plt.plot()`.
+    Parameters
+    ----------
+    process_result : dict
+        dictionary containing information on the parabola fits, as returned by `process_LightCurve()`.
+    plot_peaks : bool
+        if True, places a marker on the five tallest peaks in the FFT.
+    plt_kwargs : dict
+        keyword arguments for `matplotlib.plt.plot()`.
     """
     fft = process_result['fft']
-    fft_period = process_result['fft_period_days']
-    pgi = process_result['pgi']
+    fft_period = process_result["fft_period_days"]
     fft_pgi = process_result['fft_pgi']
     
     # make le plot!
@@ -573,39 +558,31 @@ def plot_fft(fits_result,process_result, plot_peaks=True, **plt_kwargs):
 
 
 # # PLOTTING AND PRINTING FUNCTIONS
-
-def print_summary(fits_result, process_result, bs=cadence):
-    """
-    Prints a summary of the descriptive parameters calculated by `process_LightCurve()`.
-    
-    Args:
-        fits_result (:obj:`dict`): dictionary containing information on the LC and ACF, as returned by `process_LightCurve()`.
-        process_result (:obj:`dict`): dictionary containing information on the parabola fits, as returned by `process_LightCurve()`.    
-    """
-    print('pgi: ' + "%.3f" % bins_to_days(process_result['pgi']/(24*30), bs=bs))
-    print('A_avg: ' + "%.3f" % (process_result['A_avg']))
-    print('B_avg: ' + "%.3f" % (process_result['B_avg']))
-    print('Rsq_avg: ' + "%.3f" % (process_result['R_avg']))
-    print('P_avg (days): ' + "%.3f" % bins_to_days(process_result['P_avg'], bs=bs))
-    print('P_err (days): ' + "%.3f" % bins_to_days(process_result['P_err'], bs=bs))
-    print('HWHM_err (days): ' + "%.3f" % bins_to_days(np.nanmean(process_result['hwhm_k']), bs=bs))
-    print()
-    
-
 def plot_acf(fits_result,process_result, plot_peaks=True, plot_line=None, cut=10):
     """
     Prints a summary of the descriptive parameters calculated by `process_LightCurve()`.
-    
-    Args:
-        fits_result (:obj:`dict`): dictionary containing information on the LC and ACF, as returned by `process_LightCurve()`.
-        process_result (:obj:`dict`): dictionary containing information on the parabola fits, as returned by `process_LightCurve()`.   
-        plot_peaks (:obj:`bool`): if set to True, will overplot the parabola fits to the ACF peaks on the ACF plot
-        plot_line (:obj:`float`): if given a lag time in days, will plot a vertical line on the ACF at that x-value, indended to plot the found period for visual comparison
-        cut (:obj:`int`): plots look better when you cut the first few points off the ACF, to avoid the high peak at (0,1). This keyword lets you adjust how many points get cut off the front.
-    
-    Returns:
-        fig (:obj:`obj`): the figure object. 
-        ax (:obj:`obj`): the axis object with the plotted function. 
+
+    Parameters
+    ----------
+    fits_result : dict
+        dictionary containing information on the LC and ACF, as returned by `process_LightCurve()`.
+    process_result : dict
+        dictionary containing information on the parabola fits, as returned by `process_LightCurve()`.
+    plot_peaks : bool
+        if set to True, will overplot the parabola fits to the ACF peaks on the ACF plot
+    plot_line : float or None
+        if given a lag time in days, will plot a vertical line on the ACF at that x-value,
+        intended to plot the found period for visual comparison.
+    cut : int
+        plots look better when you cut the first few points off the ACF, to avoid the high peak at (0,1).
+        This keyword lets you adjust how many points get cut off the front.
+
+    Returns
+    -------
+        fig :
+            the figure object.
+        ax :
+            the axis object with the plotted function.
     """
     # make the base plot
     # fig_num=plt.figure().number + 1
