@@ -43,7 +43,7 @@ from .fixedconstants import sec_max
 from .file_io import logger_tessilator, make_dir, fix_table_format
 from .tess_stars2px import tess_stars2px_function_entry
 
-##############################################################c#################
+###############################################################################
 ###############################################################################
 ###############################################################################
 
@@ -1181,7 +1181,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             logger.error("No photometry was recorded for this group.")
             res_table.add_row(make_failrow(t_targets, rad_calc, scc))
             continue
-
         if len(lcs) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
@@ -1602,7 +1601,7 @@ def get_cutouts(
     """
     if choose_sec is None:
         choose_sec = Tesscut.get_sectors(coordinates=coord)["sector"].data
-        logger.info(f"There are {len(choose_sec)} in total: {v}")
+        logger.info(f"There are {len(choose_sec)} in total: {choose_sec}")
         if len(choose_sec) == 0:
             logger.error(f"Sorry, no TESS data available for {name_target}")
             return []
@@ -1621,26 +1620,27 @@ def get_cutouts(
         num_attempts = 0
 
         while num_attempts < tot_attempts:
-            filename = f"{fits_dir}/{name_target}_{c:04d}*"
-            if os.path.exists(filename):
-                manifest.append(filename)
-                continue
-
-            try:
-                dl = Tesscut.download_cutouts(
-                    coordinates=coord, size=cutout_size, sector=c, path=fits_dir
-                )
-                manifest.append(dl["Local Path"][0])
-            except:
-                print(
-                    f"Didn't get Sector {c} data for {name_target}, "
-                    f"attempt {num_attempts+1} of {tot_attempts}"
-                )
-                logger.error(
-                    f"Didn't get Sector {c} data for "
-                    f"{name_target}, attempt {num_attempts+1} of "
-                    f"{tot_attempts}"
-                )
+            filename = glob(f"{fits_dir}/{name_target}_{c:04d}*.fits")
+            if len(filename) == 1:
+                manifest.append(filename[0])
+                break
+            else:
+                try:
+                    dl = Tesscut.download_cutouts(
+                        coordinates=coord, size=cutout_size, sector=c, path=fits_dir
+                    )
+                    manifest.append(dl["Local Path"][0])
+                    break
+                except:
+                    print(
+                        f"Didn't get Sector {c} data for {name_target}, "
+                        f"attempt {num_attempts+1} of {tot_attempts}"
+                    )
+                    logger.error(
+                        f"Didn't get Sector {c} data for "
+                        f"{name_target}, attempt {num_attempts+1} of "
+                        f"{tot_attempts}"
+                    )
             num_attempts += 1
 
             if num_attempts == tot_attempts:
@@ -1650,7 +1650,7 @@ def get_cutouts(
 
 
 def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
-                      ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False,
+                      ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False, keep_data=False,
                       n_cont=10, cont_rad=10., mag_lim=3.,                    
                       save_phot=False, cbv_flag=False,
                       choose_sec=None, store_lc=False, cutout_size=20,

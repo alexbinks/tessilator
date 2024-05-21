@@ -34,6 +34,7 @@ from collections.abc import Iterable
 # Local application imports
 from .file_io import logger_tessilator
 from .lc_analysis import sin_fit
+from .lc_analysis import relative_root_mean_squared_error
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -726,7 +727,7 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
     Nothing returned, the LS_dict dictionary is updated with new parameters.
     '''
     if shuf_per:
-        logger.info()
+        logger.info('running the shuffle periodogram')
         try:
 #1) run the shuffle_periodogram function.
             period_arr = shuffle_periodogram(cln_lc, n_shuf_runs=n_shuf_runs,
@@ -786,7 +787,6 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
 #9) calculate "rrmse", the relative root mean square error.
                 rrmse = relative_root_mean_squared_error(num_log10_per2,
                                                          Gauss_log10_per)
-
                 p_shuf = 10**(Gauss_param_log10_per[1])
                 p_shufu = 10**(Gauss_param_log10_per[1] + Gauss_param_log10_per[2])
                 p_shufl = 10**(Gauss_param_log10_per[1] - Gauss_param_log10_per[2])
@@ -811,7 +811,7 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
                     LS_dict['power_1'] = 1.0
                     LS_dict['Gauss_1'] = [1.0, p_shuf, p_shuf_err]
                 else:
-                     logger.warning(f'failed second set of criteria: 2a={crit_2a}, 2b={crit_2b}, 2c={crit_2c}')
+                    logger.warning(f'failed second set of criteria: 2a={crit_2a}, 2b={crit_2b}, 2c={crit_2c}')
             else:
                 logger.warning(f'failed first set of criteria: 1a={crit_1a}, 1b={crit_1b}, 1c={crit_1c}')            
 
@@ -839,11 +839,11 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
                     nl = '\n'
                     ax[1].text(0.99, 0.85, f"$P_{{\\rm rot}}$ (shuf) [d]{nl}{p_shuf:.3f}+/-{p_shuf_err:.3f}", transform=ax[1].transAxes, horizontalalignment='right')
                 plt.savefig(f'{shuf_dir}/{name_shuf_plot}', bbox_inches='tight')
+
         except:
             logger.error("An error occured with the the period shuffling method.")
             LS_dict['period_shuffle'] = -9
             LS_dict['period_shuffle_err'] = -9
-            
 
 def make_phase_curve(LS_dict, ls, n_sca=10):
     '''Generate the phase-folded lightcurve using the peak periodogram period.
@@ -1016,7 +1016,6 @@ def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_
         | "frac_phase_outliers" : The fraction of data points that are more than 3 median absolute deviation values from the best-fit.
         | "Ndata" : The number of data points used in the periodogram analysis.
     '''
-
     LS_dict, cln_lc, ls = initialise_LS_dict(lc_data, check_jump=check_jump)
     logger.info(f'LS dictionary successfully initialised: {name_pg}, {lc_type}.')
 
