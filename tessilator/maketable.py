@@ -109,9 +109,11 @@ def table_from_simbad(input_names):
                 NameList.append(input_name)
                 GaiaList.append(m[0].split(' ')[2])
     if len(NameList) == 0:
-        logger.error(f"No targets have been resolved, either by Simbad or "
-                     f"Gaia DR3. Please check the target names are "
-                     f"resolvable.")
+        logger.error(
+            "No targets have been resolved, either by Simbad or "
+            "Gaia DR3. Please check the target names are "
+            "resolvable."
+        )
         sys.exit()
     # Part 2: Query Gaia database using Gaia identifiers retrieved in part 1.
     ID_string = ""
@@ -175,15 +177,18 @@ def get_twomass_like_name(coords):
 
 def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
                       gaia_sys=True):
-    '''Generate the formatted astropy table from a list of coordinates.
+    """Generate the formatted astropy table from a list of coordinates.
 
     Each entry needs to be in comma separated variable(.csv) format.
 
     parameters
     ----------
     coord_table : `astropy.table.Table`
-        a table consisting of right ascension and declination coordinates (in
-        degrees) in comma separated variable (.csv) format.
+        A table with two columns named 'col1' and 'col2'. If the coordinates
+        are in the 'icrs' system, the columns should contain the right
+        ascension and declination values in degrees. If the coordinates are in
+        the 'galactic' or 'ecliptic' system, the columns contain the longitude and
+        latitude in degrees.
     ang_max : `float`, optional, default=10.0
         the maximum angular distance in arcseconds from the input coordinates
         provided in the table.
@@ -198,7 +203,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
     -------
     gaia_table : `astropy.table.Table`
         The output table ready for further analysis.
-    '''
+    """
     gaia_table = Table(names=('source_id', 'ra', 'dec', 'parallax',
                               'Gmag', 'BPmag', 'RPmag'), \
                        dtype=(int,float,float,float,float,float,float))
@@ -410,10 +415,12 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs',
     elif len(gaia_table.colnames) == 7:
         tbl = table_from_table(gaia_table, name_is_source_id=name_is_source_id)
     else:
-        raise Exception(f"Input table has invalid format. Please use one of "
-                        f"the following formats: \n [1] source_id \n [2] ra "
-                        f"and dec\n [3] source_id, ra, dec, parallax, Gmag, "
-                        f"BPmag and RPmag")
+        raise Exception(
+            "Input table has invalid format. Please use one of "
+            "the following formats: \n [1] source_id \n [2] ra "
+            "and dec\n [3] source_id, ra, dec, parallax, Gmag, "
+            "BPmag and RPmag"
+        )
     return tbl
 
 
