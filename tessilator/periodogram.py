@@ -159,8 +159,9 @@ def gauss_fit_peak(period, power, max_power=1):
                                         [max_power, period[-1], period_diff]))
             ym = gauss_fit(period, *popt)
         except:
-            logger.error(f"Couldn't find the optimal parameters for the "
-                         f"Gaussian fit!")
+            logger.error(
+                "Couldn't find the optimal parameters for the " "Gaussian fit!"
+            )
             p_m = np.argmax(power)
             peak_vals = [p_m-1, p_m, p_m+1]
             x = period[peak_vals]
@@ -725,7 +726,7 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
     Nothing returned, the LS_dict dictionary is updated with new parameters.
     '''
     if shuf_per:
-        logger.info(f'Running the shuffle period algorithm.')
+        logger.info()
         try:
 #1) run the shuffle_periodogram function.
             period_arr = shuffle_periodogram(cln_lc, n_shuf_runs=n_shuf_runs,
@@ -839,7 +840,7 @@ def shuffle_check(cln_lc, LS_dict, shuf_per=False, n_shuf_runs=5000,
                     ax[1].text(0.99, 0.85, f"$P_{{\\rm rot}}$ (shuf) [d]{nl}{p_shuf:.3f}+/-{p_shuf_err:.3f}", transform=ax[1].transAxes, horizontalalignment='right')
                 plt.savefig(f'{shuf_dir}/{name_shuf_plot}', bbox_inches='tight')
         except:
-            logger.error(f'An error occured with the the period shuffling method.')
+            logger.error("An error occured with the the period shuffling method.")
             LS_dict['period_shuffle'] = -9
             LS_dict['period_shuffle_err'] = -9
             
@@ -1020,8 +1021,8 @@ def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_
     logger.info(f'LS dictionary successfully initialised: {name_pg}, {lc_type}.')
 
     write_periodogram(LS_dict, name_pg=name_pg, lc_type=lc_type, pg_dir=pg_dir)
-    logger.info(f'Periodogram results written to file.')
-        
+    logger.info("Periodogram results written to file.")
+
     get_periodogram_peaks(LS_dict, n_peaks=n_peaks)
     logger.info(f'Top {n_peaks} peaks recorded to dictionary.')
 
@@ -1029,7 +1030,7 @@ def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_
     logger.info('Periodogram successfully shuffled.')
 
     make_phase_curve(LS_dict, ls, n_sca=n_sca)
-    logger.info(f'Phase curve details stored to dictionary.')
+    logger.info("Phase curve details stored to dictionary.")
     return LS_dict
 
 

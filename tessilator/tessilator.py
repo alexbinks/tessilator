@@ -13,7 +13,8 @@ The TESSILATOR
 #Internal
 
 from datetime import datetime
-import sys, os
+import sys
+import os
 import inspect
 from glob import glob
 
@@ -244,7 +245,7 @@ def setup_input_parameters():
                     single_target.write(t_name)
                 t_filename = t_name_joined
                 break
-            if os.path.exists(t_filename) == False:
+            if not os.path.exists(t_filename):
                 logger.error(f'The file "{t_filename}" does not exist.')
             else:
                 break
@@ -256,8 +257,7 @@ def setup_input_parameters():
         elif 'sector' in sys.argv[0]:
             scc_in = str(sys.argv[2])
             if len(scc_in) > 4:
-                logger.critical(f"Incorrect format for sector/camera/ccd "
-                                f"values")
+                logger.critical("Incorrect format for sector/camera/ccd " "values")
                 sys.exit()
             elif len(scc_in) < 3:
                 scc = [int(scc_in)]
@@ -300,8 +300,10 @@ def setup_input_parameters():
                                     f"Exiting program.")
                     sys.exit()                        
         if make_plots not in true_vals:
-            logger.critical(f"make_plots not a valid input: "
-                            f"choose either 0 or 1.\nExiting program.")
+            logger.critical(
+                "make_plots not a valid input: "
+                "choose either 0 or 1.\nExiting program."
+            )
             sys.exit()
 
         if t_filename.startswith('#'):
@@ -316,7 +318,7 @@ def setup_input_parameters():
                 else:
                     single_target.write(t_name)
             t_filename = t_name_joined
-        if os.path.exists(t_filename) == False:
+        if not os.path.exists(t_filename):
             logger.critical(f'The file "{t_filename}" does not exist.')
             sys.exit()
     if 'cutout' in sys.argv[0]:
@@ -989,9 +991,9 @@ def assess_lc(ls_results):
     else:
         cbv_sc += 1
 #2) Check how jumpy the lightcurves are...
-    if (ori_ls["jump_flag"]) != True:
+    if not ori_ls["jump_flag"]:
         ori_sc += 1
-    if (cbv_ls["jump_flag"]) != True:
+    if not cbv_ls["jump_flag"]:
         cbv_sc += 1
 #3) Check the max_power/FAP_001
     if (ori_ls["power_1"]/ori_ls["FAPs"][2]) > \
@@ -1177,7 +1179,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                                     lc_dir=lc_dir,
                                                     cbv_flag=cbv_flag)
         else:
-            logger.error(f"No photometry was recorded for this group.")
+            logger.error("No photometry was recorded for this group.")
             res_table.add_row(make_failrow(t_targets, rad_calc, scc))
             continue
 
