@@ -27,10 +27,10 @@ jobs:
           #  python: 3.x
           #  toxenv: codestyle
 
-          - name: Python 3.10 with minimal dependencies
+          - name: Python 3.11 with minimal dependencies
             os: ubuntu-latest
-            python: "3.10"
-            toxenv: py310-test
+            python: 3.11
+            toxenv: py311-test
 
           #- name: Python 3.8 with all optional dependencies and coverage checking
           #  os: ubuntu-latest
