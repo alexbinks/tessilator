@@ -39,7 +39,7 @@ from .detrend_cbv import get_cbv_scc
 from .contaminants import contamination, is_period_cont
 from .maketable import get_gaia_data
 from .makeplots import make_plot
-from .fixedconstants import sec_max
+#from .fixedconstants import sec_max
 from .file_io import logger_tessilator, make_dir, fix_table_format
 from .tess_stars2px import tess_stars2px_function_entry
 
@@ -79,8 +79,14 @@ print("\n")
 print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
 
+import requests
+from bs4 import BeautifulSoup
+import re
 
-
+tess_web = requests.get('https://tess.mit.edu/observations/')
+soup = BeautifulSoup(tess_web.text, 'html.parser')
+tess_para = soup(text=re.compile("TESS is in Orbit"))
+sec_max = int(tess_para[0].split(',')[1].split(' ')[2].split('.')[0])
 
 def create_table_template():
     '''Create a template astropy table to store tessilator results.
@@ -1481,35 +1487,6 @@ def get_tess_pixel_xy(t_targets):
     return xy_table
 
 
-def get_fits(scc):
-    '''Function which returns a list of fits files corresponding to a
-    given Sector, Camera and CCD configuration.
-
-    parameters
-    ----------
-    sector_num : `int`
-        The required sector number.
-
-    scc : `list`, size=3
-        List containing the sector number, camera and CCD.
-    
-    file_dir : `str`
-        The name of the base directory containin the fits files.
-
-    returns
-    -------
-    fits_files : `list`
-        A list of the fits files to be used for aperture photometry.
-    '''
-    
-    list_fits = sorted(glob(f"../tess_fits_files/sector{scc[0]:02d}/*.fits"))
-    l_cam = np.array([int(j.split('-')[2]) for j in list_fits])
-    l_ccd = np.array([int(j.split('-')[3]) for j in list_fits])
-    fits_indices = (l_cam == scc[1]) & (l_ccd == scc[2])
-    fits_files = np.array(list_fits)[fits_indices]
-    print(fits_files)
-    return fits_files
-
 
 def make_2d_cutout(file_in, phot_table, im_size=(20,20)):
     '''Makes a 2D cutout object of a target using the median time-stacked
@@ -1974,6 +1951,36 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     hrs_mins_secs = print_time_taken(start, finish)
     print(f"Finished {len(t_targets)} targets in {hrs_mins_secs}")
     logger.info(f"Total time taken: {hrs_mins_secs}")
+
+
+def get_fits(scc):
+    '''Function which returns a list of fits files corresponding to a
+    given Sector, Camera and CCD configuration.
+
+    parameters
+    ----------
+    sector_num : `int`
+        The required sector number.
+
+    scc : `list`, size=3
+        List containing the sector number, camera and CCD.
+    
+    file_dir : `str`
+        The name of the base directory containin the fits files.
+
+    returns
+    -------
+    fits_files : `list`
+        A list of the fits files to be used for aperture photometry.
+    '''
+    
+    list_fits = sorted(glob(f"../tess_fits_files/sector{scc[0]:02d}/*.fits"))
+    l_cam = np.array([int(j.split('-')[2]) for j in list_fits])
+    l_ccd = np.array([int(j.split('-')[3]) for j in list_fits])
+    fits_indices = (l_cam == scc[1]) & (l_ccd == scc[2])
+    fits_files = np.array(list_fits)[fits_indices]
+    print(fits_files)
+    return fits_files
 
 
 
