@@ -1,3 +1,93 @@
+[project]
+name = "tessilator"
+authors = [
+  {name = "Alex Binks", email = "binks@astro.uni-tuebingen.de"},
+  {name = "Moritz Guenther", email = "hgunther@mit.edu"},
+]
+maintainers = [
+  {name = "Alex Binks", email = "binks@astro.uni-tuebingen.de"},
+  {name = "Moritz Guenther", email = "hgunther@mit.edu"},
+]
+description = "The one-stop shop for measuring TESS rotation periods"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.11.0"
+keywords = ["TESS", "lightcurve", "star", "period"]
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Astronomy"
+]
+dynamic = ["version"]
+dependencies = [
+  "astropy",
+  "numpy",
+  "astroquery",
+  "photutils",
+  "matplotlib",
+  "numpy>=1.20.0",
+  "scipy>=1.9.0",
+  "statsmodels",
+  "pyinputplus"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest-astropy",
+  "sphinx-astropy"
+]
+docs = [
+  "sphinx",
+  "sphinx-automodapi",
+  "numpydoc"
+]
+
+[project.scripts]
+run_tess_sectors = "tessilator.scripts.run_tess_sectors:main"
+run_tess_cutouts = "tessilator.scripts.run_tess_cutouts:main"
+
+[project.urls]
+"Homepage" = "https://tessilator.readthedocs.io/"
+"Source" = "https://github.com/alexbinks/tessilator"
+"Issue tracker" = "https://github.com/alexbinks/tessilator/issues"
+
 [build-system]
 requires = ["setuptools", "wheel", "setuptools_scm"]
 build-backend = 'setuptools.build_meta'
+
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE", "other_licenses/*"]
+
+[tool.setuptools.packages.find]
+include = ["tessilator*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"tessilator" = ["CITATION.cff"]
+"tessilator.tests" = ["*_tests/*"]
+
+[tool.setuptools_scm]
+write_to = "tessilator/_version.py"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = [
+    "tessilator",
+    "docs",
+]
+norecursedirs = [
+    "docs[\\/]_build",
+    "docs[\\/]generated"
+]
+addopts = [
+    "--color=yes",
+    "-v"
+]
+log_cli_level = "info"
