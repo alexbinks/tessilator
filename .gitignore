@@ -21,6 +21,7 @@ temp_results
 tesssim/**/fits/
 tessilator/tests/sector_tests
 tessilator/tests/test_xypos_sector.py
+test*.png
 
 build/lib/tessilator/lc_analysis.py
 build/lib/tessilator/maketable.py
