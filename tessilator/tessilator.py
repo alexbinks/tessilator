@@ -1594,6 +1594,7 @@ def get_cutouts(
     if choose_sec is None:
         choose_sec = Tesscut.get_sectors(coordinates=coord)["sector"].data
         logger.info(f"There are {len(choose_sec)} in total: {choose_sec}")
+        logger.info(f"There are {len(choose_sec)} in total: {choose_sec}")
         if len(choose_sec) == 0:
             logger.error(f"Sorry, no TESS data available for {name_target}")
             return []
@@ -1641,15 +1642,38 @@ def get_cutouts(
     return manifest
 
 
-def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
-                      ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False, keep_data=False,
-                      n_cont=10, cont_rad=10., mag_lim=3.,                    
-                      save_phot=False, cbv_flag=False,
-                      choose_sec=None, store_lc=False, cutout_size=20,
-                      tot_attempts=3, cap_files=None, fits_dir='fits',
-                      lc_dir='lc', pg_dir='pg', fix_noise=False, shuf_per=False,
-                      make_shuf_plot=False, shuf_dir='shuf_plots'):
-    '''Download cutouts and run lightcurve/periodogram analysis for one target.
+def one_source_cutout(
+    target,
+    lc_con,
+    flux_con,
+    make_plots,
+    res_table,
+    ref_name,
+    gaia_sys=True,
+    xy_pos=(10.0, 10.0),
+    ap_rad=1.0,
+    sky_ann=(6.0, 8.0),
+    fix_rad=False,
+    n_cont=10,
+    cont_rad=10.0,
+    mag_lim=3.0,
+    keep_data=False,
+    save_phot=False,
+    cbv_flag=False,
+    choose_sec=None,
+    store_lc=False,
+    cutout_size=20,
+    tot_attempts=3,
+    cap_files=None,
+    fits_dir="fits",
+    lc_dir="lc",
+    pg_dir="pg",
+    fix_noise=False,
+    shuf_per=False,
+    make_shuf_plot=False,
+    shuf_dir="shuf_plots",
+):
+    """Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources_cutout".
 
@@ -1689,6 +1713,8 @@ def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
         The maximum pixel radius to search for contaminants
     mag_lim : `float`, optional, default=3.
         The faintest magnitude to search for contaminants.
+    keep_data : `bool`
+        Choose to save the input data to file.
     save_phot : `bool`, optional, default=False
         Decide whether to save the full results from the aperture photometry.
     cbv_flag : `bool`, optional, default=False
@@ -1724,14 +1750,14 @@ def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
     make_shuf_plot : `bool`, optional, default=False
         Choose to make a plot for the shuffled period analysis
     shuf_dir : `str`, optional, default='plot_shuf'
-        The name of the directory to save the plots of the shuffled period analysis. 
+        The name of the directory to save the plots of the shuffled period analysis.
 
     returns
     -------
     Nothing returned. Results are saved to table and plots are generated (if
-    specified). 
-    '''
-    
+    specified).
+    """
+
     # Set the contaminant parameters to the default values in case
     # they have not been added
     if 'log_tot_bg' not in target.colnames:
