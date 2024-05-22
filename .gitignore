@@ -6,25 +6,18 @@ tessilator/_version.py
 contaminants
 final_period_cal
 fits
-LargeRun
 lc
-lc_cont
-paper
-personal
 pg
 plots
-practice
-presentations
-projects
 results
 shuf_plots
-target_input
 temp_results
 
-tesssim/**/fits/
-tessilator/tests/sector_tests
-tessilator/tests/test_xypos_sector.py
-test*.png
+# 22.05.24 -- acf_functions are in experimental stage and not yet for inclusion
+tessilator/acf_functions.py
+
+
+tessilator/tests/old_targets
 
 build/lib/tessilator/lc_analysis.py
 build/lib/tessilator/maketable.py
