@@ -1140,7 +1140,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         logger.error(f"aperture photometry: failed to produce enough data "
                      f"points for {t_target['source_id']}")
         for t in t_target:
-            res_table.add_row(make_target_row(t, rad_calc, scc))
+            res_table.add_row(make_target_row(t, r=rad_calc, scc=scc))
         return None
     if cbv_flag:
         corrected_flux, weights = get_cbv_scc(scc, tpf)
@@ -1201,12 +1201,12 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                                     cbv_flag=cbv_flag)
         else:
             logger.error(f"No photometry was recorded for this group.")
-            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
         if len(lcs) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
         if fix_noise and not lc_con:
             logger.info('fixing the noise!')
@@ -1238,7 +1238,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         if d_target['period_1'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_target_row(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
 
         false_flag, reliable_flag = 4, 4        
@@ -1310,7 +1310,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             make_plot(im_plot, lc, d_target, scc, t_targets, name_target,
                       plot_dir, xy_contam=xy_con, p_min_thresh=0.1,
                       p_max_thresh=50., ap_rad=rad_calc, sky_ann=sky_ann, nc=nc)
-        res_table.add_row(make_target_row(t_targets, scc, rad_calc) | d_target)
+        target_row = make_target_row(t_targets, r=rad_calc, scc=scc) | d_target
+        common_cols = {k: v for k, v in target_row.items() if k in res_table.colnames}
+        res_table.add_row(common_cols)
         temp_dir = make_dir("temp_results", ref_name)
         res_table.write(f'{temp_dir}/{ref_name}_periods.csv', overwrite=True)
         if not keep_data:
