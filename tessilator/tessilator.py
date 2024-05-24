@@ -1,12 +1,12 @@
-'''
+"""
 
-Alexander Binks & Moritz Guenther, 2024
+Alexander Binks, Moritz Guenther, 2024
 
-Licence: MIT 2024
+License: MIT 2024
 
 The TESSILATOR
 
-'''
+"""
 ###############################################################################
 ####################################IMPORTS####################################
 ###############################################################################
@@ -21,9 +21,8 @@ from glob import glob
 # Third party imports
 import numpy as np
 import pyinputplus as pyip
-import time
 from astropy.nddata.utils import Cutout2D
-from astropy.table import Table
+from astropy.table import Table, MaskedColumn
 from astropy.io import ascii, fits
 from astropy.coordinates import SkyCoord
 from astroquery.mast import Tesscut
@@ -39,8 +38,7 @@ from .detrend_cbv import get_cbv_scc
 from .contaminants import contamination, is_period_cont
 from .maketable import get_gaia_data
 from .makeplots import make_plot
-#from .fixedconstants import sec_max
-from .file_io import logger_tessilator, make_dir, fix_table_format
+from .file_io import logger_tessilator, make_dir
 from .tess_stars2px import tess_stars2px_function_entry
 
 ###############################################################################
@@ -88,6 +86,97 @@ soup = BeautifulSoup(tess_web.text, 'html.parser')
 tess_para = soup(text=re.compile("TESS is in Orbit"))
 sec_max = int(tess_para[0].split(',')[1].split(' ')[2].split('.')[0])
 
+_Template_table_format = [
+    # column name, description, data type, format, fill_value
+    ("original_id", r"Target identifier", str, None, "N/A"),
+    ("source_id", r"Gaia DR3 source identifier", str, None, "N/A"),
+    ("ra", r"Right ascension (epoch J2000)", float, ".12f", np.nan),
+    ("dec", r"Declination (epoch J2000)", float, ".12f", np.nan),
+    ("parallax", r"Gaia DR3 parallax", float, ".6f", np.nan),
+    (
+        "Gmag",
+        r"Gaia DR3 $G$-band magnitude",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("BPmag", r"Gaia DR3 $G_{\rm BP}$-band magnitude", float, ".6f", np.nan),
+    ("RPmag", r"Gaia DR3 $G_{\rm RP}$-band magnitude", float, ".6f", np.nan),
+    ("Tmag_MED", r"Median TESS $T$-band magnitude", float, ".6f", 0),
+    ("Tmag_MAD", r"MAD TESS $T$-band magnitude", float, ".6f", 0),
+    ("Sector", r"TESS sector number", int, None, 0),
+    ("Camera", r"TESS camera number", int, None, 0),
+    ("CCD", r"TESS CCD number", int, None, 0),
+    ("log_tot_bg_star", r"$\Sigma\eta$", float, ".6f", -999),
+    ("log_max_bg_star", r"$\eta_{\rm max}$", float, ".6f", -999),
+    ("n_conts", r"Number of contaminating sources", int, None, 0),
+    ("ap_rad", r"Aperture radius (pixels)", float, ".3f", -np.inf),
+    ("false_flag", r"Test if a contaminant is the $P_{\rm rot}$ source", int, None, 4),
+    ("reliable_flag", r"Test if the $P_{\rm rot}$ source is reliable", int, None, 4),
+    ("CBV_flag", r"The CBV-correction category", int, None, 9),
+    ("smooth_flag", r"Flag for detrending step 1", int, None, 9),
+    ("norm_flag", r"Flag for detrending step 2$", int, None, 9),
+    ("jump_flag", r"Test for jumps in the lightcurve", int, None, 9),
+    ("AIC_line", r"AIC score: linear fit to the lightcurve", float, ".6f", np.nan),
+    ("AIC_sine", r"AIC score: sine fit to the lightcurve", float, ".6f", np.nan),
+    ("Ndata", r"Number of datapoints in the periodogram analysis", int, None, 0),
+    ("FAP_001", r"1\% False Alarm Probability power", float, ".6f", np.nan),
+    ("period_1", r"Primary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_1_fit",
+        r"Primary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_1_err", r"Primary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_1", r"Power output of the primary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_2", r"Secondary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_2_fit",
+        r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_2_err", r"Secondary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_2", r"Power output of the secondary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_3", r"Tertiary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_3_fit",
+        r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    (
+        "period_4_fit",
+        r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f", np.nan),
+    ("period_shuffle_err", r"Uncertainty in $P_{\rm shuff}$", float, ".6f", np.nan),
+    ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None, 9),
+    ("amp", r"Amplitude of the PFL", float, ".6f", np.nan),
+    ("scatter", r"Scatter of the PFL", float, ".6f", np.nan),
+    (
+        "chisq_phase",
+        r"$\chi^{2}$ value of the sinusoidal fit to the PFL",
+        float,
+        ".6f",
+        np.nan,
+    ),
+    ("fdev", r"Number of extreme outliers in the PFL", float, ".6f", np.nan),
+]
+
+
 def create_table_template():
     '''Create a template astropy table to store tessilator results.
 
@@ -96,56 +185,18 @@ def create_table_template():
     res_table : `astropy.table.Table`
         A template table to store tessilator results.
     '''
-    names = ('original_id','source_id','ra','dec','parallax',\
-             'Gmag','BPmag','RPmag','Tmag_MED','Tmag_MAD',\
-             'Sector','Camera','CCD',\
-             'log_tot_bg_star','log_max_bg_star','n_conts',\
-             'ap_rad','false_flag','reliable_flag',\
-             'CBV_flag','smooth_flag','norm_flag','jump_flag',\
-             'AIC_line','AIC_sine',\
-             'Ndata','FAP_001',\
-             'period_1','period_1_fit','period_1_err','power_1',\
-             'period_2','period_2_fit','period_2_err','power_2',\
-             'period_3','period_3_fit','period_3_err','power_3',\
-             'period_4','period_4_fit','period_4_err','power_4',\
-             'period_shuffle','period_shuffle_err', 'shuffle_flag',\
-             'amp','scatter','chisq_phase','fdev')
-
-
-    f_start=(str,str,float,float,float,\
-             float,float,float,float,float,\
-             int,int,int,\
-             float,float,int,\
-             float,int,int,\
-             int,int,int,int,\
-             float,float,\
-             int,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,float,float,\
-             float,float,int,\
-             float,float,float,float)
-
-
-    formats = ['%s','%s','.12f','.12f','.6f',
-               '.6f','.6f','.6f','.6f','.6f',
-               '%i','%i','%i',
-               '.6f','.6f','%i',
-               '.3f','%i','%i',
-               '%i','%i','%i','%i',
-               '.6f','.6f',
-               '%i','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','.6f','.6f',
-               '.6f','.6f','%i',
-               '.6f','.6f','.4f','.3f']
-
-    res_table = Table(names=names, dtype=f_start)
-    return res_table, names, formats
-
+    cols = []
+    for name, description, dtype, format, fill_value in _Template_table_format:
+        cols.append(
+            MaskedColumn(
+                name=name,
+                description=description,
+                dtype=dtype,
+                format=format,
+                fill_value=fill_value,
+            )
+        )
+    return Table(cols, masked=True)
 
 
 def setup_input_parameters():
@@ -567,56 +618,15 @@ def collect_contamination_data(t_targets, ref_name, targ_name,
     return t_targets, t_cont, cont_dir
 
 
+def make_target_row(t_targets, r, scc):
+    """Construct table row with the input target data.
 
-def make_datarow(t, scc, r, d):
-    '''Once the tessilator has analysed a target, the results are printed line
-    by line to a table.
+    If tessilator fails to run on a target, that's all you get.
 
-    parameters
+    Parameters
     ----------
-    t : `astropy.table.Table`
-        The table containing information on Gaia properties and contamination.
-        See the header names below in the code.
-    d : `dict`
-        The dictionary containing details of the periodogram analysis.
-        See the header names below in the code.
-    r : `float`
-        The pixel size of the aperture radius
-    scc : `list`, size=3
-        A list containing the Sector, Camera and CCD.
-        
-    returns
-    -------
-    dr : `list`
-        A list for the target star containing tessilator data.
-    '''
-    dr = [t["name"], t["source_id"], t["ra"], t["dec"], t["parallax"],
-          t["Gmag"], t["BPmag"], t["RPmag"], d["Tmag_MED"], d["Tmag_MAD"],
-          scc[0], scc[1], scc[2], t["log_tot_bg"], t["log_max_bg"],
-          t["num_tot_bg"], r, d["false_flag"], d["reliable_flag"],
-          d['CBV_flag'], d["smooth_flag"], d["norm_flag"],
-          d['jump_flag'], d['AIC_line'], d['AIC_sine'],
-          d['Ndata'], d['FAPs'][2],
-          d['period_1'], d['Gauss_1'][1], d['Gauss_1'][2], d['power_1'],
-          d['period_2'], d['Gauss_2'][1], d['Gauss_2'][2], d['power_2'],
-          d['period_3'], d['Gauss_3'][1], d['Gauss_3'][2], d['power_3'],
-          d['period_4'], d['Gauss_4'][1], d['Gauss_4'][2], d['power_4'],
-          d['period_shuffle'], d['period_shuffle_err'],d['shuffle_flag'],
-          d['pops_vals'][1], d['phase_scatter'], d['phase_chisq'],
-          d['frac_phase_outliers']
-          ]
-    return dr
-
-
-
-
-def make_failrow(t, r, scc):
-    '''Print a line with input data if tessilator fails for a given target
-
-    parameters
-    ----------
-    t : `astropy.table.Table`
-        Table of input data for the tessilator, with the following columns:
+    t_targets : `astropy.table.Row`
+        One row of input data for the tessilator, with the following columns:
 
         * name: name of the target (`str`)
 
@@ -634,42 +644,33 @@ def make_failrow(t, r, scc):
 
         * RPmag: Gaia DR3 apparent RP-band magnitude
 
-        * log_tot_bg_star: log-10 value of the flux ratio between contaminants
-          and target (optional).
-
-        * log_max_bg_star: log-10 value of the flux ratio between the largest
-          contaminant and target (optional).
-
-        * n_contaminants: number of contaminant sources (optional).
-        
-        Note that if the contaminantion is not calculated, the final three
-        columns are automatically filled with -999 values.
     r : `float`
         The pixel size of the aperture radius
-    scc : `list`, size=3
+    scc : tuple, size=3
         A list containing the Sector, Camera and CCD.
 
     returns
     -------
-    dr : `dict`
-        A dictionary entry for the target star containing input data
-    '''
-    if 'log_tot_bg' not in t_target.colnames:
-        t_targets.add_column(-999, name='log_tot_bg')
-        t_targets.add_column(-999, name='log_max_bg')
-        t_targets.add_column(0,    name='n_contaminants')
-
-    dr = [t["name"], t["source_id"], t["ra"], t["dec"], t["parallax"],
-          t["Gmag"], t["BPmag"], t["RPmag"], 0, 0,
-          scc[0], scc[1], scc[2], t["log_tot_bg"], t["log_max_bg"],
-          t["num_tot_bg"], r,
-          '4','4','9','9','9','9']
-
-    for i in range(22):
-        dr.append(np.nan)
-    dr.append(9)
-    for i in range(4):
-        dr.append(np.nan)
+    dr : dict
+        A dictionary for the target star containing input data
+    """
+    copycols = [
+        "source_id",
+        "ra",
+        "dec",
+        "parallax",
+        "Gmag",
+        "BPmag",
+        "RPmag",
+    ]
+    dr = {col: t_targets[col] for col in copycols}
+    dr["original_id"] = t_targets["name"]
+    dr["Sector"] = scc[0]
+    dr["Camera"] = scc[1]
+    dr["CCD"] = scc[2]
+    dr["ap_rad"] = r
+    # All other lines we leave on default, so they will be maksed,
+    # can can be filled if needed.
     return dr
 
 
@@ -1139,7 +1140,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         logger.error(f"aperture photometry: failed to produce enough data "
                      f"points for {t_target['source_id']}")
         for t in t_target:
-            res_table.add_row(make_failrow(t, rad_calc, scc))
+            res_table.add_row(make_target_row(t, r=rad_calc, scc=scc))
         return None
     if cbv_flag:
         corrected_flux, weights = get_cbv_scc(scc, tpf)
@@ -1149,11 +1150,26 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     keyorder = ['run_no','id','aperture_rad','time','xcenter','ycenter',
                 'flux','flux_err','bkg','total_bkg','mag','mag_err',
                 'reg_oflux','cbv_oflux']
-    tab_format = ['%i','%s','.2f','.6f','.1f','.1f',
-                  '.6f','.6f','.6f','.6f',
-                  '.6f','.4e','.6f', '.6f']
+    tab_format = [
+        "%i",
+        "%s",
+        ".2f",
+        ".6f",
+        ".1f",
+        ".1f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".6f",
+        ".4e",
+        ".6f",
+        r".6f",
+    ]
     tpf = tpf[keyorder]
-    tpf = fix_table_format(tpf, keyorder, tab_format)
+    for n, f in zip(keyorder, tab_format):
+        tpf[n].info.format = f
+
     phot_targets = tpf.group_by('id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
@@ -1184,13 +1200,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                                     lc_dir=lc_dir,
                                                     cbv_flag=cbv_flag)
         else:
-            logger.error("No photometry was recorded for this group.")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            logger.error(f"No photometry was recorded for this group.")
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
         if len(lcs) == 0:
             logger.error(f"no datapoints to make lightcurve analysis for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
         if fix_noise and not lc_con:
             logger.info('fixing the noise!')
@@ -1222,7 +1238,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         if d_target['period_1'] == -999:
             logger.error(f"the periodogram did not return any results for "
                          f"{t_targets['source_id']}")
-            res_table.add_row(make_failrow(t_targets, rad_calc, scc))
+            res_table.add_row(make_target_row(t_targets, r=rad_calc, scc=scc))
             continue
 
         false_flag, reliable_flag = 4, 4        
@@ -1294,8 +1310,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             make_plot(im_plot, lc, d_target, scc, t_targets, name_target,
                       plot_dir, xy_contam=xy_con, p_min_thresh=0.1,
                       p_max_thresh=50., ap_rad=rad_calc, sky_ann=sky_ann, nc=nc)
-                      
-        res_table.add_row(make_datarow(t_targets, scc, rad_calc, d_target))
+        target_row = make_target_row(t_targets, r=rad_calc, scc=scc) | d_target
+        common_cols = {k: v for k, v in target_row.items() if k in res_table.colnames}
+        res_table.add_row(common_cols)
         temp_dir = make_dir("temp_results", ref_name)
         res_table.write(f'{temp_dir}/{ref_name}_periods.csv', overwrite=True)
         if not keep_data:
@@ -1579,6 +1596,7 @@ def get_cutouts(
     if choose_sec is None:
         choose_sec = Tesscut.get_sectors(coordinates=coord)["sector"].data
         logger.info(f"There are {len(choose_sec)} in total: {choose_sec}")
+        logger.info(f"There are {len(choose_sec)} in total: {choose_sec}")
         if len(choose_sec) == 0:
             logger.error(f"Sorry, no TESS data available for {name_target}")
             return []
@@ -1626,15 +1644,38 @@ def get_cutouts(
     return manifest
 
 
-def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
-                      ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False, keep_data=False,
-                      n_cont=10, cont_rad=10., mag_lim=3.,                    
-                      save_phot=False, cbv_flag=False,
-                      choose_sec=None, store_lc=False, cutout_size=20,
-                      tot_attempts=3, cap_files=None, fits_dir='fits',
-                      lc_dir='lc', pg_dir='pg', fix_noise=False, shuf_per=False,
-                      make_shuf_plot=False, shuf_dir='shuf_plots'):
-    '''Download cutouts and run lightcurve/periodogram analysis for one target.
+def one_source_cutout(
+    target,
+    lc_con,
+    flux_con,
+    make_plots,
+    res_table,
+    ref_name,
+    gaia_sys=True,
+    xy_pos=(10.0, 10.0),
+    ap_rad=1.0,
+    sky_ann=(6.0, 8.0),
+    fix_rad=False,
+    n_cont=10,
+    cont_rad=10.0,
+    mag_lim=3.0,
+    keep_data=False,
+    save_phot=False,
+    cbv_flag=False,
+    choose_sec=None,
+    store_lc=False,
+    cutout_size=20,
+    tot_attempts=3,
+    cap_files=None,
+    fits_dir="fits",
+    lc_dir="lc",
+    pg_dir="pg",
+    fix_noise=False,
+    shuf_per=False,
+    make_shuf_plot=False,
+    shuf_dir="shuf_plots",
+):
+    """Download cutouts and run lightcurve/periodogram analysis for one target.
 
     Called by the function "all_sources_cutout".
 
@@ -1674,6 +1715,8 @@ def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
         The maximum pixel radius to search for contaminants
     mag_lim : `float`, optional, default=3.
         The faintest magnitude to search for contaminants.
+    keep_data : `bool`
+        Choose to save the input data to file.
     save_phot : `bool`, optional, default=False
         Decide whether to save the full results from the aperture photometry.
     cbv_flag : `bool`, optional, default=False
@@ -1709,14 +1752,14 @@ def one_source_cutout(target, lc_con, flux_con, make_plots, res_table,
     make_shuf_plot : `bool`, optional, default=False
         Choose to make a plot for the shuffled period analysis
     shuf_dir : `str`, optional, default='plot_shuf'
-        The name of the directory to save the plots of the shuffled period analysis. 
+        The name of the directory to save the plots of the shuffled period analysis.
 
     returns
     -------
     Nothing returned. Results are saved to table and plots are generated (if
-    specified). 
-    '''
-    
+    specified).
+    """
+
     # Set the contaminant parameters to the default values in case
     # they have not been added
     if 'log_tot_bg' not in target.colnames:
@@ -1904,7 +1947,7 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     shuf_dir = make_dir(shuf_ext, ref_name)
     res_dir = make_dir(res_ext, ref_name)
 
-    res_table, names, formats = create_table_template()
+    res_table = create_table_template()
     if 'log_tot_bg' not in t_targets.colnames:
         t_targets.add_column(-999, name='log_tot_bg')
         t_targets.add_column(-999, name='log_max_bg')
@@ -1944,8 +1987,7 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
         )
     finish = datetime.now()
     dt_string = finish.strftime("%b-%d-%Y_%H:%M:%S")
-    
-    res_table = fix_table_format(res_table, names, formats)
+
     res_table.write(f'{res_dir}/{period_file}_{dt_string}.csv')
 
     hrs_mins_secs = print_time_taken(start, finish)
@@ -2047,18 +2089,21 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
     )
 
 
-
-
 def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
                        keep_data=False, fix_noise=False):
-    '''Iterate over all cameras and CCDs for a given sector.
-    
-    parameters
+    """Iterate over all cameras and CCDs for a given sector.
+
+    This routine iterates over all cameras and CCDs for a given sector and
+    performs the tessilator analysis for each camera/CCD configuration.
+
+    Parameters
     ----------
     t_targets : `astropy.table.Table`
         Input data for the targets to be analysed.
-    scc : `list`, size=3
-        List containing the sector number, camera and CCD.
+    scc : tuple or int
+        This can be a single integer or a tuple of size 3. If a single integer
+        is given, then all cameras and CCDs for that sector are analysed. If a
+        tuple is given, is has the format `(sector, camera, CCD)`.
     make_plots : `bool`
         Decides is plots are made from the lightcurve analysis.
     period_file : `str`
@@ -2071,42 +2116,39 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
     fix_noise : `bool`, optional, default=False
         Choose to apply the noise correction to the cleaned lightcurve.
 
-    returns
+    Returns
     -------
     Nothing returned. The Tessilator data for each camera/CCD configuration
     is saved to file.
-    ''' 
-    start = datetime.now()
+    """
     if len(scc) == 3:
-        res_table, names, formats = create_table_template()
-        one_cc(t_targets, scc, make_plots, res_table, file_ref=file_ref,
-               keep_data=keep_data, fix_noise=fix_noise)
-        res_table = fix_table_format(res_table, names, formats)
-        res_table.write(f"{period_file}_{scc[1]}_{scc[2]}.csv",
-                          overwrite=True)
+        sector = scc[0]
+        cameras = [scc[1]]
+        ccds = [scc[2]]
+    elif isinstance(scc, int):
+        sector = scc
+        cameras, ccds = np.mgrid[1:5, 1:5]
+        cameras = cameras.flatten()
+        ccds = ccds.flatten()
+    for cam, ccd in zip(cameras, ccds):
+        start = datetime.now()
+        res_table = create_table_template()
+        one_cc(
+            t_targets,
+            [sector, cam, ccd],
+            make_plots,
+            res_table,
+            file_ref=file_ref,
+            keep_data=keep_data,
+            fix_noise=fix_noise,
+        )
+        res_table.write(f"{period_file}_{cam}_{ccd}.csv", overwrite=True)
         finish = datetime.now()
         hrs_mins_secs = print_time_taken(start, finish)
-        print(f"Finished {len(res_table)} targets for Sector {scc[0]},"
-              f" Camera {scc[1]}, CCD {scc[2]} in {hrs_mins_secs}")
-    else:
-        cam_ccd = np.array([[i,j] for i in range(1,5) for j in range(1,5)])
-        for cc in cam_ccd:
-            res_table = create_table_template()
-            start_ccd = datetime.now()
-            one_cc(t_targets, [scc[0], cc[0], cc[1]], make_plots, res_table,
-                   file_ref=file_ref, keep_data=keep_data,
-                   fix_noise=fix_noise)
-            res_table = fix_table_format(res_table, names, formats)
-            res_table.write(f"{period_file}_{cc[0]}_{cc[1]}.csv",
-                              overwrite=True)
-            finish_ccd = datetime.now()
-            hrs_mins_secs = print_time_taken(start_ccd, finish_ccd)
-            print(f"Finished {len(res_table)} targets for Sector {scc[0]}, "
-                  f"Camera {cc[0]}, CCD {cc[1]} in {hrs_mins_secs}")
-
-        finish = datetime.now()
-        hrs_mins_secs = print_time_taken(start, finish)
-        print(f"Finished the whole of Sector {scc[0]} in {hrs_mins_secs}")
+        print(
+            f"Finished {len(res_table)} targets for Sector {scc[0]},"
+            f" Camera {scc[1]}, CCD {scc[2]} in {hrs_mins_secs}"
+        )
 
 
 __all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__],
