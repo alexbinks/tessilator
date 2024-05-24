@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: ../gif/lc_movie.gif
+.. image:: _static/lc_movie.gif
   :width: 800
   :align: center
   
