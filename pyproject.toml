@@ -40,11 +40,11 @@ dependencies = [
 [project.optional-dependencies]
 test = [
   "pytest-astropy",
-  "sphinx-astropy"
 ]
 docs = [
   "sphinx",
   "sphinx-automodapi",
+  "sphinx-astropy",
   "numpydoc"
 ]
 

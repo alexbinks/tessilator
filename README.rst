@@ -1,4 +1,4 @@
-.. image:: https://github.com/alexbinks/tessilator/blob/main/gif/lc_movie.gif
+.. image:: https://github.com/alexbinks/tessilator/blob/main/docs/_static/lc_movie.gif
   :width: 500 px
   :align: center
   :alt: "AB Doradus TESS periods"

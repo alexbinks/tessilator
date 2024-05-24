@@ -12,8 +12,10 @@
 
 import datetime
 from importlib import import_module
-import os
 import sys
+import tomllib
+from pathlib import Path
+
 
 extensions = ['sphinx_automodapi.automodapi', 
               'sphinx.ext.intersphinx'
@@ -33,20 +35,16 @@ numpydoc_show_class_members = False
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# Get configuration information from setup.cfg
-from configparser import ConfigParser
-conf = ConfigParser()
+# Get configuration information from pyproject.toml
+with (Path(__file__).parents[1] / "pyproject.toml").open("rb") as f:
+    pyproject = tomllib.load(f)
 
-conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
-setup_cfg = dict(conf.items('metadata'))
+project = pyproject["project"]["name"]
+author = ",".join([l["name"] for l in pyproject["project"]["authors"]])
+copyright = "{0}, {1}".format(datetime.datetime.now().year, author)
 
-project = setup_cfg['name']
-author = setup_cfg['author']
-copyright = '{0}, {1}'.format(
-    datetime.datetime.now().year, setup_cfg['author'])
-
-import_module(setup_cfg['name'])
-package = sys.modules[setup_cfg['name']]
+import_module(pyproject["project"]["name"])
+package = sys.modules[pyproject["project"]["name"]]
 
 # The short X.Y version.
 version = package.__version__.split('-', 1)[0]
@@ -58,7 +56,7 @@ release = package.__version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'pyramid'
-#html_static_path = ["_static"]
+html_static_path = ["_static"]
 html_sidebars = {
     '**': [
         'globaltoc.html',
