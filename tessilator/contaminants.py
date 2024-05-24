@@ -242,14 +242,14 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
     for i, t_target in enumerate(t_targets):
         r = run_sql_query_contaminants(t_target, cont_rad=cont_rad, mag_lim=mag_lim,
                                        tot_attempts=tot_attempts)
+        r["SOURCE_ID"] = [f"Gaia DR3 {i}" for i in r["SOURCE_ID"]]
         print(f"sql search for contaminants completed {t_target['source_id']},"
               f" target {i+1} of {len(t_targets)}.")
         # convert the angular separation from degrees to arcseconds
         r["pix_sep"] = r["ang_sep"]*3600./pixel_size
         if len(r) > 1:
             # make a table of all objects from the SQL except the target itself
-            rx = Table(r[r["SOURCE_ID"].astype(str) != \
-                         t_target["source_id"].astype(str)])
+            rx = Table(r[r["SOURCE_ID"] != t_target["source_id"]])
             # calculate the fraction of flux from the source object that falls
             # into the aperture using the Rayleigh formula
             s = ap_rad**(2)/(2.0*exprf**(2)) # measured in pixels
@@ -270,7 +270,6 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
                 
                 f_frac = flux_fraction_contaminant(pix_sep, s)
                 frp_conts.append(f_frac*10**(-0.4*RP_cont))
-
             rx['log_flux_frac'] = 0.
             frp_tot, frp_max = 0., 0.
             for f, frp_cont in enumerate(frp_conts):
@@ -288,9 +287,10 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
                          'phot_rp_mean_mag', 'pix_sep', 'log_flux_frac']
             rx.sort(['log_flux_frac'], reverse=True)
             rx = rx[new_order]
-            rx['source_id_target'] = rx['source_id_target'].astype(str)
+            rx['source_id_target'] = rx['source_id_target']
             rx.rename_column('SOURCE_ID', 'source_id')
-            rx['source_id'] = rx['source_id'].astype(str)
+            rx['source_id'] = rx['source_id']
+
             # store the n_cont highest flux contributors to table
             for rx_row in rx[0:n_cont][:]:
                 t_cont.add_row(rx_row)

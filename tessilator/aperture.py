@@ -74,8 +74,6 @@ def get_xy_pos(targets, head):
     positions : `tuple`
         A tuple of X-Y pixel positions for each target.
     '''
-
-
     try:
         w = WCS(head)
         c = SkyCoord(targets['ra'], targets['dec'], unit=u.deg, frame='icrs')
@@ -206,7 +204,7 @@ def aper_run(file_in, targets, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
     else:
         fits_files = [file_in]
 
-    full_phot_table = Table(names=('run_no','id', 'aperture_rad', 'xcenter',
+    full_phot_table = Table(names=('run_no','gaia_dr3_id', 'aperture_rad', 'xcenter',
                                    'ycenter', 'flux', 'flux_err', 'bkg', 
                                    'total_bkg', 'reg_oflux', 'mag', 'mag_err',
                                    'time'),
@@ -214,7 +212,6 @@ def aper_run(file_in, targets, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
                                    float, float, float, float, float, float))
     for f_num, f_file in enumerate(fits_files):
         logger.info(f'Running aperture photometry for {f_file}, #{f_num+1} of {len(fits_files)}')
-
         try:
             with fits.open(f_file) as hdul:
                 data = hdul[1].data
@@ -281,14 +278,12 @@ def aper_run(file_in, targets, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
                         with np.errstate(invalid='ignore'):
                             t = aperture_photometry(flux_ap, aperture,
                                                     error=erro_ap)
-
                         #calculate the background contribution to the aperture
                         aperture_area = aperture.area_overlap(flux_ap)
                         #print out the data to "t"
                         t['run_no'] = n_step
                         t['aperture_rad'] = rad_val[n_step]
-                        t['id'] = targets['source_id']
-                        t['id'] = t['id'].astype(str)
+                        t['gaia_dr3_id'] = targets['source_id']
                         t['bkg'] = aperstats.median
                         t['tot_bkg'] = \
                             t['bkg'] * aperture_area
@@ -303,7 +298,7 @@ def aper_run(file_in, targets, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
                             t['aperture_sum_err'][g].data/\
                             t['aperture_sum'][g].data)
                         t['time'] = time_val[n_step]
-                        fix_cols = ['run_no', 'id', 'aperture_rad', 'xcenter',
+                        fix_cols = ['run_no', 'gaia_dr3_id', 'aperture_rad', 'xcenter',
                                     'ycenter', 'aperture_sum',
                                     'aperture_sum_err', 'bkg', 'tot_bkg',
                                     'ap_sum_sub', 'mag', 'mag_err', 'time']

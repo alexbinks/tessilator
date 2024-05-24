@@ -71,10 +71,6 @@ acquired using the tessilator software package (Binks et al. 2024).'
 """
 
 print(STARTUP_STRING)
-start = datetime.now()
-
-print("\n")
-print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
 
 import requests
@@ -93,13 +89,7 @@ _Template_table_format = [
     ("ra", r"Right ascension (epoch J2000)", float, ".12f", np.nan),
     ("dec", r"Declination (epoch J2000)", float, ".12f", np.nan),
     ("parallax", r"Gaia DR3 parallax", float, ".6f", np.nan),
-    (
-        "Gmag",
-        r"Gaia DR3 $G$-band magnitude",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("Gmag",r"Gaia DR3 $G$-band magnitude",float,".6f",np.nan,),
     ("BPmag", r"Gaia DR3 $G_{\rm BP}$-band magnitude", float, ".6f", np.nan),
     ("RPmag", r"Gaia DR3 $G_{\rm RP}$-band magnitude", float, ".6f", np.nan),
     ("Tmag_MED", r"Median TESS $T$-band magnitude", float, ".6f", 0),
@@ -107,9 +97,9 @@ _Template_table_format = [
     ("Sector", r"TESS sector number", int, None, 0),
     ("Camera", r"TESS camera number", int, None, 0),
     ("CCD", r"TESS CCD number", int, None, 0),
-    ("log_tot_bg_star", r"$\Sigma\eta$", float, ".6f", -999),
-    ("log_max_bg_star", r"$\eta_{\rm max}$", float, ".6f", -999),
-    ("n_conts", r"Number of contaminating sources", int, None, 0),
+    ("log_tot_bg", r"$\Sigma\eta$", float, ".6f", -999),
+    ("log_max_bg", r"$\eta_{\rm max}$", float, ".6f", -999),
+    ("num_tot_bg", r"Number of contaminating sources", int, None, 0),
     ("ap_rad", r"Aperture radius (pixels)", float, ".3f", -np.inf),
     ("false_flag", r"Test if a contaminant is the $P_{\rm rot}$ source", int, None, 4),
     ("reliable_flag", r"Test if the $P_{\rm rot}$ source is reliable", int, None, 4),
@@ -122,43 +112,19 @@ _Template_table_format = [
     ("Ndata", r"Number of datapoints in the periodogram analysis", int, None, 0),
     ("FAP_001", r"1\% False Alarm Probability power", float, ".6f", np.nan),
     ("period_1", r"Primary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
-    (
-        "period_1_fit",
-        r"Primary $P_{\rm rot}$ (Gaussian fit centroid)",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("period_1_fit", r"Primary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f",np.nan),
     ("period_1_err", r"Primary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
     ("power_1", r"Power output of the primary $P_{\rm rot}$", float, ".6f", np.nan),
     ("period_2", r"Secondary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
-    (
-        "period_2_fit",
-        r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("period_2_fit",r"Secondary $P_{\rm rot}$ (Gaussian fit centroid)",float,".6f",np.nan),
     ("period_2_err", r"Secondary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
     ("power_2", r"Power output of the secondary $P_{\rm rot}$", float, ".6f", np.nan),
     ("period_3", r"Tertiary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
-    (
-        "period_3_fit",
-        r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("period_3_fit",r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)",float,".6f",np.nan),
     ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
     ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f", np.nan),
     ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
-    (
-        "period_4_fit",
-        r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("period_4_fit", r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f", np.nan),
     ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
     ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f", np.nan),
     ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f", np.nan),
@@ -166,13 +132,7 @@ _Template_table_format = [
     ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None, 9),
     ("amp", r"Amplitude of the PFL", float, ".6f", np.nan),
     ("scatter", r"Scatter of the PFL", float, ".6f", np.nan),
-    (
-        "chisq_phase",
-        r"$\chi^{2}$ value of the sinusoidal fit to the PFL",
-        float,
-        ".6f",
-        np.nan,
-    ),
+    ("chisq_phase",r"$\chi^{2}$ value of the sinusoidal fit to the PFL",float,".6f",np.nan),
     ("fdev", r"Number of extreme outliers in the PFL", float, ".6f", np.nan),
 ]
 
@@ -470,13 +430,13 @@ def test_table_large_sectors(t_filename):
         cnc.insert(0, 'name')
         t = t[cnc]
         # Ensure the dtype for "name" and "source_id" are strings.
-        t["name"] = t["name"].astype(str)
-        t["source_id"] = t["source_id"].astype(str)
+        t["name"] = t["name"]
+        t["source_id"] = t["source_id"]
     elif cnc == t.colnames[1:]:
         if t.colnames[0] == "name":
             # Ensure the dtype for "name" and "source_id" are strings.
-            t["name"] = t["name"].astype(str)
-            t["source_id"] = t["source_id"].astype(str)
+            t["name"] = t["name"]
+            t["source_id"] = t["source_id"]
     else:
         t = None
         # return nothing if neither of the above two conditions are met.
@@ -610,7 +570,7 @@ def collect_contamination_data(t_targets, ref_name, targ_name,
             t_contam = Table.read(f'{cont_dir}/{targ_name}.csv')
             for i in range(len(t_contam)):
                 g = (t_contam["source_id"] == \
-                     t_targets["source_id"].astype(str)[i])
+                     t_targets["source_id"][i])
                 if len(g) >= 1:
                     t_targets["log_tot_bg"][i] = t_contam["log_tot_bg"][g][0]
                     t_targets["log_max_bg"][i] = t_contam["log_max_bg"][g][0]
@@ -644,6 +604,14 @@ def make_target_row(t_targets, r, scc):
 
         * RPmag: Gaia DR3 apparent RP-band magnitude
 
+        * log_tot_bg: log-10 value of the flux ratio between contaminants
+          and target (optional)
+
+        * log_max_bg: log-10 value of the flux ratio between the largest
+          contaminant and target (optional)
+
+        * num_tot_bg: number of contaminant sources (optional)
+
     r : `float`
         The pixel size of the aperture radius
     scc : tuple, size=3
@@ -662,6 +630,9 @@ def make_target_row(t_targets, r, scc):
         "Gmag",
         "BPmag",
         "RPmag",
+        "log_tot_bg",
+        "log_max_bg",
+        "num_tot_bg",
     ]
     dr = {col: t_targets[col] for col in copycols}
     dr["original_id"] = t_targets["name"]
@@ -1133,7 +1104,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     try:
         tpf, rad_calc = aper_run(file_in, t_target, xy_pos=xy_pos, ap_rad=ap_rad,
                                  sky_ann=sky_ann, fix_rad=fix_rad)
-
     except Exception as e:
         logger.error(f"aperture photometry: of {file_in} failed to run")
     if len(tpf) < 10:
@@ -1147,7 +1117,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         tpf["cbv_oflux"] = corrected_flux[1][:]
     else:
         tpf["cbv_oflux"] = tpf["reg_oflux"]
-    keyorder = ['run_no','id','aperture_rad','time','xcenter','ycenter',
+    keyorder = ['run_no','gaia_dr3_id','aperture_rad','time','xcenter','ycenter',
                 'flux','flux_err','bkg','total_bkg','mag','mag_err',
                 'reg_oflux','cbv_oflux']
     tab_format = [
@@ -1170,14 +1140,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     for n, f in zip(keyorder, tab_format):
         tpf[n].info.format = f
 
-    phot_targets = tpf.group_by('id')
+    phot_targets = tpf.group_by('gaia_dr3_id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
         if isinstance(t_target, Table):
             t_targets = t_target[t_target["source_id"] == key[0]]
         else:
             t_targets = Table(t_target)
-            t_targets["source_id"] = t_targets["source_id"].astype(str)
             
         name_target = get_name_target(t_targets["name"][0])
         name_full = f'{name_target}_{scc[0]:04d}_{scc[1]}_{scc[2]}'
@@ -1190,7 +1159,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             t_targets["log_tot_bg"] = -999.
             t_targets["log_max_bg"] = -999.
             t_targets["num_tot_bg"] = -999.
-
         if save_phot:
             tpf.write(f'{lc_dir}/ap_{name_full}.csv', overwrite=True)
         if len(g_c) >= 50:
@@ -1253,7 +1221,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                 logger.info('calculating contaminant lightcurves')
                 if t_cont is not None:
                     t_cont = t_cont[t_cont["source_id_target"] ==
-                                          t_targets["source_id"].astype(str)]
+                                          t_targets["source_id"]]
                     xy_con = find_xy_cont(file_in, t_cont, cutout_size)
                     false_flag, reliable_flag = '', ''
                     for z in range(len(xy_con)):
@@ -1310,6 +1278,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             make_plot(im_plot, lc, d_target, scc, t_targets, name_target,
                       plot_dir, xy_contam=xy_con, p_min_thresh=0.1,
                       p_max_thresh=50., ap_rad=rad_calc, sky_ann=sky_ann, nc=nc)
+
         target_row = make_target_row(t_targets, r=rad_calc, scc=scc) | d_target
         common_cols = {k: v for k, v in target_row.items() if k in res_table.colnames}
         res_table.add_row(common_cols)
@@ -1762,10 +1731,10 @@ def one_source_cutout(
 
     # Set the contaminant parameters to the default values in case
     # they have not been added
-    if 'log_tot_bg' not in target.colnames:
-        target.add_column(-999, name='log_tot_bg')
-        target.add_column(-999, name='log_max_bg')
-        target.add_column(0,    name='n_contaminants')
+#    if 'log_tot_bg' not in target.colnames:
+#        target.add_column(-999, name='log_tot_bg')
+#        target.add_column(-999, name='log_max_bg')
+#        target.add_column(0,    name='n_contaminants')
     name_target = target['name'].replace(" ", "_")
     name_spl = name_target.split("_")
     if name_spl[0] == 'Gaia':
@@ -1854,13 +1823,13 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
 
         * RPmag: Gaia DR3 apparent RP-band magnitude
 
-        * log_tot_bg_star: log-10 value of the flux ratio between contaminants
+        * log_tot_bg: log-10 value of the flux ratio between contaminants
           and target (optional)
 
-        * log_max_bg_star: log-10 value of the flux ratio between the largest
+        * log_max_bg: log-10 value of the flux ratio between the largest
           contaminant and target (optional)
 
-        * n_contaminants: number of contaminant sources (optional)
+        * num_tot_bg: number of contaminant sources (optional)
 
     period_file : `str` 
         Name of the file to store periodogram results.
@@ -1941,6 +1910,9 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     terminates.
     '''
 
+    start = datetime.now()
+    print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
+
     fits_dir = make_dir(fits_ext, ref_name)
     lc_dir = make_dir(lc_ext, ref_name)
     pg_dir = make_dir(pg_ext, ref_name)
@@ -1948,10 +1920,10 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     res_dir = make_dir(res_ext, ref_name)
 
     res_table = create_table_template()
-    if 'log_tot_bg' not in t_targets.colnames:
-        t_targets.add_column(-999, name='log_tot_bg')
-        t_targets.add_column(-999, name='log_max_bg')
-        t_targets.add_column(0,    name='num_tot_bg')
+#    if 'log_tot_bg' not in t_targets.colnames:
+#        t_targets.add_column(-999, name='log_tot_bg')
+#        t_targets.add_column(-999, name='log_max_bg')
+#        t_targets.add_column(0,    name='num_tot_bg')
     for i, target in enumerate(t_targets):
         logger.info(f"{target['name']} (Gaia DR3 {target['source_id']}), star #{i+1}"
                     f" of {len(t_targets)}")

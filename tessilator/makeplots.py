@@ -123,7 +123,7 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
         log_im_plot = np.log10(im_plot.data)
         image_plot = np.ma.array(log_im_plot, mask=np.isnan(log_im_plot))
     im_fig = axs[0,0].imshow(image_plot, cmap='binary')
-    Gaia_name = f"Gaia DR3 {t_table['source_id'][0]}"
+    Gaia_name = f"{t_table['source_id'][0]}"
     targ_name = t_table['name'][0]
     fig.text(0.5,0.96,
              f"{targ_name}, Sector {scc[0]}, "
@@ -254,10 +254,10 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     s = axs[1,1].scatter(LS['phase_x'], LS["phase_y"],
                          c=LS['phase_col'], cmap=cmap_use, vmin=0.5,
                          vmax=N_cyc+0.5)
-    axs[1,1].text(0.01, 0.90, f"Amplitude = {LS['pops_vals'][1]:.3f}, "
-                  f"Scatter = {LS['phase_scatter']:.3f}, "
-                  f"$\chi^{2}$ = {LS['phase_chisq']:.3f}, "
-                  "$f_{\\rm dev}$"+ f"= {LS['frac_phase_outliers']:.3f}",
+    axs[1,1].text(0.01, 0.90, f"Amplitude = {LS['amp']:.3f}, "
+                  f"Scatter = {LS['scatter']:.3f}, "
+                  f"$\chi^{2}$ = {LS['chisq_phase']:.3f}, "
+                  "$f_{\\rm dev}$"+ f"= {LS['fdev']:.3f}",
                   fontsize=lsize, horizontalalignment='left',
                   transform=axs[1,1].transAxes)
 

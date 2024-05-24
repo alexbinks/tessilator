@@ -449,6 +449,9 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05,
         logger.error('Something went wrong with the FAP test, maybe division '
                      'by 0.')
         LS_dict['FAPs'] = np.array([0.3, 0.2, 0.1])
+    LS_dict["FAP_001"] = LS_dict["FAPs"][1]
+
+
 
 
     LS_dict['shuffle_flag'] = 0
@@ -514,6 +517,10 @@ def get_periodogram_peaks(LS_dict, n_peaks=4):
                                          LS_dict["power_a_1"],
                                          indices=LS_dict[f'a_g_{i}'])
             LS_dict[f'Gauss_{i}'], LS_dict[f'Gauss_y_{i}'] = x1, x2 
+            LS_dict[f'period_{i}_fit'] = LS_dict[f'Gauss_{i}'][1]
+            LS_dict[f'period_{i}_err'] = LS_dict[f'Gauss_{i}'][2]
+
+
            # find all the new period values in the new array
             x3 = LS_dict[f'period_a_{i}'][LS_dict[f'a_{i+1}']]
             LS_dict[f'period_a_{i+1}'] = x3
@@ -526,6 +533,9 @@ def get_periodogram_peaks(LS_dict, n_peaks=4):
             # return the maximum power peak value
             x6 = LS_dict[f'power_a_{i+1}'][np.argmax(LS_dict[f'power_a_{i+1}'])]
             LS_dict[f'power_{i+1}'] = x6
+            
+            
+            
         except:
             logger.error('Something went wrong with the periods/powers of '
                          'subsequent peaks. Probably an empty array of '
@@ -535,6 +545,9 @@ def get_periodogram_peaks(LS_dict, n_peaks=4):
             LS_dict[f'power_a_{i+1}'] = -999
             LS_dict[f'period_{i+1}'] = -999
             LS_dict[f'power_{i+1}'] = -999
+            LS_dict[f'period_{i}_fit'] = -999
+            LS_dict[f'period_{i}_err'] = -999
+
         LS_dict.pop(f'a_{n_peaks+1}', None)
         LS_dict.pop(f'period_a_{n_peaks+1}', None)
         LS_dict.pop(f'power_a_{n_peaks+1}', None)
@@ -922,14 +935,15 @@ def make_phase_curve(LS_dict, ls, n_sca=10):
     LS_dict['phase_fit_y'] = yp
     LS_dict['phase_x'] = pha_plt
     LS_dict['phase_y'] = nf_plt
-    LS_dict['phase_chisq'] = chi_sq
+    LS_dict['chisq_phase'] = chi_sq
     LS_dict['phase_col'] = cyc_plt
     LS_dict['pops_vals'] = pops    
+    LS_dict['amp'] = pops[1]
     LS_dict['pops_cov'] = popsc
-    LS_dict['phase_scatter'] = sca_median
-    LS_dict['frac_phase_outliers'] = fdev
+    LS_dict['scatter'] = sca_median
+    LS_dict['fdev'] = fdev
     LS_dict['Ndata'] = Ndata
-
+    
 
 def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_target', n_sca=10, p_min_thresh=0.05, p_max_thresh=100., samples_per_peak=10, n_peaks=4, check_jump=False, shuf_per=False, n_shuf_runs=5000, make_shuf_plot=False, shuf_dir='shuf_plots', name_shuf_plot='example_shuf_plot.png'):
     '''Run Lomb-Scargle periodogram and return a dictionary of results.
@@ -1029,6 +1043,8 @@ def run_ls(lc_data, lc_type='reg', ref_name='targets', pg_dir='pg', name_pg='pg_
     logger.info('Periodogram successfully shuffled.')
 
     make_phase_curve(LS_dict, ls, n_sca=n_sca)
+    
+    
     logger.info("Phase curve details stored to dictionary.")
     return LS_dict
 

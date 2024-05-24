@@ -138,6 +138,7 @@ def table_from_simbad(input_names):
         list_ind.append(np.where(np.array(gaia_table["SOURCE_ID"] == \
                         str(row)))[0][0])
     gaia_table = gaia_table[list_ind]
+    gaia_table["SOURCE_ID"] = [f"Gaia DR3 {i}" for i in gaia_table["SOURCE_ID"]]
     gaia_table['name'] = NameList
     gaia_table.rename_column('SOURCE_ID', 'source_id')
     gaia_table.rename_column('phot_g_mean_mag', 'Gmag')
@@ -267,6 +268,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
             else:
                 NameList.append(sorted(r["ID"], key=len)[0])
         gaia_table["name"] = NameList
+        gaia_table["source_id"] = GDR3_Names
     else:
         twomass_name = get_twomass_like_name(c)
         for i in range(len(twomass_name)):
@@ -322,12 +324,12 @@ def table_from_table(input_table, name_is_source_id=False):
                                                 float, float, float),
                        names=('source_id', 'ra', 'dec', 'parallax', 'Gmag',
                               'BPmag', 'RPmag'))
-    gaia_table['source_id'] = gaia_table['source_id'].astype(int)
+    gaia_table['source_id'] = gaia_table['source_id']
     if name_is_source_id:
         gaia_table['name'] = gaia_table['source_id'].data
     else:
-        GDR3_Names = ["Gaia DR3 " + i for i in\
-                      gaia_table['source_id'].astype(str)]
+        GDR3_Names = [i for i in\
+                      gaia_table['source_id']]
         NameList = []
         try:
             result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
@@ -335,7 +337,7 @@ def table_from_table(input_table, name_is_source_id=False):
             result_table = [None for i in GDR3_Names]
         for i, r in enumerate(result_table):
             if r is None:
-                NameList.append(gaia_table['source_id'][i].astype(str))
+                NameList.append(str(gaia_table['source_id'][i]))
             else:
                 NameList.append(sorted(r["ID"], key=len)[0])
         gaia_table["name"] = NameList
