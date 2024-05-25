@@ -38,7 +38,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # Get configuration information from pyproject.toml
 with (Path(__file__).parents[1] / "pyproject.toml").open("rb") as f:
     pyproject = tomllib.load(f)
-
 project = pyproject["project"]["name"]
 author = ",".join([l["name"] for l in pyproject["project"]["authors"]])
 copyright = "{0}, {1}".format(datetime.datetime.now().year, author)

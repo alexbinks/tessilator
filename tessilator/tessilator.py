@@ -485,7 +485,6 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs',
     t_targets : `astropy.table.Table`
         a formatted astropy table ready for further analysis
     '''
-    logger.info(f"Starting Time: {start}")
     if isinstance(t_filename, str):
         t_input = ascii.read(t_filename, delimiter=',', format='no_header')
     elif isinstance(t_filename, Table):
@@ -1911,6 +1910,7 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     '''
 
     start = datetime.now()
+    logger.info(f"Starting Time: {start}")
     print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
 
     fits_dir = make_dir(fits_ext, ref_name)
@@ -2104,6 +2104,9 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
         ccds = ccds.flatten()
     for cam, ccd in zip(cameras, ccds):
         start = datetime.now()
+        logger.info(f"Starting Time: {start}")
+        print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
+
         res_table = create_table_template()
         one_cc(
             t_targets,
