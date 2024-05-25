@@ -18,7 +18,7 @@ def check_ABDor(tab):
     """
     assert len(tab) == 1
     assert len(tab.colnames) == 8
-    assert str(tab["source_id"][0]) == "4660766641264343680"
+    assert str(tab["source_id"][0]) == "Gaia DR3 4660766641264343680"
     assert tab["Gmag"][0] == pytest.approx(6.690593)
 
 
