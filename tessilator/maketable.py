@@ -74,8 +74,8 @@ def table_from_simbad(input_names):
     # Get a list object identifiers from Simbad
     # suppress the Simbad.query_objectids warnings if there are no matches for
     # the input name
-    with warnings.catch_warnings():
-        warnings.simplefilter(action='ignore', category=UserWarning)
+#    with warnings.catch_warnings():
+#        warnings.simplefilter(action='ignore', category=UserWarning)
         try:
             result_table = [Simbad.query_objectids(name) for name in name_arr]
         except:
@@ -93,7 +93,7 @@ def table_from_simbad(input_names):
             else:
                 logger.error(f"Could not find any match for '{input_name}'")
         else: # Simbad returns at least one identifier
-            r_list = [z for z in res["ID"]]
+            r_list = [z for z in res["id"]]
             m = [s for s in r_list if "Gaia DR3" in s]
             if len(m) == 0: # if Gaia identifier is not in the Simbad list
                 if is_Gaia[i] == 1:
@@ -130,17 +130,16 @@ def table_from_simbad(input_names):
     gaia_table = job.get_results() # Astropy table
     logger.info('query completed!')
     # convert source_id column to str (astroquery returns type np.int64)
-    gaia_table["SOURCE_ID"] = gaia_table["SOURCE_ID"].astype(str)
+    gaia_table["source_id"] = gaia_table["source_id"].astype(str)
     list_ind = []
     # astroquery returns the table sorted numerically by the source identifier
     # the rows are rearranged to match with the input list.
     for row in GaiaList:
-        list_ind.append(np.where(np.array(gaia_table["SOURCE_ID"] == \
+        list_ind.append(np.where(np.array(gaia_table["source_id"] == \
                         str(row)))[0][0])
     gaia_table = gaia_table[list_ind]
-    gaia_table["SOURCE_ID"] = [f"Gaia DR3 {i}" for i in gaia_table["SOURCE_ID"]]
+    gaia_table["source_id"] = [f"Gaia DR3 {i}" for i in gaia_table["source_id"]]
     gaia_table['name'] = NameList
-    gaia_table.rename_column('SOURCE_ID', 'source_id')
     gaia_table.rename_column('phot_g_mean_mag', 'Gmag')
     gaia_table.rename_column('phot_bp_mean_mag', 'BPmag')
     gaia_table.rename_column('phot_rp_mean_mag', 'RPmag')
@@ -248,7 +247,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
             if len(x) == 0:
                 continue
             else:
-                y = x[0]['SOURCE_ID', 'ra', 'dec', 'parallax',
+                y = x[0]['source_id', 'ra', 'dec', 'parallax',
                          'phot_g_mean_mag', 'phot_bp_mean_mag',
                          'phot_rp_mean_mag']
                 gaia_table.add_row((y))
@@ -408,7 +407,9 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs',
         * RPmag: the apparent RP-band magnitude from Gaia DR3
 
     """
-
+    
+    warnings.filterwarnings('ignore', category=UserWarning, append=True)
+    
     if len(gaia_table.colnames) == 1:
         tbl = table_from_simbad(gaia_table)
     elif len(gaia_table.colnames) == 2:

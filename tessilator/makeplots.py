@@ -36,9 +36,9 @@ from .file_io import logger_tessilator
 # initialize the logger object
 logger = logger_tessilator(__name__) 
 
-def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
-              xy_ctr=(10,10), xy_contam=None, p_min_thresh=0.1,
-              p_max_thresh=50., ap_rad=1.0, sky_ann=(6.,8.), nc='nc'):
+def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
+                xy_ctr=(10,10), xy_contam=None, p_min_thresh=0.1,
+                p_max_thresh=50., ap_rad=1.0, sky_ann=(6.,8.), nc='nc'):
     '''Produce a plot of tessilator results.
 
     | This module produces a 4-panel plot displaying information from the
@@ -83,7 +83,6 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     -------
     Nothing returned. The resulting plot is saved to file.
     '''
-
     t_0 = clean["time"][0]
     c_1 = clean["pass_sparse"].data
     c_2 = clean["pass_clean_outlier"].data
@@ -119,6 +118,7 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     circ_aper = Circle(xy_ctr, ap_rad, linewidth=1.2, fill=False, color='r')
     circ_ann1 = Circle(xy_ctr, sky_ann[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(xy_ctr, sky_ann[1], linewidth=1.2, fill=False, color='b')
+
     with np.errstate(all='ignore'):
         log_im_plot = np.log10(im_plot.data)
         image_plot = np.ma.array(log_im_plot, mask=np.isnan(log_im_plot))
@@ -254,18 +254,18 @@ def make_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     s = axs[1,1].scatter(LS['phase_x'], LS["phase_y"],
                          c=LS['phase_col'], cmap=cmap_use, vmin=0.5,
                          vmax=N_cyc+0.5)
-    axs[1,1].text(0.01, 0.90, f"Amplitude = {LS['amp']:.3f}, "
-                  f"Scatter = {LS['scatter']:.3f}, "
-                  f"$\chi^{2}$ = {LS['chisq_phase']:.3f}, "
-                  "$f_{\\rm dev}$"+ f"= {LS['fdev']:.3f}",
-                  fontsize=lsize, horizontalalignment='left',
-                  transform=axs[1,1].transAxes)
+#    axs[1,1].text(0.01, 0.90, f"Amplitude = {LS['amp']:.3f}, "
+#                  f"Scatter = {LS['scatter']:.3f}, "
+#                  f"$\chi^{2}$ = {LS['chisq_phase']:.3f}, "
+#                  "$f_{\\rm dev}$"+ f"= {LS['fdev']:.3f}",
+#                  fontsize=lsize, horizontalalignment='left',
+#                  transform=axs[1,1].transAxes)
 
-    cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
-                        bbox_to_anchor=(0.79, 0.92, 0.20, 0.05),
-                        bbox_transform=axs[1,1].transAxes)
-    cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
-                        label='cycle number')
+#    cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
+#                        bbox_to_anchor=(0.79, 0.92, 0.20, 0.05),
+#                        bbox_transform=axs[1,1].transAxes)
+#    cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
+#                        label='cycle number')
     plot_name = '_'.join([name_target, f"{scc[0]:04d}",
                           f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
     plt.savefig(f'./{plot_dir}/{plot_name}', bbox_inches='tight')

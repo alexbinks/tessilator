@@ -26,6 +26,7 @@ from astropy.table import Table, MaskedColumn
 from astropy.io import ascii, fits
 from astropy.coordinates import SkyCoord
 from astroquery.mast import Tesscut
+from astropy.time import Time
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
@@ -37,7 +38,7 @@ from .periodogram import run_ls
 from .detrend_cbv import get_cbv_scc
 from .contaminants import contamination, is_period_cont
 from .maketable import get_gaia_data
-from .makeplots import make_plot
+from .makeplots import create_plot
 from .file_io import logger_tessilator, make_dir
 from .tess_stars2px import tess_stars2px_function_entry
 
@@ -123,10 +124,10 @@ _Template_table_format = [
     ("period_3_fit",r"Tertiary $P_{\rm rot}$ (Gaussian fit centroid)",float,".6f",np.nan),
     ("period_3_err", r"Tertiary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
     ("power_3", r"Power output of the tertiary $P_{\rm rot}$", float, ".6f", np.nan),
-    ("period_4", r"Quaternary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
-    ("period_4_fit", r"Quaternary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f", np.nan),
-    ("period_4_err", r"Quaternary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
-    ("power_4", r"Power output of the quaternary $P_{\rm rot}$", float, ".6f", np.nan),
+    ("period_4", r"Quarternary $P_{\rm rot}$ (peak)", float, ".6f", np.nan),
+    ("period_4_fit", r"Quarternary $P_{\rm rot}$ (Gaussian fit centroid)", float, ".6f", np.nan),
+    ("period_4_err", r"Quarternary $P_{\rm rot}$ uncertainty", float, ".6f", np.nan),
+    ("power_4", r"Power output of the quarternary $P_{\rm rot}$", float, ".6f", np.nan),
     ("period_shuffle", r"$P_{\rm shuff}$", float, ".6f", np.nan),
     ("period_shuffle_err", r"Uncertainty in $P_{\rm shuff}$", float, ".6f", np.nan),
     ("shuffle_flag", r"Indicates if $P_{\rm shuff}$ was adopted", int, None, 9),
@@ -164,31 +165,9 @@ def setup_input_parameters():
 
     The input parameters are:
 
-    1) "flux_con": the toggle for applying the contamination calculation
-       (yes=1, no=0).
+    1) "file_ref" is a string expression used to reference the files produced.
 
-    2) either "lc_con", if using the cutout functions or "sector_num" if
-       sectors are needed.
-              
-       * "lc_con" determines if lightcurve/periodogram analyses should be
-         carried out for neighbouring contaminants (yes=1, no=0).
-
-       * "sector_num" prompts the user to enter the sector number needed.
-         If command line arguments are not used, the program will ask if a
-         specific Camera and CCD is needed (1=yes, 0=no). If not required, the
-         whole sector is analysed. If this is a command line argument, if the
-         user enters just the sector number (maximum 2 digits) the whole sector
-         will be analysed, and if the Camera and CCD number are given right
-         after the sector number with no spaces, then a specific Camera and CCD
-         configuration will be used. E.G: if "sector_num = 8", the entire
-         sector 8 is analysed, whereas if "sector_num = 814" then the program
-         will analyse only Camera 1 and CCD 4 in sector 8.
-
-    3) "make_plots" gives the user the option to make plots (yes=1, no=0)
-
-    4) "file_ref" is a string expression used to reference the files produced.
-
-    5) "t_filename" is the name of the input file (or target) required for
+    2) "t_filename" is the name of the input file (or target) required for
        analysis.
 
     If a program is called from the command line without all five input
@@ -214,8 +193,6 @@ def setup_input_parameters():
         Decides if a lightcurve analysis is to be performed for the 5 strongest
         contaminants. Here, the data required for further analysis are
         stored in a table.
-    make_plots : `bool`
-        Decides is plots are made from the lightcurve analysis.
     file_ref : `str`
         A common string to give all output files the same naming convention.
     t_filename : `str`
@@ -224,123 +201,38 @@ def setup_input_parameters():
      '''
     # first, set parameters in the case where inputs are not defined on the
     # command line
-    if len(sys.argv) != 6:
-        flux_con = pyip.inputInt("Do you want to search for contaminants? "
-                   "1=yes, 0=no : ", min=0, max=1)
-        if 'cutout' in sys.argv[0]:
-            lc_con = pyip.inputInt("Do you want to calculate period data for "
-                     "the contaminants? 1=yes, 0=no : ", min=0, max=1)
-        elif 'sector' in sys.argv[0]:
-            sector_num = pyip.inputInt("Which sector of data do you require? "
-                         f"(1-{sec_max}) : ", min=1, max=sec_max)
-            cc_request = pyip.inputInt("Do you want a specific Camera/CCD? "
-                                        "1=yes, 0=no : ", min=0, max=1)
-            if cc_request:
-                cam_num = pyip.inputInt("Which Camera? "
-                                        "(1-4)", min=1, max=4)
-                ccd_num = pyip.inputInt("Which CCD? "
-                                        "(1-4)", min=1, max=4)
-                scc = [sector_num, cam_num, ccd_num]
-            else:
-                scc = [sector_num]
-        make_plots = pyip.inputInt("Would you like to make some plots? 1=yes, "
-                     "0=no : ", min=0, max=1)
+    if len(sys.argv) != 3:
         file_ref = pyip.inputStr("Enter the unique name for referencing the "
                    "output files : ")
         while True:
             t_filename = pyip.inputStr("Enter the file name of your input "
                          "table or object.\nIf this is a single target please "
                          "enter a hash (#) symbol before the identifier : ")
-            if t_filename.startswith('#'):
-                t_name = t_filename[1:]
-                t_name_joined = \
-                t_name.replace(' ','_').replace(',', '_')+'.dat'
-                if os.path.exists(t_name_joined):
-                    os.remove(t_name_joined)
-                with open(t_name_joined, 'a') as single_target:
-                    single_target.write(t_name)
-                t_filename = t_name_joined
-                break
             if not os.path.exists(t_filename):
                 logger.error(f'The file "{t_filename}" does not exist.')
             else:
                 break
     # second, set parameters in the case where command line inputs are given
     else:
-        flux_con = int(sys.argv[1])
-        if 'cutout' in sys.argv[0]:
-            lc_con = int(sys.argv[2])
-        elif 'sector' in sys.argv[0]:
-            scc_in = str(sys.argv[2])
-            if len(scc_in) > 4:
-                logger.critical("Incorrect format for sector/camera/ccd " "values")
-                sys.exit()
-            elif len(scc_in) < 3:
-                scc = [int(scc_in)]
-            elif len(scc_in) in [3,4]:
-                sec = int(scc_in[:-2])
-                cam = int(scc_in[-2])
-                ccd = int(scc_in[-1])
-                scc = [sec, cam, ccd]
-        make_plots = int(sys.argv[3])
-        file_ref = sys.argv[4]
-        t_filename = sys.argv[5]
+        file_ref = sys.argv[1]
+        t_filename = sys.argv[2]
 
-        true_vals = [0, 1]
-        sec_vals = np.arange(1,sec_max+1)
-        cam_ccd_vals = np.arange(1,5)
-        if flux_con not in true_vals:
-            logger.critical(f"flux_con value {flux_con} not a valid input: "
-                            f"choose either 0 or 1.\nExiting program.")
-            sys.exit()
-        if 'cutout' in sys.argv[0]:
-            if lc_con not in true_vals:
-                logger.critical(f"lc_con value {lc_con} not a valid input: "
-                            f"choose either 0 or 1.\nExiting program.")
-                sys.exit()
-        elif 'sector' in sys.argv[0]:
-            if scc[0] not in sec_vals:
-                logger.critical(f"sector_num value {scc[0]} not a valid input: "
-                                f"choose integer between 1 and {sec_max}.\n"
-                                f"Exiting program.")
-                sys.exit()
-            if len(scc) == 3:
-                if scc[1] not in cam_ccd_vals:
-                    logger.critical(f"Camera value {scc[1]} out of range: "
-                                    f"choose integer between 1 and 4.\n"
-                                    f"Exiting program.")
-                    sys.exit()
-                if scc[2] not in cam_ccd_vals:
-                    logger.critical(f"CCD value {scc[2]} out of range: "
-                                    f"choose integer between 1 and 4.\n"
-                                    f"Exiting program.")
-                    sys.exit()                        
-        if make_plots not in true_vals:
-            logger.critical(
-                "make_plots not a valid input: "
-                "choose either 0 or 1.\nExiting program."
-            )
-            sys.exit()
-
-        if t_filename.startswith('#'):
-            logger.info(t_filename)
-            t_name = t_filename[1:]
-            t_name_joined = t_name.replace(' ','_').replace(',', '_')+'.dat'
-            if os.path.exists(t_name_joined):
-                os.remove(t_name_joined)
-            with open(t_name_joined, 'a') as single_target:
-                if t_name.startswith("Gaia DR3 "):
-                    single_target.write(t_name[9:])
-                else:
-                    single_target.write(t_name)
-            t_filename = t_name_joined
-        if not os.path.exists(t_filename):
-            logger.critical(f'The file "{t_filename}" does not exist.')
-            sys.exit()
-    if 'cutout' in sys.argv[0]:
-        return flux_con, lc_con, make_plots, file_ref, t_filename
-    elif 'sector' in sys.argv[0]:
-        return flux_con, scc, make_plots, file_ref, t_filename
+    if t_filename.startswith('#'):
+        logger.info(t_filename)
+        t_name = t_filename[1:]
+        t_name_joined = t_name.replace(' ','_').replace(',', '_')+'.dat'
+        if os.path.exists(t_name_joined):
+            os.remove(t_name_joined)
+        with open(t_name_joined, 'a') as single_target:
+            if t_name.startswith("Gaia DR3 "):
+                single_target.write(t_name[9:])
+            else:
+                single_target.write(t_name)
+        t_filename = t_name_joined
+    if not os.path.exists(t_filename):
+        logger.critical(f'The file "{t_filename}" does not exist.')
+        sys.exit()
+    return file_ref, t_filename
 
 
 def setup_filenames(file_ref, scc=None):
@@ -462,7 +354,7 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs',
     and then encompassed with double-quotation marks around the source
     identifier.
     
-    E.G. >>> python run_tess_cutouts 0 0 0 files "#AB Doradus"
+    E.G. >>> python run_tess_cutouts files "#AB Doradus"
     
     parameters
     ----------
@@ -485,13 +377,17 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs',
     t_targets : `astropy.table.Table`
         a formatted astropy table ready for further analysis
     '''
+    
     if isinstance(t_filename, str):
         t_input = ascii.read(t_filename, delimiter=',', format='no_header')
     elif isinstance(t_filename, Table):
         t_input = t_filename
     t_targets = get_gaia_data(t_input, name_is_source_id=name_is_source_id,
                               type_coord=type_coord, gaia_sys=gaia_sys)
-    print(t_targets)
+
+    if len(t_targets) == 1:
+        os.remove(t_filename)
+
     return t_targets
 
 
@@ -682,7 +578,7 @@ def apply_noise_corr(targ_lc, sim_lc):
 
 
 def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name,
-                       make_plots=False):
+                       make_plot=False):
     '''Apply a flux-corrected key to the target lightcurve dictionary, and make
     a plot of the corrections if required.
     
@@ -702,7 +598,7 @@ def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name,
     ref_name : `str`
         The reference name for each subdirectory which will connect all output
         files.
-    make_plots : `bool`, optional, default=False
+    make_plot : `bool`, optional, default=False
         Choose to make plots of the noise corrections.
 
     returns
@@ -713,7 +609,7 @@ def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name,
     '''
 
     targ_lc = apply_noise_corr(targ_lc, med_lc)
-    if make_plots:
+    if make_plot:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_"\
                     f"{scc[2]}_corr_local_lc.png"
 
@@ -726,7 +622,7 @@ def fix_noise_lc_local(targ_lc, med_lc, scc, targ_name, ref_name,
 # NOTE - I'm cancelling this procedure until we get new lightcurves!
 # 23.01.2024
 def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name,
-                     mag_extr_lim=3., make_plots=False):
+                     mag_extr_lim=3., make_plot=False):
     '''Divide the target lightcurve by the noise lightcurve
     
     For a given sector, camera and CCD configuration, this function will search
@@ -753,7 +649,7 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name,
         The tolerated difference in magnitude between the target
         and the range of calculated simulated lightcurves if the
         magnitude is out of range.
-    make_plots : `bool`, optional, default=False
+    make_plot : `bool`, optional, default=False
         Choose to make plots of the noise corrections.
 
     returns
@@ -798,7 +694,7 @@ def fix_noise_lc_sim(targ_lc, targ_name, t_targets, scc, ref_name,
     sim_lc = Table.read(sim_tab)
     targ_lc = apply_noise_corr(targ_lc, sim_lc)
 
-    if make_plots:
+    if make_plot:
         plot_name = f"{targ_name}_{scc[0]:04d}_{scc[1]}_{scc[2]}_"\
                     f"corr_sim_lc.png"
         make_lc_corr_plot(plot_name, ref_name, targ_lc["time"],
@@ -1010,16 +906,69 @@ def assess_lc(ls_results):
         lc_choice = 1
     return lc_choice
 
+def convert_ffi_date_to_tess(fd):
+    tess_t0 = 2457000.
+    fd = str(fd)
+    y,d,h,m,s=fd[0:4],fd[4:7],fd[7:9],fd[9:11],fd[11:]
+    time_str = f"{y}:{d}:{h}:{m}:{s}"
+    time_now = Time(time_str, format='yday', scale='utc').jd
+    return time_now-tess_t0
+                
+                
+                
+                
+def run_clean_fail_modes(lc, scc):
+    file_root = './fail_modes/'
+    fail_fire_file = f'{file_root}tess_fireflies_and_fireworks.txt'
+    fail_jitters_file = f'{file_root}tess_jitters.txt'
+    fail_scattered_file = f'{file_root}tess_scattered_light.txt'
 
+    time_cut = []
+    lc_mask = np.ones(len(lc), dtype=bool)
+    if os.path.exists(fail_fire_file):
+        fail_fire = ascii.read(fail_fire_file)
+        cut_lines = np.where((fail_fire["Sector"] == scc[0]) &
+                            (fail_fire["Camera"] == scc[1]))[0]
+        if len(cut_lines) >= 1:
+            for c in cut_lines:
+                fs = convert_ffi_date_to_tess(fail_fire["FFI_Start"][c])
+                fe = convert_ffi_date_to_tess(fail_fire["FFI_End"][c])
+                time_cut.append((fs,fe))
+    if os.path.exists(fail_jitters_file):
+        fail_jitters = ascii.read(fail_jitters_file)
+        cut_lines = np.where(fail_jitters["Sector"] == scc[0])[0]
+        for c in cut_lines:
+            time_cut.append((fail_jitters["j_start"][c],
+                             fail_jitters["j_fin"][c]))
 
-def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
+#    if os.path.exists(fail_scattered_file):
+#        fail_scatter = ascii.read(fail_scattered_file)
+#        cut_lines = np.where((fail_scatter["Sector"] == scc[0]) &
+#                            (fail_scatter["Cam"] == scc[1]) &
+#                            (fail_scatter["CCD"] == scc[2]))[0]
+    for tc in time_cut:
+         lc_mask = (lc_mask) & ((lc["time"] <= tc[0]) | (lc["time"] >= tc[1]))
+    
+    print(lc[lc_mask])
+#        lc = run_fail_fire(lc, scc, fail_fire)
+#    if os.exists('./fail_modes/tess_jitters.txt'):
+#        fail_jitters = Table.read(f'./fail_modes/{fail_files[1]})
+#        lc = run_fail_jitters(lc, scc, fail_jitters)
+#    if os.exists('./fail_modes/tess_scattered_light.txt'):
+#        fail_scattered = Table.read(f'./fail_modes/{fail_files[2]})
+#        lc = run_fail_scattered(lc, scc, fail_scattered)
+
+    return lc[lc_mask]
+
+def full_run_lc(file_in, t_target, scc, res_table, gaia_sys=True,
                 xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False,
                 n_cont=10, cont_rad=10., mag_lim=3., tot_attempts=3,
                 ref_name='targets', cutout_size=20, save_phot=False,
                 cbv_flag=False, store_lc=False, lc_dir='lc', pg_dir='pg',
-                plot_ext='plots', keep_data=False, flux_con=False,
-                lc_con=False, fix_noise=False, shuf_per=False,
-                make_shuf_plot=False, shuf_dir='plot_shuf'):
+                plot_ext='plots', clean_fail_modes=False, keep_data=False,
+                calc_cont=False, lc_cont=False, fix_noise=False,
+                shuf_per=False, make_plot=False, make_shuf_plot=False,
+                shuf_dir='plot_shuf'):
     '''Aperture photometry, lightcurve cleaning and periodogram analysis.
 
     This function calls a set of functions in the lc_analysis.py module to
@@ -1032,8 +981,6 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
         Name of the input TESS fits file.
     t_target : `astropy.table.Table`
         Details of the target star.
-    make_plots: `bool`
-        Choose to make plots. 
     scc : `list`, size=3
         List containing the sector number, camera and CCD.
     res_table : `astropy.table.Table`
@@ -1076,7 +1023,10 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     pg_dir : `str`, optional, default='pg'
         The directory used to store the periodogram data.
     plot_ext : `str`, optional, default='plots'
-        The directory used to store the plots if make_plots==True.
+        The directory used to store the plots if make_plot==True.
+    clean_fail_modes : `bool`, optional, default=False
+        Choose to remove parts of the lightcurve that are reported as
+        problematic in the TESS Data Release Notes
     keep_data : `bool`
         Choose to save the input data to file.
     flux_con : `bool`, optional, default=False
@@ -1142,6 +1092,12 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
     phot_targets = tpf.group_by('gaia_dr3_id')
     for key, group in zip(phot_targets.groups.keys, phot_targets.groups):
         g_c = group[group["flux"] > 0.0]
+        if clean_fail_modes:
+            g_c = run_clean_fail_modes(g_c, scc)
+#        if scc[0] == 1:
+#           sector01_rm = [1347,1349]
+#           g_c = g_c[(g_c["time"] < sector01_rm[0]) |
+#                     (g_c["time"] > sector01_rm[1])]
         if isinstance(t_target, Table):
             t_targets = t_target[t_target["source_id"] == key[0]]
         else:
@@ -1149,7 +1105,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             
         name_target = get_name_target(t_targets["name"][0])
         name_full = f'{name_target}_{scc[0]:04d}_{scc[1]}_{scc[2]}'
-        if flux_con:
+        if calc_cont:
             t_targets, t_cont, cont_dir = \
             collect_contamination_data(t_targets, ref_name, name_full,
                                        gaia_sys=gaia_sys, ap_rad=rad_calc, n_cont=n_cont, cont_rad=cont_rad, mag_lim=mag_lim, tot_attempts=tot_attempts
@@ -1179,7 +1135,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             logger.info('fixing the noise!')
             for l in range(len(lcs)):
                 lcs[l] = fix_noise_lc_sim(lcs[l], name_target, t_targets, scc,
-                                          ref_name, make_plots=make_plots)
+                                          ref_name, make_plot=make_plot)
             nc = 'corr_sim'
         ls_results = []
         for lc in lcs:
@@ -1209,10 +1165,10 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             continue
 
         false_flag, reliable_flag = 4, 4        
-        if lc_con:
+        if lc_cont:
             print('performing periodogram analysis of potential contaminants')
             lc_cont_files = []
-            if flux_con != 1:
+            if not flux_cont:
                 logger.warning("Contaminants not identified! "
                                "Please toggle lc_con=1")
                 logger.warning("Continuing program using only the target.")
@@ -1224,7 +1180,7 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                     xy_con = find_xy_cont(file_in, t_cont, cutout_size)
                     false_flag, reliable_flag = '', ''
                     for z in range(len(xy_con)):
-                        name_lc, false_lab, reliable_lab, lc_cont, d_lc = \
+                        name_lc, false_lab, reliable_lab, lc_contam, d_lc = \
                         run_test_for_contaminant(xy_con[z], file_in, t_cont[z],
                                                  d_target, scc,
                                                  lc_cont_dir=cont_dir)
@@ -1235,9 +1191,9 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                 path_exist = os.path.exists(cont_dir)
                                 if not path_exist:
                                     os.mkdir(cont_dir)
-                                lc_cont.write(f'{cont_dir}/{name_lc}',
+                                lc_contam.write(f'{cont_dir}/{name_lc}',
                                               overwrite=True)
-                                lc_cont_files.append(lc_cont)
+                                lc_cont_files.append(lc_contam)
                         false_flag = int(false_flag)
                         reliable_flag = int(reliable_flag)
                 else:
@@ -1253,13 +1209,13 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
                                       scc)
                         clean_norm_lc = \
                         fix_noise_lc_local(lc, t_median_lc, scc, name_target,
-                                           ref_name, make_plots=make_plots)
+                                           ref_name, make_plot=make_plot)
                         d_target = run_ls(clean_norm_lc, check_jump=True)
                         d_target["best_lc"] = best_lc
                     else:
                         nc = 'corr_sim'
                         lc = fix_noise_lc_sim(lc, name_target, t_targets, scc,
-                                              ref_name, make_plots=make_plots)
+                                              ref_name, make_plot=make_plot)
                         d_target = run_ls(lc, check_jump=True)
                         d_target["best_lc"] = best_lc
                 else:
@@ -1269,12 +1225,20 @@ def full_run_lc(file_in, t_target, make_plots, scc, res_table, gaia_sys=True,
             
         d_target["false_flag"] = false_flag
         d_target["reliable_flag"] = reliable_flag
-        if make_plots:
+
+
+#        save_cutout=True
+#        if save_cutout:    
+#            print(im_plot.data)
+
+
+        if make_plot:
             plot_dir = make_dir(plot_ext, ref_name)
             im_plot, xy_ctr = make_2d_cutout(file_in, group, 
                                              im_size=(cutout_size+1,
                                                       cutout_size+1))
-            make_plot(im_plot, lc, d_target, scc, t_targets, name_target,
+
+            create_plot(im_plot, lc, d_target, scc, t_targets, name_target,
                       plot_dir, xy_contam=xy_con, p_min_thresh=0.1,
                       p_max_thresh=50., ap_rad=rad_calc, sky_ann=sky_ann, nc=nc)
 
@@ -1574,9 +1538,12 @@ def get_cutouts(
 
     choose_sec = choose_sec[:cap_files]
     if not np.all(np.isin(choose_sec, np.arange(1, sec_max + 1))):
-        raise ValueError(
-            f"Invalid sector numbers: {choose_sec}, sectors are 1-{sec_max}."
-        )
+#        raise ValueError(
+#            f"Invalid sector numbers: {~choose_sec[np.isin(choose_sec, , np.arange(1, sec_max + 1))]}, available sectors are 1-{sec_max}."
+#        )
+        logger.warning(f"Invalid sector numbers: {~choose_sec[np.isin(choose_sec, np.arange(1, sec_max + 1))]}, available sectors are 1-{sec_max}."
+        )      
+        choose_sec = choose_sec[np.isin(choose_sec, np.arange(1, sec_max + 1))]
 
     manifest = []
     for c in choose_sec:
@@ -1614,9 +1581,6 @@ def get_cutouts(
 
 def one_source_cutout(
     target,
-    lc_con,
-    flux_con,
-    make_plots,
     res_table,
     ref_name,
     gaia_sys=True,
@@ -1638,10 +1602,15 @@ def one_source_cutout(
     fits_dir="fits",
     lc_dir="lc",
     pg_dir="pg",
+    plot_ext="plots",
+    clean_fail_modes=False,
     fix_noise=False,
     shuf_per=False,
+    make_plot=False,
+    calc_cont=True,
+    lc_cont=False,
     make_shuf_plot=False,
-    shuf_dir="shuf_plots",
+    shuf_dir="shuf_plots"
 ):
     """Download cutouts and run lightcurve/periodogram analysis for one target.
 
@@ -1657,8 +1626,6 @@ def one_source_cutout(
         stored in a table.
     flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
-    make_plots : `bool`
-        Decides is plots are made from the lightcurve analysis.
     res_table : `astropy.table.Table`
         The table to store the final tessilator results.
     ref_name : `str`
@@ -1713,6 +1680,9 @@ def one_source_cutout(
         The directory used to store the lightcurve files if store_lc==True.
     pg_dir : `str`, optional, default='pg'
         The directory used to store the periodogram data.
+    clean_fail_modes : `bool`, optional, default=False
+        Choose to remove parts of the lightcurve that are reported as
+        problematic in the TESS Data Release Notes
     fix_noise : `bool`, optional, default=False
         Choose to apply corrections accounting for systematic noise.
     shuf_per : `bool`, optional, default=False
@@ -1773,16 +1743,19 @@ def one_source_cutout(
                 t_sp = f_new.split('_')
     # simply extract the sector, ccd and camera numbers from the fits file.
                 scc = [int(t_sp[-3][1:]), int(t_sp[-2]), int(t_sp[-1][0])]
-                print(f_new, scc)
                 
-                full_run_lc(f_new, target, make_plots, scc, res_table, gaia_sys=gaia_sys, 
-                            xy_pos=xy_pos, ap_rad=ap_rad, sky_ann=sky_ann, fix_rad=fix_rad,
-                            n_cont=n_cont, cont_rad=cont_rad, mag_lim=mag_lim, tot_attempts=tot_attempts,
-                            ref_name=ref_name, cutout_size=cutout_size, save_phot=save_phot,
-                            cbv_flag=cbv_flag, flux_con=flux_con,
-                            store_lc=store_lc, lc_con=lc_con, lc_dir=lc_dir,
-                            pg_dir=pg_dir,
-                            fix_noise=fix_noise, shuf_per=shuf_per, make_shuf_plot=make_shuf_plot,
+                full_run_lc(f_new, target, scc, res_table, gaia_sys=gaia_sys,
+                            xy_pos=xy_pos, ap_rad=ap_rad, sky_ann=sky_ann,
+                            fix_rad=fix_rad, n_cont=n_cont, cont_rad=cont_rad,
+                            mag_lim=mag_lim, tot_attempts=tot_attempts,
+                            ref_name=ref_name, cutout_size=cutout_size,
+                            save_phot=save_phot, cbv_flag=cbv_flag,
+                            store_lc=store_lc, calc_cont=calc_cont,
+                            lc_cont=lc_cont, lc_dir=lc_dir, pg_dir=pg_dir,
+                            plot_ext=plot_ext,
+                            clean_fail_modes=clean_fail_modes,
+                            fix_noise=fix_noise, shuf_per=shuf_per,
+                            make_plot=make_plot, make_shuf_plot=make_shuf_plot,
                             shuf_dir=shuf_dir)
             except Exception as e:
                 logger.error(f"Error occurred when processing {file_in}. "
@@ -1791,14 +1764,16 @@ def one_source_cutout(
   
     
 
-def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots, 
-                       ref_name, gaia_sys=True, xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.), fix_rad=False,
-                       n_cont=10, cont_rad=10., mag_lim=3.,
-                       choose_sec=None, save_phot=False,
-                       cbv_flag=False, store_lc=False, tot_attempts=3,
-                       cap_files=None, res_ext='results', lc_ext='lc',
-                       pg_ext='pg', fits_ext='fits', keep_data=False,
-                       fix_noise=False, shuf_per=False, shuf_ext='shuf_plots', make_shuf_plot=False):
+def all_sources_cutout(t_targets, period_file, ref_name, gaia_sys=True,
+                       xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
+                       fix_rad=False, n_cont=10, cont_rad=10., mag_lim=3.,
+                       choose_sec=None, save_phot=False, cbv_flag=False,
+                       store_lc=False, tot_attempts=3, cap_files=None,
+                       res_ext='results', lc_ext='lc', pg_ext='pg',
+                       fits_ext='fits', clean_fail_modes=False,
+                       keep_data=False, fix_noise=False, shuf_per=False,
+                       shuf_ext='shuf_plots', calc_cont=True, lc_cont=False,
+                       make_plot=False, make_shuf_plot=False):
     '''Run the tessilator for all targets.
 
     parameters
@@ -1838,8 +1813,6 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
         stored in a table.
     flux_con : `bool`
         Decides if the flux contribution from contaminants is to be calculated.
-    make_plots : `bool`
-        Decides is plots are made from the lightcurve analysis.
     ref_name : `str`
         The reference name for each subdirectory which will connect all output
         files.
@@ -1887,8 +1860,11 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
         The directory to store the final results file.
     lc_ext : `str`, optional, default='lc'
         The directory used to store the lightcurve files if lc_dir==True
-    pg_ext : `str`, optional, default='pg'
+    pg_dir : `str`, optional, default='pg'
         The directory used to store the periodogram data.
+    clean_fail_modes : `bool`, optional, default=False
+        Choose to remove parts of the lightcurve that are reported as
+        problematic in the TESS Data Release Notes
     fits_ext : `str`, optional, default='fits'
         The name of the directory to store the fits files.
     keep_data : `bool`
@@ -1912,7 +1888,6 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
     start = datetime.now()
     logger.info(f"Starting Time: {start}")
     print("Start time: ", start.strftime("%d/%m/%Y %H:%M:%S"))
-
     fits_dir = make_dir(fits_ext, ref_name)
     lc_dir = make_dir(lc_ext, ref_name)
     pg_dir = make_dir(pg_ext, ref_name)
@@ -1929,9 +1904,6 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
                     f" of {len(t_targets)}")
         one_source_cutout(
             target,
-            lc_con,
-            flux_con,
-            make_plots,
             res_table,
             ref_name,
             gaia_sys=gaia_sys,
@@ -1952,9 +1924,13 @@ def all_sources_cutout(t_targets, period_file, lc_con, flux_con, make_plots,
             fits_dir=fits_dir,
             lc_dir=lc_dir,
             pg_dir=pg_dir,
+            clean_fail_modes=clean_fail_modes,
             fix_noise=fix_noise,
             shuf_per=shuf_per,
             shuf_dir=shuf_dir,
+            calc_cont=calc_cont,
+            lc_cont=lc_cont,
+            make_plot=make_plot,
             make_shuf_plot=make_shuf_plot,
         )
     finish = datetime.now()
@@ -1999,7 +1975,7 @@ def get_fits(scc):
 
 
 
-def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
+def one_cc(t_targets, scc, res_table, file_ref, ap_rad=1.0,
                       sky_ann=[6.,8.], keep_data=False, fix_noise=False):
     '''Run the tessilator for targets in a given Sector/Camera/CCD
     configuration.
@@ -2017,8 +1993,6 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
         Table containing the targets to be analysed.
     scc : `list`, size=3
         List containing the sector number, camera and CCD.
-    make_plots : `bool`
-        Decides is plots are made from the lightcurve analysis.
     res_table : `astropy.table.Table`
         The table to store tessilator results.
     file_ref : `str`
@@ -2049,7 +2023,6 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
     full_run_lc(
         fits_files,
         t_targets[ind],
-        make_plots,
         scc,
         res_table,
         ap_rad=ap_rad,
@@ -2061,7 +2034,7 @@ def one_cc(t_targets, scc, make_plots, res_table, file_ref, ap_rad=1.0,
     )
 
 
-def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
+def all_sources_sector(t_targets, scc, period_file, file_ref,
                        keep_data=False, fix_noise=False):
     """Iterate over all cameras and CCDs for a given sector.
 
@@ -2076,8 +2049,6 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
         This can be a single integer or a tuple of size 3. If a single integer
         is given, then all cameras and CCDs for that sector are analysed. If a
         tuple is given, is has the format `(sector, camera, CCD)`.
-    make_plots : `bool`
-        Decides is plots are made from the lightcurve analysis.
     period_file : `str`
         Name of file for recording parameters measured by the periodogram
         analysis.
@@ -2111,7 +2082,6 @@ def all_sources_sector(t_targets, scc, make_plots, period_file, file_ref,
         one_cc(
             t_targets,
             [sector, cam, ccd],
-            make_plots,
             res_table,
             file_ref=file_ref,
             keep_data=keep_data,

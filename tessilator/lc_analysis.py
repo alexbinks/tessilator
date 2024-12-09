@@ -681,6 +681,7 @@ def run_make_lc_steps(f_lc, f_orig, min_crit_frac=0.1, min_crit_num=50,
         The dictionary returned from `detrend_lc`
     '''
 
+
     # (1) normalise the original flux points
     f_lc['nflux_ori'] = f_lc[f'{f_orig}']/np.median(f_lc[f'{f_orig}'])
     f_lc['nflux_err'] = f_lc['eflux']/f_lc[f'{f_orig}']

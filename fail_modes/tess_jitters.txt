@@ -1,0 +1,2 @@
+Sector,j_start,j_fin
+1,1347,1349

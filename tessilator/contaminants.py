@@ -242,14 +242,14 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
     for i, t_target in enumerate(t_targets):
         r = run_sql_query_contaminants(t_target, cont_rad=cont_rad, mag_lim=mag_lim,
                                        tot_attempts=tot_attempts)
-        r["SOURCE_ID"] = [f"Gaia DR3 {i}" for i in r["SOURCE_ID"]]
+        r["source_id"] = [f"Gaia DR3 {i}" for i in r["source_id"]]
         print(f"sql search for contaminants completed {t_target['source_id']},"
               f" target {i+1} of {len(t_targets)}.")
         # convert the angular separation from degrees to arcseconds
         r["pix_sep"] = r["ang_sep"]*3600./pixel_size
         if len(r) > 1:
             # make a table of all objects from the SQL except the target itself
-            rx = Table(r[r["SOURCE_ID"] != t_target["source_id"]])
+            rx = Table(r[r["source_id"] != t_target["source_id"]])
             # calculate the fraction of flux from the source object that falls
             # into the aperture using the Rayleigh formula
             s = ap_rad**(2)/(2.0*exprf**(2)) # measured in pixels
@@ -282,13 +282,12 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
                     rx['log_flux_frac'][f] = -99.
 
             rx['source_id_target'] = t_target["source_id"]
-            new_order = ['source_id_target', 'SOURCE_ID', 'ra', 'dec', 
+            new_order = ['source_id_target', 'source_id', 'ra', 'dec', 
                          'phot_g_mean_mag', 'phot_bp_mean_mag',
                          'phot_rp_mean_mag', 'pix_sep', 'log_flux_frac']
             rx.sort(['log_flux_frac'], reverse=True)
             rx = rx[new_order]
             rx['source_id_target'] = rx['source_id_target']
-            rx.rename_column('SOURCE_ID', 'source_id')
             rx['source_id'] = rx['source_id']
 
             # store the n_cont highest flux contributors to table
