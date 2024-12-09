@@ -7,7 +7,7 @@
  "n_cont":5,
  "cont_rad":10.,
  "mag_lim":3.,
- "choose_sec":1,
+ "choose_sec":None,
  "save_phot":True,
  "cbv_flag":False,
  "store_lc":True,
