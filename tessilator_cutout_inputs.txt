@@ -12,7 +12,7 @@
  "cbv_flag":False,
  "store_lc":True,
  "tot_attempts":10,
- "cap_files":None,
+ "cap_sectors":5,
  "res_ext":"results",
  "lc_ext":"lc",
  "pg_ext":"pg",
