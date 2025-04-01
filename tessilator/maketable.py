@@ -261,11 +261,12 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
         except:
             result_table = [None for i in GDR3_Names]
         NameList = []
+
         for i, r in enumerate(result_table):
             if r is None:
                 NameList.append(gaia_table['source_id'][i].astype(str))
             else:
-                NameList.append(sorted(r["ID"], key=len)[0])
+                NameList.append(sorted(r["id"], key=len)[0])
         gaia_table["name"] = NameList
         gaia_table["source_id"] = GDR3_Names
     else:
@@ -338,7 +339,7 @@ def table_from_table(input_table, name_is_source_id=False):
             if r is None:
                 NameList.append(str(gaia_table['source_id'][i]))
             else:
-                NameList.append(sorted(r["ID"], key=len)[0])
+                NameList.append(sorted(r["id"], key=len)[0])
         gaia_table["name"] = NameList
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag',
                  'BPmag', 'RPmag']

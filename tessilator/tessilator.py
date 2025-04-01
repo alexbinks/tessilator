@@ -921,10 +921,10 @@ def run_clean_fail_modes(lc, scc):
     file_root = './fail_modes/'
     fail_fire_file = f'{file_root}tess_fireflies_and_fireworks.txt'
     fail_jitters_file = f'{file_root}tess_jitters.txt'
-    fail_scattered_file = f'{file_root}tess_scattered_light.txt'
 
     time_cut = []
     lc_mask = np.ones(len(lc), dtype=bool)
+
     if os.path.exists(fail_fire_file):
         fail_fire = ascii.read(fail_fire_file)
         cut_lines = np.where((fail_fire["Sector"] == scc[0]) &
@@ -940,23 +940,8 @@ def run_clean_fail_modes(lc, scc):
         for c in cut_lines:
             time_cut.append((fail_jitters["j_start"][c],
                              fail_jitters["j_fin"][c]))
-
-#    if os.path.exists(fail_scattered_file):
-#        fail_scatter = ascii.read(fail_scattered_file)
-#        cut_lines = np.where((fail_scatter["Sector"] == scc[0]) &
-#                            (fail_scatter["Cam"] == scc[1]) &
-#                            (fail_scatter["CCD"] == scc[2]))[0]
     for tc in time_cut:
          lc_mask = (lc_mask) & ((lc["time"] <= tc[0]) | (lc["time"] >= tc[1]))
-    
-    print(lc[lc_mask])
-#        lc = run_fail_fire(lc, scc, fail_fire)
-#    if os.exists('./fail_modes/tess_jitters.txt'):
-#        fail_jitters = Table.read(f'./fail_modes/{fail_files[1]})
-#        lc = run_fail_jitters(lc, scc, fail_jitters)
-#    if os.exists('./fail_modes/tess_scattered_light.txt'):
-#        fail_scattered = Table.read(f'./fail_modes/{fail_files[2]})
-#        lc = run_fail_scattered(lc, scc, fail_scattered)
 
     return lc[lc_mask]
 
@@ -1102,7 +1087,6 @@ def full_run_lc(file_in, t_target, scc, res_table, gaia_sys=True,
             t_targets = t_target[t_target["source_id"] == key[0]]
         else:
             t_targets = Table(t_target)
-            
         name_target = get_name_target(t_targets["name"][0])
         name_full = f'{name_target}_{scc[0]:04d}_{scc[1]}_{scc[2]}'
         if calc_cont:
@@ -1227,9 +1211,6 @@ def full_run_lc(file_in, t_target, scc, res_table, gaia_sys=True,
         d_target["reliable_flag"] = reliable_flag
 
 
-#        save_cutout=True
-#        if save_cutout:    
-#            print(im_plot.data)
 
 
         if make_plot:
@@ -1488,7 +1469,7 @@ def get_cutouts(
     name_target,
     choose_sec=None,
     tot_attempts=3,
-    cap_files=None,
+    cap_sectors=None,
     fits_dir="fits",
 ):
     """Download TESS cutouts and store to a list for lightcurve analysis.
@@ -1515,7 +1496,7 @@ def get_cutouts(
 
     tot_attempts : `int`, optional, default=3
         The number of sql queries in case of request or server errors.
-    cap_files : `int`, optional, default=None
+    cap_sectors : `int`, optional, default=None
         The maximum number of sectors for each target.
     fits_dir : `str`, optional, default='fits'
         The name of the directory to store the fits files.
@@ -1536,7 +1517,7 @@ def get_cutouts(
     if isinstance(choose_sec, int):
         choose_sec = [choose_sec]
 
-    choose_sec = choose_sec[:cap_files]
+    choose_sec = choose_sec[:cap_sectors]
     if not np.all(np.isin(choose_sec, np.arange(1, sec_max + 1))):
 #        raise ValueError(
 #            f"Invalid sector numbers: {~choose_sec[np.isin(choose_sec, , np.arange(1, sec_max + 1))]}, available sectors are 1-{sec_max}."
@@ -1598,7 +1579,7 @@ def one_source_cutout(
     store_lc=False,
     cutout_size=20,
     tot_attempts=3,
-    cap_files=None,
+    cap_sectors=None,
     fits_dir="fits",
     lc_dir="lc",
     pg_dir="pg",
@@ -1672,7 +1653,7 @@ def one_source_cutout(
         The pixel length of the downloaded cutout.
     tot_attempts : `int`, optional, default=3
         The number of sql queries in case of request or server errors.
-    cap_files : `None`, `int`, optional, default=None
+    cap_sectors : `None`, `int`, optional, default=None
         The maximum number of sectors for each target.
     fits_dir : `str`, optional, default='fits'
         The name of the directory to store the fits files.
@@ -1716,13 +1697,14 @@ def one_source_cutout(
     # multiple sectors!
     fits_files = get_cutouts(coo, cutout_size, name_target,
                              tot_attempts=tot_attempts, choose_sec=choose_sec,
-                             cap_files=cap_files, fits_dir=fits_dir)
+                             cap_sectors=cap_sectors, fits_dir=fits_dir)
     if fits_files is None:
         logger.error(f"could not download any data for {target['name']}. "
                      f"Trying next target.")
     else:
         for m, file_in in enumerate(fits_files):
-            print(f'working on {file_in}, #{m+1} of {len(fits_files)}')
+            fits_name = file_in.split('/')[-1]
+            print(f'working on {fits_name}, #{m+1} of {len(fits_files)}')
             try:
     # rename the fits file to something more legible for users
                 f_sp = file_in.split('/')[-1].split('-')
@@ -1768,7 +1750,7 @@ def all_sources_cutout(t_targets, period_file, ref_name, gaia_sys=True,
                        xy_pos=(10.,10.), ap_rad=1., sky_ann=(6.,8.),
                        fix_rad=False, n_cont=10, cont_rad=10., mag_lim=3.,
                        choose_sec=None, save_phot=False, cbv_flag=False,
-                       store_lc=False, tot_attempts=3, cap_files=None,
+                       store_lc=False, tot_attempts=3, cap_sectors=None,
                        res_ext='results', lc_ext='lc', pg_ext='pg',
                        fits_ext='fits', clean_fail_modes=False,
                        keep_data=False, fix_noise=False, shuf_per=False,
@@ -1854,7 +1836,7 @@ def all_sources_cutout(t_targets, period_file, ref_name, gaia_sys=True,
         Choose to save the cleaned lightcurve to file.
     tot_attempts : `int`, optional, default=3
         The number of sql queries in case of request or server errors.
-    cap_files : `int`, optional, default=None
+    cap_sectors : `int`, optional, default=None
         The maximum number of sectors for each target.
     res_ext : `str`, optional, default='results'
         The directory to store the final results file.
@@ -1920,7 +1902,7 @@ def all_sources_cutout(t_targets, period_file, ref_name, gaia_sys=True,
             store_lc=store_lc,
             choose_sec=choose_sec,
             tot_attempts=tot_attempts,
-            cap_files=cap_files,
+            cap_sectors=cap_sectors,
             fits_dir=fits_dir,
             lc_dir=lc_dir,
             pg_dir=pg_dir,

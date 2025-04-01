@@ -55,7 +55,6 @@ def test_all_sources_cutout(tmpdir):
     assert os.path.isfile(f"{tmpdir}/plots/ABDor/AB_Dor_0033_4_2_nc.png")
     out_csv = glob.glob(f"{tmpdir}/results/ABDor/*.csv")
     out = Table.read(out_csv[0])
-    print(out)
     assert len(out) == 1
 
     for col in ABDor.colnames[2:]:

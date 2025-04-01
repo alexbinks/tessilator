@@ -449,7 +449,7 @@ def initialise_LS_dict(lc_data, check_jump=False, p_min_thresh=0.05,
         logger.error('Something went wrong with the FAP test, maybe division '
                      'by 0.')
         LS_dict['FAPs'] = np.array([0.3, 0.2, 0.1])
-    LS_dict["FAP_001"] = LS_dict["FAPs"][1]
+    LS_dict["FAP_001"] = LS_dict["FAPs"][2]
 
 
 
