@@ -22,6 +22,7 @@ import inspect
 #Third party
 from astropy.table import Table
 from astroquery.simbad import Simbad
+from astroquery.vizier import Vizier
 from astroquery.gaia import Gaia
 from astropy.coordinates import SkyCoord, ICRS
 import astropy.units as u
@@ -38,6 +39,10 @@ from .file_io import logger_tessilator
 # initialize the logger object
 logger = logger_tessilator(__name__) 
 
+
+
+Vizier.ROW_LIMIT = 1  # or -1 for unlimited
+gaia_catalog = "I/355/gaiadr3"  # Gaia DR3 catalog in Vizier
 
 
 def table_from_simbad(input_names):
@@ -283,7 +288,7 @@ def table_from_coords(coord_table, ang_max=10.0, type_coord='icrs',
     return gaia_table
     
     
-def table_from_table(input_table, name_is_source_id=False):
+def table_from_table(input_table, name_is_source_id=False, ang_max=10.):
     '''Generate the formatted astropy table from a pre-formatted astropy
     table.
 
@@ -313,6 +318,9 @@ def table_from_table(input_table, name_is_source_id=False):
         The column headers must not be included!
     name_is_source_id : `bool`, optional, default=False
         Choose if the name is to be the same as the Gaia DR3 source identifier.
+    ang_max : `float`, optional, default=10.0
+        the maximum angular distance in arcseconds from the input coordinates
+        provided in the table.
 
     returns
     -------
@@ -324,23 +332,38 @@ def table_from_table(input_table, name_is_source_id=False):
                                                 float, float, float),
                        names=('source_id', 'ra', 'dec', 'parallax', 'Gmag',
                               'BPmag', 'RPmag'))
-    gaia_table['source_id'] = gaia_table['source_id']
+#    gaia_table['source_id'] = gaia_table['source_id']
     if name_is_source_id:
         gaia_table['name'] = gaia_table['source_id'].data
     else:
         GDR3_Names = [i for i in\
                       gaia_table['source_id']]
-        NameList = []
-        try:
-            result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
-        except:
-            result_table = [None for i in GDR3_Names]
-        for i, r in enumerate(result_table):
-            if r is None:
-                NameList.append(str(gaia_table['source_id'][i]))
+        source_list = []
+        coords = SkyCoord(ra=gaia_table["ra"]*u.degree,
+                         dec=gaia_table["dec"]*u.degree,
+                         frame='icrs')
+#        print(GDR3_Names)
+        
+        for c in coords:
+            result = Vizier.query_region(c, radius=ang_max*u.arcsec,  # search radius
+                                         catalog=gaia_catalog)
+            if result:
+                source_list.append(f"Gaia DR3 {result[0][0]['Source']}")
             else:
-                NameList.append(sorted(r["id"], key=len)[0])
-        gaia_table["name"] = NameList
+                source_list.append(None)
+        
+#        try:
+#            result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
+#        except:
+#            result_table = [None for i in GDR3_Names]
+#        for i, r in enumerate(result_table):
+#            if r is None:
+#                NameList.append(str(gaia_table['source_id'][i]))
+#            else:
+#                NameList.append(sorted(r["id"], key=len)[0])
+#        print(NameList)
+        gaia_table["name"] = GDR3_Names
+        gaia_table["source_id"] = source_list
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag',
                  'BPmag', 'RPmag']
     gaia_table = gaia_table[new_order]

@@ -119,6 +119,7 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     circ_ann1 = Circle(xy_ctr, sky_ann[0], linewidth=1.2, fill=False, color='b')
     circ_ann2 = Circle(xy_ctr, sky_ann[1], linewidth=1.2, fill=False, color='b')
 
+    print(t_table)
     with np.errstate(all='ignore'):
         log_im_plot = np.log10(im_plot.data)
         image_plot = np.ma.array(log_im_plot, mask=np.isnan(log_im_plot))

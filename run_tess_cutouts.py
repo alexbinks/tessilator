@@ -12,7 +12,7 @@ logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 print(f"Reading the table and formatting into astropy table structure for {tFile}")
-tTargets = tessilator.read_data(tFile, gaia_sys=True, type_coord='icrs')
+tTargets = tessilator.read_data(tFile, gaia_sys=True, type_coord='icrs', name_is_source_id=False)
 
 print("Done reading the table and formatting...now iterating over each source.")
 

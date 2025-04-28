@@ -240,8 +240,11 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
                           float))
 
     for i, t_target in enumerate(t_targets):
+        print(t_target)
+        
         r = run_sql_query_contaminants(t_target, cont_rad=cont_rad, mag_lim=mag_lim,
                                        tot_attempts=tot_attempts)
+        print(r)
         r["source_id"] = [f"Gaia DR3 {i}" for i in r["source_id"]]
         print(f"sql search for contaminants completed {t_target['source_id']},"
               f" target {i+1} of {len(t_targets)}.")
