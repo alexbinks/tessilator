@@ -98,8 +98,7 @@ def table_from_simbad(input_names):
             else:
                 logger.error(f"Could not find any match for '{input_name}'")
         else: # Simbad returns at least one identifier
-            r_list = [z for z in res["id"]]
-            m = [s for s in r_list if "Gaia DR3" in s]
+            m = [s for s in res["id"] if "Gaia DR3" in s]
             if len(m) == 0: # if Gaia identifier is not in the Simbad list
                 if is_Gaia[i] == 1:
                     logger.warning("Simbad didn't resolve Gaia DR3 "
