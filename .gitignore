@@ -27,7 +27,7 @@ tessilator.egg-info/PKG-INFO
 tessilator.egg-info/SOURCES.txt
 
 
-
+*.log
 
 # TAKEN FROM ASTROPY
 # Compiled files
