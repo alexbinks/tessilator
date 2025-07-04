@@ -228,13 +228,15 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     axs[1,0].text(0.99,0.80, f"Gmag = {float(t_table['Gmag']):.3f}",
                   fontsize=lsize, horizontalalignment='right',
                   transform=axs[1,0].transAxes)
-    axs[1,0].text(0.99,0.70, "$\log (f_{\\rm bg}/f_{*})$ = "
-                  f"{float(t_table['log_tot_bg']):.3f}", fontsize=lsize,
-                  horizontalalignment='right', transform=axs[1,0].transAxes)
-    leg = axs[1,0].legend(loc='lower right')
-    leg.legendHandles[1]._sizes = [30]
-    leg.legendHandles[2]._sizes = [30]
-    leg.legendHandles[3]._sizes = [30]
+    axs[1, 0].text(
+        0.99,
+        0.70,
+        f"$\\log (f_{{\\rm bg}}/f_{{*}})$ = {float(t_table['log_tot_bg']):.3f}",
+        fontsize=lsize,
+        horizontalalignment="right",
+        transform=axs[1, 0].transAxes,
+    )
+    axs[1, 0].legend(loc="lower right", markerscale=10)
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
@@ -269,7 +271,7 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
 #                        label='cycle number')
     plot_name = '_'.join([name_target, f"{scc[0]:04d}",
                           f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
-    plt.savefig(f'./{plot_dir}/{plot_name}', bbox_inches='tight')
+    fig.savefig(f"./{plot_dir}/{plot_name}", bbox_inches="tight")
     plt.close('all')
 
 
