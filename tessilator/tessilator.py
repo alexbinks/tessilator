@@ -346,7 +346,7 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs',
     
     (b) a 2-column table of decimal sky coordinates (celestial or galactic).
     
-    (c) a pre-prepared table of 7 columns consisting of source_id, ra, dec,
+    (c) a table of 7 columns consisting of source_id, ra, dec,
         parallax, Gmag, BPmag, RPmag (without column headers).
     
     Note that a single target can be quickly analysed directly from the
@@ -354,7 +354,7 @@ def read_data(t_filename, name_is_source_id=False, type_coord='icrs',
     and then encompassed with double-quotation marks around the source
     identifier.
     
-    E.G. >>> python run_tess_cutouts files "#AB Doradus"
+        >>> python run_tess_cutouts files "#AB Doradus"
     
     parameters
     ----------
@@ -729,20 +729,19 @@ def make_lc_corr_plot(plot_name, ref_name, targ_time, targ_flux, sim_flux,
     -------
     None. Plots are saved to file.
     '''    
-    fig, ax = plt.subplots(figsize=(15,7))
-    mpl.rcParams.update({'font.size': 20})
-    ax.set_xlabel('time [days]')
-    ax.set_ylabel('normalised flux')
-    ax.plot(targ_time, targ_flux, '.', c='r', label='target flux')
-    ax.plot(targ_time, sim_flux, '.', c='g', label='systematic flux')
-    ax.legend()
-    im_dir_tot = f'./{im_dir}/{ref_name}'
-    path_exist = os.path.exists(im_dir_tot)
-    if not path_exist:
-        os.mkdir(im_dir_tot)
-    plt.savefig(f'{im_dir_tot}/{plot_name}', bbox_inches='tight')
-    plt.close('all')
-
+    with plt.rc_context({'font.size': 20}):
+        fig, ax = plt.subplots(figsize=(15,7))
+        ax.set_xlabel('time [days]')
+        ax.set_ylabel('normalised flux')
+        ax.plot(targ_time, targ_flux, '.', c='r', label='target flux')
+        ax.plot(targ_time, sim_flux, '.', c='g', label='systematic flux')
+        ax.legend()
+        im_dir_tot = f'./{im_dir}/{ref_name}'
+        path_exist = os.path.exists(im_dir_tot)
+        if not path_exist:
+            os.mkdir(im_dir_tot)
+        fig.savefig(f'{im_dir_tot}/{plot_name}', bbox_inches='tight')
+        plt.close('all')
 
 
 def get_name_target(t_target):
