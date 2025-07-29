@@ -1,5 +1,7 @@
-from pkg_resources import get_distribution, DistributionNotFound
+from importlib.metadata import version, PackageNotFoundError
+
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    pass  # package is not installed
+    __version__ = version("tessilator")
+except PackageNotFoundError:
+    # package is not installed
+    pass
