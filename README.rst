@@ -73,7 +73,7 @@ If this package is useful for research leading to publication we would
 appreciate the following acknowledgement:
 
 "The data from the Transiting Exoplanet Survey Satellite (TESS) was acquired
-using the tessilator software package (Binks et al. 2024)."
+using the tessilator software package [Binks et al. 2024](https://ui.adsabs.harvard.edu/abs/2024MNRAS.533.2162B/abstract)."
 
 Licence: MIT
 
