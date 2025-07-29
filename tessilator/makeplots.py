@@ -309,6 +309,11 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
             horizontalalignment="right",
             transform=axs[1, 0].transAxes,
         )
+    axs[1, 0].legend(loc="lower right", markerscale=10)
+    ax2=axs[1,0].twinx()
+    ax2.set_position([0.05,0.3,0.90,0.2])
+    ax2.invert_yaxis()
+=======
         leg = axs[1, 0].legend(loc="lower right")
         leg.legendHandles[1]._sizes = [30]
         leg.legendHandles[2]._sizes = [30]
@@ -350,17 +355,16 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
         #                  fontsize=lsize, horizontalalignment='left',
         #                  transform=axs[1,1].transAxes)
 
-        #    cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
-        #                        bbox_to_anchor=(0.79, 0.92, 0.20, 0.05),
-        #                        bbox_transform=axs[1,1].transAxes)
-        #    cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
-        #                        label='cycle number')
-        plot_name = (
-            "_".join([name_target, f"{scc[0]:04d}", f"{scc[1]}", f"{scc[2]}", f"{nc}"])
-            + ".png"
-        )
-        plt.savefig(f"./{plot_dir}/{plot_name}", bbox_inches="tight")
-        plt.close("all")
+
+#    cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
+#                        bbox_to_anchor=(0.79, 0.92, 0.20, 0.05),
+#                        bbox_transform=axs[1,1].transAxes)
+#    cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
+#                        label='cycle number')
+    plot_name = '_'.join([name_target, f"{scc[0]:04d}",
+                          f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
+    fig.savefig(f"./{plot_dir}/{plot_name}", bbox_inches="tight")
+    plt.close('all')
 
 
 __all__ = [item[0] for item in inspect.getmembers(sys.modules[__name__],

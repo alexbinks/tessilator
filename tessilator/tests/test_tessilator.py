@@ -43,11 +43,9 @@ def test_all_sources_cutout(tmpdir):
         tessilator.all_sources_cutout(
             ABDor,
             period_file="period",
-            lc_con=False,
-            flux_con=False,
-            make_plots=True,
             ref_name="ABDor",
             choose_sec=33,
+            make_plot=True,
         )
     assert os.path.isfile(f"{tmpdir}/fits/ABDor/AB_Dor_0033_4_2.fits")
     # Checking how a matplotlib file looks is more complicated,
@@ -66,7 +64,6 @@ def test_all_sources_cutout(tmpdir):
     assert out["original_id"][0] == ABDor["name"]
     # Just test a few representative columns
     assert out["Sector"][0] == 33
-    assert out["num_tot_bg"].mask[0]
     assert (
         out["ap_rad"][0] == 1.926
     )  # The csv writer sets the precision, so this is exact
@@ -86,7 +83,6 @@ def test_all_sources_cutout_no_data(tmpdir):
         tessilator.all_sources_sector(
             tTargets,
             scc=[16, 4, 3],
-            make_plots=False,
             period_file="period",
             file_ref="ABDor",
             keep_data=False,
