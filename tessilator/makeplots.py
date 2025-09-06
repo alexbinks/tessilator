@@ -296,7 +296,7 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
         axs[1, 0].text(
             0.99,
             0.80,
-            f"Gmag = {float(t_table['Gmag']):.3f}",
+            f"Gmag = {t_table['Gmag'][0]:.3f}",
             fontsize=lsize,
             horizontalalignment="right",
             transform=axs[1, 0].transAxes,
@@ -304,7 +304,7 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
         axs[1, 0].text(
             0.99,
             0.70,
-            f"$\log (f_{{\\rm bg}}/f_{{*}})$ = {float(t_table['log_tot_bg']):.3f}",
+            f"$\\log (f_{{\\rm bg}}/f_{{*}})$ = {t_table['log_tot_bg'][0]:.3f}",
             fontsize=lsize,
             horizontalalignment="right",
             transform=axs[1, 0].transAxes,
@@ -314,10 +314,6 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
 
-    leg = axs[1, 0].legend(loc="lower right")
-    leg.legendHandles[1]._sizes = [30]
-    leg.legendHandles[2]._sizes = [30]
-    leg.legendHandles[3]._sizes = [30]
     ax2 = axs[1, 0].twinx()
     ax2.set_position([0.05, 0.3, 0.90, 0.2])
     ax2.invert_yaxis()
