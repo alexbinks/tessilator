@@ -313,54 +313,42 @@ def create_plot(im_plot, clean, LS, scc, t_table, name_target, plot_dir,
     ax2=axs[1,0].twinx()
     ax2.set_position([0.05,0.3,0.90,0.2])
     ax2.invert_yaxis()
-=======
-        leg = axs[1, 0].legend(loc="lower right")
-        leg.legendHandles[1]._sizes = [30]
-        leg.legendHandles[2]._sizes = [30]
-        leg.legendHandles[3]._sizes = [30]
-        ax2 = axs[1, 0].twinx()
-        ax2.set_position([0.05, 0.3, 0.90, 0.2])
-        ax2.invert_yaxis()
 
-        if not np.all(clean_orig_mag.data == -999.0):
-            ax2.scatter(
-                clean_orig_time[clean_orig_mag > -999],
-                clean_orig_mag[clean_orig_mag > -999],
-                s=0.3,
-                alpha=0.3,
-                color="b",
-                marker="x",
-            )
-            ax2.set_ylabel("TESS magnitude", c="b", fontsize=fsize)
+    leg = axs[1, 0].legend(loc="lower right")
+    leg.legendHandles[1]._sizes = [30]
+    leg.legendHandles[2]._sizes = [30]
+    leg.legendHandles[3]._sizes = [30]
+    ax2 = axs[1, 0].twinx()
+    ax2.set_position([0.05, 0.3, 0.90, 0.2])
+    ax2.invert_yaxis()
 
-        axs[1, 1].set_xlim([0, 1])
-        axs[1, 1].set_xlabel("phase", fontsize=fsize)
-        axs[1, 1].set_ylabel("normalised flux", fontsize=fsize)
-        axs[1, 1].plot(LS["phase_fit_x"], LS["phase_fit_y"], c="b")
-        LS["phase_col"] += 1
-        N_cyc = int(max(LS["phase_col"]))
-        cmap_use = plt.get_cmap("rainbow", N_cyc)
-        s = axs[1, 1].scatter(
-            LS["phase_x"],
-            LS["phase_y"],
-            c=LS["phase_col"],
-            cmap=cmap_use,
-            vmin=0.5,
-            vmax=N_cyc + 0.5,
+    if not np.all(clean_orig_mag.data == -999.0):
+        ax2.scatter(
+            clean_orig_time[clean_orig_mag > -999],
+            clean_orig_mag[clean_orig_mag > -999],
+            s=0.3,
+            alpha=0.3,
+            color="b",
+            marker="x",
         )
-        #    axs[1,1].text(0.01, 0.90, f"Amplitude = {LS['amp']:.3f}, "
-        #                  f"Scatter = {LS['scatter']:.3f}, "
-        #                  f"$\chi^{2}$ = {LS['chisq_phase']:.3f}, "
-        #                  "$f_{\\rm dev}$"+ f"= {LS['fdev']:.3f}",
-        #                  fontsize=lsize, horizontalalignment='left',
-        #                  transform=axs[1,1].transAxes)
+        ax2.set_ylabel("TESS magnitude", c="b", fontsize=fsize)
 
+    axs[1, 1].set_xlim([0, 1])
+    axs[1, 1].set_xlabel("phase", fontsize=fsize)
+    axs[1, 1].set_ylabel("normalised flux", fontsize=fsize)
+    axs[1, 1].plot(LS["phase_fit_x"], LS["phase_fit_y"], c="b")
+    LS["phase_col"] += 1
+    N_cyc = int(max(LS["phase_col"]))
+    cmap_use = plt.get_cmap("rainbow", N_cyc)
+    s = axs[1, 1].scatter(
+        LS["phase_x"],
+        LS["phase_y"],
+        c=LS["phase_col"],
+        cmap=cmap_use,
+        vmin=0.5,
+        vmax=N_cyc + 0.5,
+    )
 
-#    cbaxes = inset_axes(axs[1,1], width="100%", height="100%",
-#                        bbox_to_anchor=(0.79, 0.92, 0.20, 0.05),
-#                        bbox_transform=axs[1,1].transAxes)
-#    cbar = plt.colorbar(s, cax=cbaxes, orientation='horizontal',
-#                        label='cycle number')
     plot_name = '_'.join([name_target, f"{scc[0]:04d}",
                           f"{scc[1]}", f"{scc[2]}", f"{nc}"])+'.png'
     fig.savefig(f"./{plot_dir}/{plot_name}", bbox_inches="tight")
