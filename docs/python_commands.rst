@@ -16,11 +16,13 @@ Import the tessilator, logging and numpy module
    >>> import numpy as np
 
 Provide tessilator with the input parameters and store these as variables to be passed to further tasks.
+Running the following command will prompt the user for input parameters, one by one.
 
    >>> fluxCon, lcCon, makePlots, fileRef, tFile = tessilator.setup_input_parameters()
    >>> periodFile = tessilator.setup_filenames(fileRef)
 
-Define the aperture radius and the radii of the annulus for background calculation
+Define the aperture radius and the radii of the annulus for background calculation,
+in pixels. (Each TESS pixel is approximately 21 arcseconds on the sky.)
 
    >>> Rad, SkyRad = 1.0, np.array([6.0,8.0])
 
