@@ -89,8 +89,8 @@ def run_sql_query_contaminants(t_target, cont_rad=10., mag_lim=3.,
               WHERE 1 = CONTAINS(\
               POINT({t_target['ra']}, {t_target['dec']}),\
               CIRCLE(ra, dec, {cont_rad*pixel_size/3600.})) \
-              AND phot_g_mean_mag < {t_target['RPmag']+mag_lim} \
-              ORDER BY phot_g_mean_mag ASC"
+              AND phot_rp_mean_mag < {t_target['RPmag']+mag_lim} \
+              ORDER BY phot_rp_mean_mag ASC"
 
     # Attempt a synchronous SQL job, otherwise try the asyncronous method.
 
@@ -240,11 +240,8 @@ def contamination(t_targets, ap_rad=1.0, n_cont=10, cont_rad=10., mag_lim=3.,
                           float))
 
     for i, t_target in enumerate(t_targets):
-        print(t_target)
-        
         r = run_sql_query_contaminants(t_target, cont_rad=cont_rad, mag_lim=mag_lim,
                                        tot_attempts=tot_attempts)
-        print(r)
         r["source_id"] = [f"Gaia DR3 {i}" for i in r["source_id"]]
         print(f"sql search for contaminants completed {t_target['source_id']},"
               f" target {i+1} of {len(t_targets)}.")

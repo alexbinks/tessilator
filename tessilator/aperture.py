@@ -4,10 +4,10 @@ Alexander Binks & Moritz Guenther, 2024
 
 Licence: MIT 2024
 
-This module contains functions to perform aperture photometry.
+This module contains functions to perform aperture photmetry.
 
 The aperture photometry is defined by a single function 'aper_run', which reads
-the TESS image files, performs aperture photometry and returns an astropy table
+the TESS image files, performs aperture phtoometry and returns an astropy table
 containing the timestamps, magnitudes and fluxes derived from aperture
 photometry. Additionally, one can use the function 'calc_rad', which evaluates
 the relative brightness of neighbouring pixels to automatically determine the

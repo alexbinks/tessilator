@@ -67,13 +67,15 @@ def table_from_simbad(input_names):
     input_names.rename_column(input_names.colnames[0], 'ID')
     input_names["ID"] = input_names["ID"].astype(str)
     # create arrays to store naming variables
-    name_arr, is_Gaia = [], [0 for i in input_names]
+    result_table, name_arr, is_Gaia, = [], [], [0 for i in input_names]
     for i, input_name in enumerate(input_names["ID"]):
     # if the target name is the numeric part of the Gaia DR3 source identifier
     # prefix the name with "Gaia DR3 "
         if input_name.isnumeric() and len(input_name) > 10:
             input_name = "Gaia DR3 " + input_name
             is_Gaia[i] = 1
+        else:
+            input_name = str(input_name)
         name_arr.append(input_name)
 
     # Get a list object identifiers from Simbad
@@ -81,10 +83,11 @@ def table_from_simbad(input_names):
     # the input name
 #    with warnings.catch_warnings():
 #        warnings.simplefilter(action='ignore', category=UserWarning)
+    for name in name_arr:
         try:
-            result_table = [Simbad.query_objectids(name) for name in name_arr]
+            result_table.append(Simbad.query_objectids(name))
         except:
-            result_table = [None for name in name_arr]
+            result_table.append(None)
     NameList = []
     GaiaList = []
     for r, res in enumerate(result_table):
@@ -98,7 +101,8 @@ def table_from_simbad(input_names):
             else:
                 logger.error(f"Could not find any match for '{input_name}'")
         else: # Simbad returns at least one identifier
-            m = [s for s in res["id"] if "Gaia DR3" in s]
+            r_list = [z for z in res["id"]]
+            m = [s for s in r_list if "Gaia DR3" in s]
             if len(m) == 0: # if Gaia identifier is not in the Simbad list
                 if is_Gaia[i] == 1:
                     logger.warning("Simbad didn't resolve Gaia DR3 "
@@ -341,7 +345,6 @@ def table_from_table(input_table, name_is_source_id=False, ang_max=10.):
         coords = SkyCoord(ra=gaia_table["ra"]*u.degree,
                          dec=gaia_table["dec"]*u.degree,
                          frame='icrs')
-#        print(GDR3_Names)
         
         for c in coords:
             result = Vizier.query_region(c, radius=ang_max*u.arcsec,  # search radius
@@ -351,16 +354,6 @@ def table_from_table(input_table, name_is_source_id=False, ang_max=10.):
             else:
                 source_list.append(None)
         
-#        try:
-#            result_table =  [Simbad.query_objectids(i) for i in GDR3_Names]
-#        except:
-#            result_table = [None for i in GDR3_Names]
-#        for i, r in enumerate(result_table):
-#            if r is None:
-#                NameList.append(str(gaia_table['source_id'][i]))
-#            else:
-#                NameList.append(sorted(r["id"], key=len)[0])
-#        print(NameList)
         gaia_table["name"] = GDR3_Names
         gaia_table["source_id"] = source_list
     new_order = ['name', 'source_id', 'ra', 'dec', 'parallax', 'Gmag',
@@ -432,7 +425,6 @@ def get_gaia_data(gaia_table, name_is_source_id=False, type_coord='icrs',
     """
     
     warnings.filterwarnings('ignore', category=UserWarning, append=True)
-    
     if len(gaia_table.colnames) == 1:
         tbl = table_from_simbad(gaia_table)
     elif len(gaia_table.colnames) == 2:
